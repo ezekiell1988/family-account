@@ -1,0 +1,41 @@
+## .NET / C#
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.userprefs
+.vs/
+
+## Publicación
+publish/
+out/
+
+## EF Core — no versionar migraciones generadas automáticamente (opcional)
+# Infrastructure/Data/Migrations/
+
+## Secretos locales — NUNCA subir al repo
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json.example
+
+## Archivos de certificados
+*.pfx
+*.p12
+*.cer
+*.key
+
+## Logs
+logs/
+*.log
+
+## NuGet
+*.nupkg
+.nuget/
+
+## JetBrains / Rider
+.idea/
+*.sln.iml
+
+## macOS
+.DS_Store

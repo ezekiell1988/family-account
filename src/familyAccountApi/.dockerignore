@@ -1,0 +1,12 @@
+**/.vs
+**/.vscode
+**/obj
+**/bin
+**/node_modules
+**/.git
+**/.gitignore
+**/appsettings.Development.json
+Infrastructure/Data/Migrations
+Dockerfile
+.dockerignore
+*.md
