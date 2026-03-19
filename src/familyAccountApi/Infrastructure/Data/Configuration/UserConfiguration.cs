@@ -33,5 +33,14 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.CodeUser)
             .IsUnique()
             .HasDatabaseName("UQ_user_codeUser");
+
+        builder.HasData(new User
+        {
+            IdUser    = 1,
+            CodeUser  = "S",
+            NameUser  = "Ezequiel Baltodano Cubillo",
+            PhoneUser = "50683681485",
+            EmailUser = "ezekiell1988@hotmail.com"
+        });
     }
 }

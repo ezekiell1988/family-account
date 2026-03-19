@@ -61,63 +61,161 @@ app.Run();
 
 ## JWT Authentication Setup
 
-### Document Transformer
+En .NET 10 los tipos de OpenAPI están en el namespace `Microsoft.OpenApi` (no `Microsoft.OpenApi.Models`).
 
-Create a transformer to add JWT Bearer authentication to OpenAPI schema:
+### Opción A — Bearer en TODOS los endpoints (incluyendo anónimos)
+
+Usar un `IOpenApiDocumentTransformer` que añade el esquema y lo aplica a todas las operaciones:
 
 ```csharp
+// BearerSecuritySchemeTransformer.cs
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.OpenApi;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 internal sealed class BearerSecuritySchemeTransformer(
-    IAuthenticationSchemeProvider authenticationSchemeProvider) 
+    IAuthenticationSchemeProvider authenticationSchemeProvider)
     : IOpenApiDocumentTransformer
 {
     public async Task TransformAsync(
-        OpenApiDocument document, 
-        OpenApiDocumentTransformerContext context, 
+        OpenApiDocument document,
+        OpenApiDocumentTransformerContext context,
         CancellationToken cancellationToken)
     {
         var authSchemes = await authenticationSchemeProvider.GetAllSchemesAsync();
         if (!authSchemes.Any(s => s.Name == "Bearer")) return;
 
-        // Add security scheme
         document.Components ??= new OpenApiComponents();
-        document.Components.SecuritySchemes = new Dictionary<string, OpenApiSecurityScheme>
+        document.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
         {
             ["Bearer"] = new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.Http,
                 Scheme = "bearer",
                 In = ParameterLocation.Header,
-                BearerFormat = "Json Web Token",
+                BearerFormat = "JWT",
                 Description = "Enter JWT token obtained from login endpoint"
             }
         };
 
-        // Apply to all operations
-        foreach (var operation in document.Paths.Values
-            .SelectMany(path => path.Operations))
+        // Aplica a TODAS las operaciones
+        foreach (var pathItem in document.Paths.Values)
         {
-            operation.Value.Security ??= [];
-            operation.Value.Security.Add(new OpenApiSecurityRequirement
+            foreach (var operation in pathItem.Operations.Values)
             {
-                [new OpenApiSecuritySchemeReference("Bearer", document)] = []
-            });
+                operation.Security ??= [];
+                operation.Security.Add(new OpenApiSecurityRequirement
+                {
+                    [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+                });
+            }
         }
     }
 }
 ```
 
-### Register Transformer
-
 ```csharp
-builder.Services.AddOpenApi(options =>
+// Program.cs — solo registra el document transformer
+builder.Services.AddOpenApi("v1", options =>
 {
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 ```
+
+---
+
+### Opción B — Bearer SOLO en endpoints que requieren autorización ✅ Recomendado
+
+Un único `IOpenApiDocumentTransformer` que hace ambas cosas: registrar el esquema **y** asignar
+el requisito por operación. Los document transformers corren **después** de todos los operation
+transformers (incluyendo los internos de ASP.NET Core), garantizando que el `{}` vacío que el
+framework auto-inyecta en endpoints con `RequireAuthorization()` quede sobreescrito.
+
+> **Fuente:** [Microsoft ASP.NET Core OpenAPI docs – transformer execution order](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/using-openapi-documents#transformer-execution-order)
+
+```csharp
+// BearerSecuritySchemeTransformer.cs
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.OpenApi;
+using Microsoft.OpenApi;
+
+internal sealed class BearerSecuritySchemeTransformer(
+    IAuthenticationSchemeProvider authenticationSchemeProvider)
+    : IOpenApiDocumentTransformer
+{
+    public async Task TransformAsync(
+        OpenApiDocument document,
+        OpenApiDocumentTransformerContext context,
+        CancellationToken cancellationToken)
+    {
+        var authSchemes = await authenticationSchemeProvider.GetAllSchemesAsync();
+        if (!authSchemes.Any(s => s.Name == "Bearer")) return;
+
+        // 1. Registrar esquema en components/securitySchemes
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
+        {
+            ["Bearer"] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                In = ParameterLocation.Header,
+                BearerFormat = "JWT",
+                Description = "Enter JWT token obtained from login endpoint"
+            }
+        };
+
+        // 2. Construir lookup de endpoints anónimos
+        //    context.DescriptionGroups es IReadOnlyList<ApiDescriptionGroup>;
+        //    cada grupo tiene .Items (IReadOnlyList<ApiDescription>).
+        var anonymousKeys = context.DescriptionGroups
+            .SelectMany(g => g.Items)
+            .Where(d => d.ActionDescriptor.EndpointMetadata
+                .OfType<IAllowAnonymous>().Any())
+            .Select(d => (
+                Path: "/" + (d.RelativePath ?? string.Empty).TrimStart('/'),
+                Method: d.HttpMethod?.ToUpperInvariant() ?? string.Empty
+            ))
+            .ToHashSet();
+
+        // 3. ASIGNAR (no .Add()) para sobrescribir el {} vacío que ASP.NET Core inyecta.
+        //    CRÍTICO: pasar `document` como hostDocument en OpenApiSecuritySchemeReference.
+        //    Sin él, Target == null y el serializer omite la entrada → genera [{}] (Optional).
+        foreach (var (path, pathItem) in document.Paths)
+        {
+            foreach (var (opType, operation) in pathItem.Operations)
+            {
+                var isAnonymous = anonymousKeys.Contains(
+                    (path, opType.ToString().ToUpperInvariant()));
+
+                operation.Security = isAnonymous
+                    ? null
+                    : [new OpenApiSecurityRequirement
+                      {
+                          [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+                      }];
+            }
+        }
+    }
+}
+```
+
+```csharp
+// Program.cs — solo el document transformer (no hace falta operation transformer)
+builder.Services.AddOpenApi("v1", options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+});
+```
+
+> **Notas críticas:**
+> - En .NET 10 los tipos son `OpenApiSecurityRequirement` y `OpenApiSecuritySchemeReference`,
+>   ambos en el namespace `Microsoft.OpenApi` (no `Microsoft.OpenApi.Models`).
+> - `IOpenApiSecurityScheme` es la interfaz; `OpenApiSecurityScheme` la implementación concreta.
+> - `context.DescriptionGroups` (NO `ApiDescriptionGroups`) da acceso a los `ApiDescription`.
+> - `opType.ToString().ToUpperInvariant()` sobre `OperationType` devuelve `"GET"`, `"POST"`, etc.,
+>   que coincide con `d.HttpMethod` del `ApiDescription`.
 
 ---
 
@@ -292,6 +390,62 @@ app.MapGet("/internal/health", () => "OK")
 2. Confirm `Scalar.AspNetCore` package is installed
 3. Ensure `app.MapScalarApiReference()` is called AFTER `app.MapOpenApi()`
 
+### Scalar muestra "Authentication Optional" en vez de "Required"
+
+**Causa raíz investigada (marzo 2026):**
+
+El serializer de `OpenApiSecurityRequirement` ([fuente en microsoft/OpenAPI.NET](https://github.com/microsoft/OpenAPI.NET/blob/main/src/Microsoft.OpenApi/Models/OpenApiSecurityRequirement.cs))
+contiene internamente:
+
+```csharp
+foreach (var pair in this.Where(static p => p.Key?.Target is not null))
+```
+
+Si no se pasa `document` como `hostDocument` al constructor de `OpenApiSecuritySchemeReference`,
+`Target` es `null` y la entrada se omite. El resultado serializado es `[{}]` en lugar de
+`[{"Bearer":[]}]`. Por especificación OpenAPI, `[{}]` significa "auth opcional" (acceso anónimo
+soportado), mientras que `[{"Bearer":[]}]` significa "auth requerida".
+
+> **Fuente spec:** [Scalar issue #8046](https://github.com/scalar/scalar/issues/8046) —
+> confirmado por el equipo de Scalar: `[{},{"Bearer":[]}]` = Optional, `[{"Bearer":[]}]` = Required.
+
+**Síntomas:**
+- Scalar muestra el candado con etiqueta "Authentication Optional"
+- El JSON en `/openapi/v1.json` tiene `"security": [{}]` en endpoints protegidos
+
+**Solución:** Siempre pasar `document` al construir el `OpenApiSecuritySchemeReference`:
+
+```csharp
+// ❌ MAL — Target es null, se serializa como {}
+[new OpenApiSecuritySchemeReference("Bearer")] = []
+
+// ✅ BIEN — Target resuelve al esquema en components, se serializa como {"Bearer":[]}
+[new OpenApiSecuritySchemeReference("Bearer", document)] = []
+```
+
+**Por qué no funciona el operation transformer para este caso:**
+Los operation transformers corren ANTES que los document transformers. El document transformer
+que registra el esquema en `components.securitySchemes` corre DESPUÉS. Por eso, si el
+`OpenApiSecuritySchemeReference` se construye en un operation transformer, `Target` siempre
+será null en ese momento (el esquema aún no existe en el documento).
+
+**Diagnóstico rápido:**
+
+```powershell
+# Verificar qué valor real tiene security en el JSON generado
+$json = Invoke-RestMethod http://localhost:5132/openapi/v1.json
+$json.paths.PSObject.Properties | ForEach-Object {
+    $path = $_.Name
+    $_.Value.PSObject.Properties | ForEach-Object {
+        $sec = $_.Value.security
+        $secStr = if($null -ne $sec){ $sec | ConvertTo-Json -Compress } else { "(null)" }
+        "{0} {1} => security: {2}" -f $_.Name.ToUpper(), $path, $secStr
+    }
+}
+# Resultado esperado para endpoints protegidos: {"Bearer":[]}
+# Resultado con bug:                             {}
+```
+
 ---
 
 ## Best Practices
@@ -320,6 +474,24 @@ app.MapGet("/internal/health", () => "OK")
 
 ---
 
-**Last updated:** February 7, 2026  
-**Scalar version:** 2.12.32  
-**.NET version:** 10.0.102
+---
+
+## Orden de ejecución de transformers
+
+> **Fuente:** [Microsoft ASP.NET Core OpenAPI docs](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/using-openapi-documents#transformer-execution-order)
+
+```
+Schema transformers → Operation transformers → Document transformers
+```
+
+Regla práctica:
+- Usa **document transformer** cuando necesites acceso a `document.Components` (esquemas, securitySchemes) porque
+  es el único punto donde el documento está completo.
+- Los **operation transformers** NO deben construir `OpenApiSecuritySchemeReference` con hostDocument,
+  porque `components.securitySchemes` aún no existe en ese momento.
+
+---
+
+**Last updated:** March 19, 2026  
+**Scalar version:** 2.13.11  
+**.NET version:** 10.0.104

@@ -156,6 +156,8 @@ builder.Services.AddAuthorization();
 // ─── OpenAPI + Scalar ────────────────────────────────────────────────────────
 builder.Services.AddOpenApi("v1", options =>
 {
+    // BearerSecuritySchemeTransformer es un DocumentTransformer (corre último),
+    // por lo que sobrescribe el {} vacío que ASP.NET Core inyecta internamente.
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 
