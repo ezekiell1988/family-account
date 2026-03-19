@@ -13,6 +13,11 @@ public sealed class UserPinConfiguration : IEntityTypeConfiguration<UserPin>
 
         builder.Property(up => up.IdUser).IsRequired();
 
+        builder.Property(up => up.CreateAt)
+            .HasColumnType("datetime")
+            .HasDefaultValueSql("GETDATE()")
+            .IsRequired();
+
         builder.Property(up => up.Pin)
             .HasMaxLength(5)
             .IsRequired()

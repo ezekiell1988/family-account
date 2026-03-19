@@ -29,15 +29,18 @@ public static class UsersModule
 
         group.MapPost("/", Create)
             .WithName("CreateUser")
-            .WithSummary("Crear nuevo usuario");
+            .WithSummary("Crear nuevo usuario")
+            .RequireAuthorization("Admin");
 
         group.MapPut("/{id:int}", Update)
             .WithName("UpdateUser")
-            .WithSummary("Actualizar usuario");
+            .WithSummary("Actualizar usuario")
+            .RequireAuthorization("Admin");
 
         group.MapDelete("/{id:int}", Delete)
             .WithName("DeleteUser")
-            .WithSummary("Eliminar usuario");
+            .WithSummary("Eliminar usuario")
+            .RequireAuthorization("Admin");
 
         return app;
     }

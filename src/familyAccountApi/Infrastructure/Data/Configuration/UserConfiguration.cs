@@ -11,6 +11,11 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasKey(u => u.IdUser);
         builder.Property(u => u.IdUser).ValueGeneratedOnAdd();
 
+        builder.Property(u => u.CreateAt)
+            .HasColumnType("datetime")
+            .HasDefaultValueSql("GETDATE()")
+            .IsRequired();
+
         builder.Property(u => u.CodeUser)
             .HasMaxLength(50)
             .IsRequired()
@@ -37,6 +42,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasData(new User
         {
             IdUser    = 1,
+            CreateAt  = new DateTime(2026, 3, 19, 0, 0, 0, DateTimeKind.Unspecified),
             CodeUser  = "S",
             NameUser  = "Ezequiel Baltodano Cubillo",
             PhoneUser = "50683681485",

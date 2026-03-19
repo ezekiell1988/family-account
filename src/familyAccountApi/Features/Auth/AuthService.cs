@@ -58,9 +58,16 @@ public sealed class AuthService(
 
         if (!pinExists) return null;
 
+        // Cargar roles del usuario
+        var roles = await db.UserRole
+            .AsNoTracking()
+            .Where(ur => ur.IdUser == user.IdUser)
+            .Select(ur => ur.Role.NameRole)
+            .ToListAsync(ct);
+
         // Generar tokens
         var (accessToken, jti, expiresAt) = tokenService.GenerateAccessToken(
-            user.IdUser, user.EmailUser, user.CodeUser, user.NameUser);
+            user.IdUser, user.EmailUser, user.CodeUser, user.NameUser, roles);
         var refreshToken = tokenService.GenerateRefreshToken();
 
         // Guardar refresh token en Redis
@@ -91,9 +98,16 @@ public sealed class AuthService(
         // Revocar refresh token anterior
         await cache.RemoveAsync(RefreshKey(refreshToken), ct);
 
+        // Cargar roles del usuario
+        var roles = await db.UserRole
+            .AsNoTracking()
+            .Where(ur => ur.IdUser == idUser)
+            .Select(ur => ur.Role.NameRole)
+            .ToListAsync(ct);
+
         // Generar nuevos tokens
         var (accessToken, _, expiresAt) = tokenService.GenerateAccessToken(
-            user.IdUser, user.EmailUser, user.CodeUser, user.NameUser);
+            user.IdUser, user.EmailUser, user.CodeUser, user.NameUser, roles);
         var newRefreshToken = tokenService.GenerateRefreshToken();
 
         var refreshOptions = new DistributedCacheEntryOptions

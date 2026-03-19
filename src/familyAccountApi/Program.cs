@@ -151,7 +151,15 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Acceso total: solo Developer
+    options.AddPolicy("Developer", p => p.RequireRole("Developer"));
+    // Acceso amplio: Developer + Admin
+    options.AddPolicy("Admin",     p => p.RequireRole("Developer", "Admin"));
+    // Acceso básico: todos los roles autenticados
+    options.AddPolicy("User",      p => p.RequireRole("Developer", "Admin", "User"));
+});
 
 // ─── OpenAPI + Scalar ────────────────────────────────────────────────────────
 builder.Services.AddOpenApi("v1", options =>

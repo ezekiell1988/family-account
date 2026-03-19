@@ -6,8 +6,10 @@ namespace FamilyAccountApi.Infrastructure.Data;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public DbSet<User> User => Set<User>();
-    public DbSet<UserPin> UserPin => Set<UserPin>();
+    public DbSet<User>     User     => Set<User>();
+    public DbSet<UserPin>  UserPin  => Set<UserPin>();
+    public DbSet<Role>     Role     => Set<Role>();
+    public DbSet<UserRole> UserRole => Set<UserRole>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
