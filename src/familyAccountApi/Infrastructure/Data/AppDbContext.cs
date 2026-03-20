@@ -22,6 +22,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<FiscalPeriod>             FiscalPeriod             => Set<FiscalPeriod>();
     public DbSet<AccountingEntry>          AccountingEntry          => Set<AccountingEntry>();
     public DbSet<AccountingEntryLine>      AccountingEntryLine      => Set<AccountingEntryLine>();
+    public DbSet<CostCenter>               CostCenter               => Set<CostCenter>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

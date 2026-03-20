@@ -58,5 +58,17 @@ public sealed class AccountingEntryLineConfiguration : IEntityTypeConfiguration<
             .WithMany(a => a.AccountingEntryLines)
             .HasForeignKey(ael => ael.IdAccount)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(ael => ael.IdCostCenter)
+            .HasComment("FK opcional al centro de costo asociado a esta línea del asiento contable.");
+
+        builder.HasIndex(ael => ael.IdCostCenter)
+            .HasDatabaseName("IX_accountingEntryLine_idCostCenter")
+            .HasFilter("[idCostCenter] IS NOT NULL");
+
+        builder.HasOne(ael => ael.IdCostCenterNavigation)
+            .WithMany(cc => cc.AccountingEntryLines)
+            .HasForeignKey(ael => ael.IdCostCenter)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -8,7 +8,9 @@ public sealed class AccountingEntryLine
     public decimal DebitAmount           { get; set; }
     public decimal CreditAmount          { get; set; }
     public string? DescriptionLine       { get; set; }
+    public int?    IdCostCenter          { get; set; }
 
     public AccountingEntry IdAccountingEntryNavigation { get; set; } = null!;
-    public Account IdAccountNavigation { get; set; } = null!;
+    public Account         IdAccountNavigation         { get; set; } = null!;
+    public CostCenter?     IdCostCenterNavigation      { get; set; }
 }

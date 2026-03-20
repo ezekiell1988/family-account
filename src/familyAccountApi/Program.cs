@@ -5,6 +5,7 @@ using FamilyAccountApi.BackgroundJobs;
 using Microsoft.Extensions.Caching.Distributed;
 using FamilyAccountApi.Features.Auth;
 using FamilyAccountApi.Features.AccountingEntries;
+using FamilyAccountApi.Features.CostCenters;
 using FamilyAccountApi.Features.Email;
 using FamilyAccountApi.Features.Accounts;
 using FamilyAccountApi.Features.FiscalPeriods;
@@ -192,6 +193,7 @@ builder.Services.AddProductCategoriesModule();
 builder.Services.AddAccountsModule();
 builder.Services.AddFiscalPeriodsModule();
 builder.Services.AddAccountingEntriesModule();
+builder.Services.AddCostCentersModule();
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -246,6 +248,7 @@ v1.MapProductCategoriesEndpoints();
 v1.MapAccountsEndpoints();
 v1.MapFiscalPeriodsEndpoints();
 v1.MapAccountingEntriesEndpoints();
+v1.MapCostCentersEndpoints();
 
 // ─── Recurring jobs ──────────────────────────────────────────────────────────
 // Crea los 12 períodos del año en curso cada 1° de enero a las 3:00 AM UTC.
