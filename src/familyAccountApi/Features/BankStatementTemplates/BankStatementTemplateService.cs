@@ -32,6 +32,7 @@ public sealed class BankStatementTemplateService(AppDbContext db) : IBankStateme
             NameTemplate = request.NameTemplate,
             BankName = request.BankName,
             ColumnMappings = request.ColumnMappings,
+            KeywordRules = request.KeywordRules,
             DateFormat = request.DateFormat,
             TimeFormat = request.TimeFormat,
             IsActive = request.IsActive,
@@ -47,6 +48,7 @@ public sealed class BankStatementTemplateService(AppDbContext db) : IBankStateme
             entity.NameTemplate,
             entity.BankName,
             entity.ColumnMappings,
+            entity.KeywordRules,
             entity.DateFormat,
             entity.TimeFormat,
             entity.IsActive,
@@ -62,6 +64,7 @@ public sealed class BankStatementTemplateService(AppDbContext db) : IBankStateme
         entity.NameTemplate = request.NameTemplate;
         entity.BankName = request.BankName;
         entity.ColumnMappings = request.ColumnMappings;
+        entity.KeywordRules = request.KeywordRules;
         entity.DateFormat = request.DateFormat;
         entity.TimeFormat = request.TimeFormat;
         entity.IsActive = request.IsActive;
@@ -75,6 +78,7 @@ public sealed class BankStatementTemplateService(AppDbContext db) : IBankStateme
             entity.NameTemplate,
             entity.BankName,
             entity.ColumnMappings,
+            entity.KeywordRules,
             entity.DateFormat,
             entity.TimeFormat,
             entity.IsActive,
@@ -98,6 +102,7 @@ public sealed class BankStatementTemplateService(AppDbContext db) : IBankStateme
             b.NameTemplate,
             b.BankName,
             b.ColumnMappings,
+            b.KeywordRules,
             b.DateFormat,
             b.TimeFormat,
             b.IsActive,

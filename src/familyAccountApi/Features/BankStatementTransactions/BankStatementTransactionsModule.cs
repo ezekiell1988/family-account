@@ -1,3 +1,4 @@
+using FamilyAccountApi.Features.BankMovements.Dtos;
 using FamilyAccountApi.Features.BankStatementTransactions.Dtos;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -43,6 +44,16 @@ public static class BankStatementTransactionsModule
         group.MapDelete("/{id:int}", Delete)
             .WithName("DeleteBankStatementTransaction")
             .WithSummary("Eliminar transacción")
+            .RequireAuthorization("Admin");
+
+        group.MapPatch("/{id:int}/classify", Classify)
+            .WithName("ClassifyBankStatementTransaction")
+            .WithSummary("Clasificar (o reclasificar) una transacción: asignar tipo de movimiento y cuenta contrapartida")
+            .RequireAuthorization("Admin");
+
+        group.MapPost("/{id:int}/create-movement", CreateMovement)
+            .WithName("CreateMovementFromBankStatementTransaction")
+            .WithSummary("Crear un BankMovement a partir de una transacción clasificada y marcarla como conciliada")
             .RequireAuthorization("Admin");
 
         return app;
@@ -112,5 +123,49 @@ public static class BankStatementTransactionsModule
     {
         var deleted = await service.DeleteAsync(id, ct);
         return deleted ? TypedResults.NoContent() : TypedResults.NotFound();
+    }
+
+    private static async Task<Results<Ok<BankStatementTransactionResponse>, NotFound, BadRequest<ProblemDetails>>> Classify(
+        int id,
+        ClassifyBankStatementTransactionRequest request,
+        IBankStatementTransactionService service,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await service.ClassifyAsync(id, request, ct);
+            return result is not null ? TypedResults.Ok(result) : TypedResults.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.BadRequest(new ProblemDetails
+            {
+                Title  = "Clasificación fallida",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
+    private static async Task<Results<Created<BankMovementResponse>, NotFound, BadRequest<ProblemDetails>>> CreateMovement(
+        int id,
+        CreateMovementFromTransactionRequest request,
+        IBankStatementTransactionService service,
+        CancellationToken ct)
+    {
+        try
+        {
+            var movement = await service.CreateMovementFromTransactionAsync(id, request, ct);
+            return TypedResults.Created($"/bank-movements/{movement.IdBankMovement}", movement);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.BadRequest(new ProblemDetails
+            {
+                Title  = "Error al crear movimiento",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
     }
 }

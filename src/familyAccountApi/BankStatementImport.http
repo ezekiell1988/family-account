@@ -1,27 +1,26 @@
 ### ============================================================
-###  FLUJO COMPLETO: Importar extracto BCR (HTML-XLS)
-###  Archivo de prueba: c:\Temp\MovimientosPorRangoFecha_Cta_CR07015202001294229652.xls
-###  Cuenta: SOTO ARCE KAREN TATIANA – CR07 0152 0200 1294 2296 52
+###  Importar extracto BCR (HTML-XLS)
+###  Archivo: c:\Temp\MovimientosPorRangoFecha_Cta_CR07015202001294229652.xls
+###  Cuenta seed:    IdBankAccount=1  → BCR-AHO-001 (Soto Arce Karen Tatiana)
+###  Plantilla seed: IdBankStatementTemplate=1 → BCR-HTML-XLS-V1
 ### ============================================================
 
 @host = https://localhost:7243/api/v1
 
-# ── Paso 0: guarda el token aquí después de hacer login ──────────────────────
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJlemVraWVsbDE5ODhAaG90bWFpbC5jb20iLCJqdGkiOiJhYTNjZTA0My05ZTE1LTQyMDAtOTNiNi1jOWQ2NzljYjBhODAiLCJjb2RlVXNlciI6IlMiLCJuYW1lVXNlciI6IkV6ZXF1aWVsIEJhbHRvZGFubyBDdWJpbGxvIiwiaWF0IjoxNzc0MDI0NTA2LCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOlsiRGV2ZWxvcGVyIiwiQWRtaW4iLCJVc2VyIl0sIm5iZiI6MTc3NDAyNDUwNiwiZXhwIjoxNzc0MDI4MTA2LCJpc3MiOiJGYW1pbHlBY2NvdW50QXBpIiwiYXVkIjoiRmFtaWx5QWNjb3VudENsaWVudHMifQ.UEMI4Er379UJl6Vi3OSozWJNIAl1UdqT4zpo8P2WL9s
+# ── Pegá el accessToken devuelto en el Paso 2 ────────────────────────────────
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJlemVraWVsbDE5ODhAaG90bWFpbC5jb20iLCJqdGkiOiJhZDE0NmQwMS03YjU1LTQ0ZDItODA3NC0wZjkxMzIwODE4ZjEiLCJjb2RlVXNlciI6IlMiLCJuYW1lVXNlciI6IkV6ZXF1aWVsIEJhbHRvZGFubyBDdWJpbGxvIiwiaWF0IjoxNzc0MDQzMzQ3LCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOlsiRGV2ZWxvcGVyIiwiQWRtaW4iLCJVc2VyIl0sIm5iZiI6MTc3NDA0MzM0NywiZXhwIjoxNzc0MDQ2OTQ3LCJpc3MiOiJGYW1pbHlBY2NvdW50QXBpIiwiYXVkIjoiRmFtaWx5QWNjb3VudENsaWVudHMifQ.bp6CvTJUK9qmd0oR8FFwSsl9ldKxq8nnUlCBs0dFRBM
 
-# ── Pega aquí el refreshToken devuelto en el login ───────────────────────────
-@refreshToken = <REFRESH_TOKEN_DEL_LOGIN>
+# ── Pegá el refreshToken devuelto en el Paso 2 ───────────────────────────────
+@refreshToken = U0SbtUyqfDbmN+/fFkfOxWOKai4HD9jlEkIwgrMjNKGid3ow9qU5R//rodhj8MUzI0+E7YRA41lFAcvaHP3i2Q==
 
-# ── IDs que se van creando en cada paso ──────────────────────────────────────
-@templateId  = 2
-@bankAccId   = 2
-@importId    = <ID_DEVUELTO_EN_PASO_4>
+# ── ID devuelto por el Paso 3 (upload) ───────────────────────────────────────
+@importId = 2
 
 
 ### ──────────────────────────────────────────────────────────────────────────
-### PASO 0 – Login (obtener PIN)
+### PASO 1 – Solicitar PIN por email
 ### ──────────────────────────────────────────────────────────────────────────
-# @name login
+# @name requestPin
 POST {{host}}/auth/request-pin
 Content-Type: application/json
 
@@ -32,7 +31,8 @@ Content-Type: application/json
 ###
 
 ### ──────────────────────────────────────────────────────────────────────────
-### PASO 1 – Login (obtener JWT)
+### PASO 2 – Login con el PIN recibido → copiá accessToken en @token
+###          y refreshToken en @refreshToken
 ### ──────────────────────────────────────────────────────────────────────────
 # @name login
 POST {{host}}/auth/login
@@ -40,76 +40,19 @@ Content-Type: application/json
 
 {
   "emailUser": "ezekiell1988@hotmail.com",
-  "pin": "23218"
+  "pin": "57449"
 }
 
 ###
 
 ### ──────────────────────────────────────────────────────────────────────────
-### PASO 1b – Refrescar el access token (cuando expire, sin volver a hacer login)
-### Copia el refreshToken de la respuesta del paso anterior y pégalo arriba
-### en la variable @refreshToken. La respuesta devuelve un nuevo accessToken
-### y un nuevo refreshToken — actualizá ambas variables.
+### PASO 3 – Cargar extracto BCR ★
+###   - idBankAccount=1   (BCR-AHO-001, seed)
+###   - idTemplate=1      (BCR-HTML-XLS-V1, seed)
+### Copiá el id devuelto en @importId
 ### ──────────────────────────────────────────────────────────────────────────
-POST {{host}}/auth/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "{{refreshToken}}"
-}
-
-###
-
-### ──────────────────────────────────────────────────────────────────────────
-### PASO 2 – Crear plantilla BCR (ejecutar 1 sola vez)
-### Columnas: 0=FechaContable, 1=FechaTx, 2=Hora, 3=Documento,
-###           4=Descripción, 5=Débito, 6=Crédito, 7=Saldo
-### ──────────────────────────────────────────────────────────────────────────
-# @name createTemplate
-POST {{host}}/bank-statement-templates
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "codeTemplate": "BCR-CRC-001",
-  "nameTemplate": "Banco de Costa Rica – Cuenta Colones",
-  "bankName": "Banco de Costa Rica",
-  "columnMappings": "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}",
-  "dateFormat": "dd/MM/yyyy",
-  "timeFormat": "HH:mm:ss",
-  "isActive": true,
-  "notes": "Exportación HTML/XLS desde Banca en Línea BCR. Formato CR: 1.234,56"
-}
-
-###
-
-### ──────────────────────────────────────────────────────────────────────────
-### PASO 3 – Crear cuenta bancaria BCR (ejecutar 1 sola vez)
-### Ajustá idAccount al ID del cuenta de activo que uses en el plan contable
-### ──────────────────────────────────────────────────────────────────────────
-# @name createBankAccount
-POST {{host}}/bank-accounts
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "idAccount": 7,
-  "idCurrency": 1,
-  "codeBankAccount": "BCR-CR07",
-  "bankName": "Banco de Costa Rica",
-  "accountNumber": "CR07015202001294229652",
-  "accountHolder": "SOTO ARCE KAREN TATIANA",
-  "isActive": true
-}
-
-###
-
-### ──────────────────────────────────────────────────────────────────────────
-### PASO 4 – CARGAR EL EXTRACTO XLS ★ endpoint principal ★
-### idBankAccount e idBankStatementTemplate van en la URL (path params).
-### El body solo lleva el archivo.
-### ──────────────────────────────────────────────────────────────────────────
-POST {{host}}/bank-statement-imports/upload/{{bankAccId}}/{{templateId}}
+# @name uploadStatement
+POST {{host}}/bank-statement-imports/upload/1/1
 Authorization: Bearer {{token}}
 Content-Type: multipart/form-data; boundary=----BoundaryBCR2026
 
@@ -123,7 +66,13 @@ Content-Type: application/octet-stream
 ###
 
 ### ──────────────────────────────────────────────────────────────────────────
-### PASO 5 – Verificar que la importación quedó registrada
+### PASO 3b – Diagnóstico: estado de la importación (POLLING ASYNC)
+###
+###   El upload ahora encola un job de Hangfire y retorna inmediatamente.
+###   Ejecutá este paso hasta que "status" cambie de "Pendiente"/"Procesando"
+###   a "Completado" (o "Error").
+###
+###   "totalTransactions" > 0 confirma que el parser encontró filas.
 ### ──────────────────────────────────────────────────────────────────────────
 GET {{host}}/bank-statement-imports/{{importId}}
 Authorization: Bearer {{token}}
@@ -132,7 +81,7 @@ Accept: application/json
 ###
 
 ### ──────────────────────────────────────────────────────────────────────────
-### PASO 6 – Ver todas las transacciones de la importación
+### PASO 4 – Ver transacciones importadas (ejecutar solo cuando status=Completado)
 ### ──────────────────────────────────────────────────────────────────────────
 GET {{host}}/bank-statement-transactions/import/{{importId}}
 Authorization: Bearer {{token}}
@@ -141,19 +90,13 @@ Accept: application/json
 ###
 
 ### ──────────────────────────────────────────────────────────────────────────
-### EXTRA – Listar todas las importaciones
+### EXTRA – Refrescar token sin volver a hacer login
 ### ──────────────────────────────────────────────────────────────────────────
-GET {{host}}/bank-statement-imports
-Authorization: Bearer {{token}}
-Accept: application/json
+POST {{host}}/auth/refresh
+Content-Type: application/json
 
-###
-
-### ──────────────────────────────────────────────────────────────────────────
-### EXTRA – Listar plantillas disponibles
-### ──────────────────────────────────────────────────────────────────────────
-GET {{host}}/bank-statement-templates
-Authorization: Bearer {{token}}
-Accept: application/json
+{
+  "refreshToken": "{{refreshToken}}"
+}
 
 ###

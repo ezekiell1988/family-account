@@ -1,12 +1,18 @@
+using FamilyAccountApi.BackgroundJobs;
 using FamilyAccountApi.Domain.Entities;
 using FamilyAccountApi.Features.BankStatementImports.Dtos;
 using FamilyAccountApi.Features.BankStatementImports.Parsers;
 using FamilyAccountApi.Infrastructure.Data;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace FamilyAccountApi.Features.BankStatementImports;
 
-public sealed class BankStatementImportService(AppDbContext db) : IBankStatementImportService
+public sealed class BankStatementImportService(
+    AppDbContext db,
+    IDistributedCache cache,
+    IBackgroundJobClient backgroundJobs) : IBankStatementImportService
 {
     public async Task<IReadOnlyList<BankStatementImportResponse>> GetAllAsync(CancellationToken ct = default)
     {
@@ -173,57 +179,52 @@ public sealed class BankStatementImportService(AppDbContext db) : IBankStatement
         int       importedBy,
         CancellationToken ct = default)
     {
+        // ── Validaciones ──────────────────────────────────────────────────
         var bankAccountExists = await db.BankAccount
             .AsNoTracking()
             .AnyAsync(b => b.IdBankAccount == idBankAccount, ct);
         if (!bankAccountExists)
             throw new InvalidOperationException($"La cuenta bancaria con ID {idBankAccount} no existe.");
 
-        var template = await db.BankStatementTemplate
+        var templateExists = await db.BankStatementTemplate
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.IdBankStatementTemplate == idBankStatementTemplate, ct)
-            ?? throw new InvalidOperationException($"La plantilla con ID {idBankStatementTemplate} no existe.");
+            .AnyAsync(t => t.IdBankStatementTemplate == idBankStatementTemplate, ct);
+        if (!templateExists)
+            throw new InvalidOperationException($"La plantilla con ID {idBankStatementTemplate} no existe.");
 
-        // Parsear el archivo HTML-XLS
-        using var stream = file.OpenReadStream();
-        var parsed = BcrXlsParser.Parse(
-            stream,
-            template.ColumnMappings,
-            template.DateFormat,
-            template.TimeFormat);
+        // ── Leer bytes del archivo (el stream solo vive mientras dura el request) ─
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        var fileBytes = ms.ToArray();
 
+        // ── Crear registro en BD con estado Pendiente ─────────────────────
         var import = new BankStatementImport
         {
-            IdBankAccount              = idBankAccount,
-            IdBankStatementTemplate    = idBankStatementTemplate,
-            FileName                   = file.FileName,
-            ImportDate                 = DateTime.UtcNow,
-            ImportedBy                 = importedBy,
-            Status                     = "Completado",
-            TotalTransactions          = parsed.Count,
-            ProcessedTransactions      = parsed.Count,
-            ErrorMessage               = null
+            IdBankAccount           = idBankAccount,
+            IdBankStatementTemplate = idBankStatementTemplate,
+            FileName                = file.FileName,
+            ImportDate              = DateTime.UtcNow,
+            ImportedBy              = importedBy,
+            Status                  = "Pendiente",
+            TotalTransactions       = 0,
+            ProcessedTransactions   = 0,
+            ErrorMessage            = null
         };
 
         db.BankStatementImport.Add(import);
         await db.SaveChangesAsync(ct);
 
-        var transactions = parsed.Select(p => new BankStatementTransaction
-        {
-            IdBankStatementImport = import.IdBankStatementImport,
-            AccountingDate        = p.AccountingDate,
-            TransactionDate       = p.TransactionDate,
-            TransactionTime       = p.TransactionTime,
-            DocumentNumber        = p.DocumentNumber,
-            Description           = p.Description,
-            DebitAmount           = p.DebitAmount,
-            CreditAmount          = p.CreditAmount,
-            Balance               = p.Balance,
-            IsReconciled          = false
-        }).ToList();
+        // ── Guardar archivo en Redis (TTL 1 h, margen para reintentos del job) ─
+        var redisKey = BankStatementImportJob.BuildRedisKey(import.IdBankStatementImport);
+        await cache.SetAsync(redisKey, fileBytes,
+            new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+            }, ct);
 
-        db.BankStatementTransaction.AddRange(transactions);
-        await db.SaveChangesAsync(ct);
+        // ── Encolar el job de Hangfire ─────────────────────────────────────
+        backgroundJobs.Enqueue<BankStatementImportJob>(
+            job => job.ProcessAsync(import.IdBankStatementImport));
 
         // Cargar navegaciones para el response
         await db.Entry(import)

@@ -144,12 +144,12 @@ public static class BankStatementImportsModule
             var result = await service.UploadAsync(file, idBankAccount, idBankStatementTemplate, userId, ct);
             return TypedResults.Created($"/bank-statement-imports/{result.IdBankStatementImport}", result);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
             return TypedResults.BadRequest(new ProblemDetails
             {
                 Title  = "Error de importación",
-                Detail = ex.Message,
+                Detail = $"{ex.GetType().Name}: {ex.Message}",
                 Status = StatusCodes.Status400BadRequest
             });
         }

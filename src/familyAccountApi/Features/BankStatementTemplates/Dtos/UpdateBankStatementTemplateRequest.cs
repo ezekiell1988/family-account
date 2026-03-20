@@ -21,6 +21,10 @@ public sealed record UpdateBankStatementTemplateRequest
     [Description("Mapeo de columnas en formato JSON")]
     public required string ColumnMappings { get; init; }
 
+    [Description("Reglas de palabras clave en formato JSON para auto-clasificar transacciones. " +
+                 "Ejemplo: [{\"keywords\":[\"SALARIO\",\"ITQS\"],\"idBankMovementType\":1,\"idAccountCounterpart\":44}]")]
+    public string? KeywordRules { get; init; }
+
     [StringLength(50)]
     [Description("Formato de fecha (ej: dd/MM/yyyy)")]
     public string? DateFormat { get; init; }

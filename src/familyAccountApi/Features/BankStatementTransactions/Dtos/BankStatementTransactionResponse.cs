@@ -12,4 +12,9 @@ public sealed record BankStatementTransactionResponse(
     decimal? CreditAmount,
     decimal? Balance,
     bool IsReconciled,
+    int? IdBankMovementType,
+    string? BankMovementTypeName,
+    string? MovementSign,
+    int? IdAccountCounterpart,
+    string? AccountCounterpartName,
     int? IdAccountingEntry);

@@ -51,6 +51,7 @@ public static class BcrXlsParser
                       ?? new BcrColumnMapping();
 
         var doc = new HtmlDocument();
+        doc.OptionFixNestedTags = true;
         doc.Load(fileStream, detectEncodingFromByteOrderMarks: true);
 
         // El BCR usa id="t1" para la tabla de datos;
@@ -81,9 +82,13 @@ public static class BcrXlsParser
             var cells = row.SelectNodes(".//td");
             if (cells is null || cells.Count < 5) continue;
 
+            // IMPORTANTE: Trim() debe ir DESPUÉS de DeEntitize.
+            // El BCR genera celdas con &nbsp; al inicio (p.ej. "&nbsp;02/01/2026").
+            // Si se hace Trim() antes de DeEntitize, el &nbsp; se convierte en \u00a0
+            // (NO-BREAK SPACE) después del trim y DateOnly.TryParseExact falla.
             string Cell(int idx) =>
                 idx < cells.Count
-                    ? HtmlEntity.DeEntitize(cells[idx].InnerText.Trim())
+                    ? HtmlEntity.DeEntitize(cells[idx].InnerText).Trim()
                     : string.Empty;
 
             var accountingDateStr  = Cell(mapping.AccountingDate);
@@ -131,20 +136,36 @@ public static class BcrXlsParser
     }
 
     /// <summary>
-    /// Parsea montos en formato costarricense: 1.234,56
-    /// (punto = separador de miles, coma = separador decimal).
+    /// Parsea montos detectando automáticamente el formato:
+    ///   US/EN:  1,234.56  (coma = miles, punto = decimal)  ← formato BCR
+    ///   CR/EU:  1.234,56  (punto = miles, coma = decimal)
+    /// La detección se basa en cuál separador aparece al final.
     /// </summary>
     private static decimal? ParseAmount(string value)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
 
-        // Quitar espacios y símbolo de moneda si lo hubiera
-        var cleaned = value.Replace(" ", "").TrimStart('¢', '$', '₡');
+        var cleaned = value
+            .Replace("\u00a0", "")   // eliminar NBSP que pueda venir de &nbsp;
+            .Replace(" ", "")
+            .TrimStart('¢', '$', '₡');
 
-        // Formato CR: 1.234,56 → quitar puntos, cambiar coma por punto
-        cleaned = cleaned.Replace(".", "").Replace(",", ".");
+        if (string.IsNullOrEmpty(cleaned)) return null;
 
-        return decimal.TryParse(cleaned, NumberStyles.Number,
+        int lastDot   = cleaned.LastIndexOf('.');
+        int lastComma = cleaned.LastIndexOf(',');
+
+        string normalized;
+        if (lastDot > lastComma)
+            // US/EN: 1,234.56 → quitar comas (son separadores de miles)
+            normalized = cleaned.Replace(",", "");
+        else if (lastComma > lastDot)
+            // CR/EU: 1.234,56 → quitar puntos, coma → punto
+            normalized = cleaned.Replace(".", "").Replace(",", ".");
+        else
+            normalized = cleaned;
+
+        return decimal.TryParse(normalized, NumberStyles.Number,
             CultureInfo.InvariantCulture, out var result)
             ? result
             : null;

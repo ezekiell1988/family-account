@@ -57,9 +57,62 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
             .HasMaxLength(1000)
             .HasComment("Notas o instrucciones adicionales para el uso de la plantilla");
 
+        builder.Property(b => b.KeywordRules)
+            .HasComment("Reglas de palabras clave en formato JSON para auto-clasificar transacciones durante la importaci\u00f3n");
+
         // ── Índice único ─────────────────────────────────────
         builder.HasIndex(b => b.CodeTemplate)
             .IsUnique()
             .HasDatabaseName("UQ_bankStatementTemplate_codeTemplate");
+
+        // ── Seed ──────────────────────────────────────────────────────────────
+        // Plantilla BCR: el archivo .xls del portal BCR es HTML con tabla id="t1".
+        // ColumnMappings usa los índices de BcrColumnMapping (0=FechaContable,
+        // 1=FechaTrx, 2=Hora, 3=Documento, 4=Descripción, 5=Débito, 6=Crédito, 7=Saldo).
+        //
+        // KeywordRules — relacionadas con BankMovementType seed:
+        //   1=SAL  Depósito de Salario    (Abono)
+        //   2=DEP  Depósito en Efectivo   (Abono)
+        //   3=TRANSF-REC Transferencia Recibida (Abono)
+        //   5=RET  Retiro en Efectivo     (Cargo)
+        //   6=PAGO-TC Pago Tarjeta Crédito (Cargo)
+        //   7=PAGO-PREST Pago de Préstamo  (Cargo)
+        //   8=TRANSF-ENV Transferencia Enviada (Cargo)
+        //
+        // BankAccount IdBankAccount=1 → BCR-AHO-001 (CR07015202001294229652, Soto Arce Karen Tatiana)
+        // La asociación plantilla↔cuenta se realiza al crear el BankStatementImport.
+        builder.HasData(new BankStatementTemplate
+        {
+            IdBankStatementTemplate = 1,
+            CodeTemplate  = "BCR-HTML-XLS-V1",
+            NameTemplate  = "BCR – Movimientos de Cuenta (HTML-XLS)",
+            BankName      = "Banco de Costa Rica",
+            DateFormat    = "dd/MM/yyyy",
+            TimeFormat    = "HH:mm:ss",
+            IsActive      = true,
+            Notes         = "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. " +
+                            "Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.",
+            ColumnMappings = """{"accountingDate":0,"transactionDate":1,"transactionTime":2,"documentNumber":3,"description":4,"debitAmount":5,"creditAmount":6,"balance":7,"skipHeaderRows":1}""",
+            KeywordRules   = """
+[
+  {"keywords":["SALARIO","ITQS","IT QUEST","NOMINA","PLANILLA"],
+                                                                        "idBankMovementType":1,"matchMode":"Any"},
+  {"keywords":["DEP EFECTIVO","DEPOSITO EFECTIVO","DEPOSITO EN CAJA"],
+                                                                        "idBankMovementType":2,"matchMode":"Any"},
+  {"keywords":["INTERNET DTR SINPE","DTR SINPE","SINPE CR","TRANSF CREDIT","CREDITO SINPE","SINPE MOVIL CR","ABONO SINPE","RECIBO SINPE"],
+                                                                        "idBankMovementType":3,"matchMode":"Any"},
+  {"keywords":["COMPRAS EN COMERCIOS","COMPRA EN COMERCIO","COMPRAS COMERC","COMPRA COMERC"],
+                                                                        "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["RETIRO ATM","RETIRO CAJERO","RETIRO EFECTIVO","CAJERO AUTOMATICO"],
+                                                                        "idBankMovementType":5,"matchMode":"Any"},
+  {"keywords":["PAGO TC","PAGO TARJETA","TRJ CRED","PAGO TARJETA CREDITO","PAGO TRJ","PAGO TARJETAS"],
+                                                                        "idBankMovementType":6,"matchMode":"Any"},
+  {"keywords":["PAGO PREST","CUOTA PREST","PAGO PRESTAMO","CUOTA PRESTAMO"],
+                                                                        "idBankMovementType":7,"matchMode":"Any"},
+  {"keywords":["SINPE MOVIL OTRA ENT","OTRA ENT","TRANSF DEB","SINPE DEB","DEB SINPE","SINPE MOVIL DEB","DEBITO SINPE","TRANSFERENCIA SINPE DEB","CARGO SINPE"],
+                                                                        "idBankMovementType":8,"matchMode":"Any"}
+]
+"""
+        });
     }
 }

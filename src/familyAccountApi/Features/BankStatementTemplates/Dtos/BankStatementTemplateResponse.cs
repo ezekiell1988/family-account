@@ -6,6 +6,7 @@ public sealed record BankStatementTemplateResponse(
     string NameTemplate,
     string BankName,
     string ColumnMappings,
+    string? KeywordRules,
     string? DateFormat,
     string? TimeFormat,
     bool IsActive,

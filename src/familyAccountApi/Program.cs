@@ -127,6 +127,7 @@ builder.Services.AddHangfireServer(options =>
 builder.Services.AddScoped<EmailJobs>();
 builder.Services.AddScoped<PinJobs>();
 builder.Services.AddScoped<FiscalPeriodJobs>();
+builder.Services.AddScoped<BankStatementImportJob>();
 
 // ─── Auth (JWT Bearer) ───────────────────────────────────────────────────────
 var jwtSection = builder.Configuration.GetSection(JwtOptions.Section);

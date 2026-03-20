@@ -36,6 +36,12 @@ public sealed record UpdateBankStatementTransactionRequest
     [Description("Indica si está conciliada")]
     public bool IsReconciled { get; init; }
 
+    [Description("ID del tipo de movimiento bancario asignado (manual o auto)")]
+    public int? IdBankMovementType { get; init; }
+
+    [Description("ID de la cuenta contable contrapartida (sobreescribe la del tipo de movimiento si se especifica)")]
+    public int? IdAccountCounterpart { get; init; }
+
     [Description("ID del asiento contable asociado")]
     public int? IdAccountingEntry { get; init; }
 }
