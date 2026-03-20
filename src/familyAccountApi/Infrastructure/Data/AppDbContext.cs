@@ -23,6 +23,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<AccountingEntry>          AccountingEntry          => Set<AccountingEntry>();
     public DbSet<AccountingEntryLine>      AccountingEntryLine      => Set<AccountingEntryLine>();
     public DbSet<CostCenter>               CostCenter               => Set<CostCenter>();
+    public DbSet<Currency>                 Currency                 => Set<Currency>();
+    public DbSet<ExchangeRate>             ExchangeRate             => Set<ExchangeRate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
