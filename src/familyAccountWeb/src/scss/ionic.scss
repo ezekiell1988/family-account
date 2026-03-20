@@ -1,0 +1,42 @@
+/* =====================================================
+   IONIC STYLES - Mobile Only
+   Este archivo se compila y carga dinámicamente solo en móvil
+   ===================================================== */
+
+/**
+ * Ionic Framework - Core Styles
+ * -----------------------------------------------------
+ * Importamos los estilos base de Ionic que proporcionan
+ * la funcionalidad y diseño de los componentes móviles.
+ */
+@import '~@ionic/angular/css/core.css';
+@import '~@ionic/angular/css/structure.css';
+@import '~@ionic/angular/css/typography.css';
+@import '~@ionic/angular/css/display.css';
+@import '~@ionic/angular/css/padding.css';
+@import '~@ionic/angular/css/float-elements.css';
+@import '~@ionic/angular/css/text-alignment.css';
+@import '~@ionic/angular/css/text-transformation.css';
+@import '~@ionic/angular/css/flex-utils.css';
+
+/**
+ * Dark Mode
+ * -----------------------------------------------------
+ * Soporte para tema oscuro de Ionic usando la clase .ion-palette-dark
+ * Documentación: https://ionicframework.com/docs/theming/dark-mode
+ */
+@import '~@ionic/angular/css/palettes/dark.class.css';
+
+/**
+ * Custom Mobile Styles - Estructura Modular
+ * -----------------------------------------------------
+ * Estilos personalizados organizados por funcionalidad.
+ * Nota: Se eliminó ionic-mobile.css a favor de esta estructura SCSS modular.
+ */
+@import 'ionic/variables';      // Variables y configuración global
+@import 'ionic/layout';         // Estructura de página y layout
+@import 'ionic/components';     // Componentes Ionic personalizados
+@import 'ionic/pages';          // Estilos específicos de páginas
+@import 'ionic/theme-panel';    // Panel de configuración de tema
+@import 'ionic/dark-mode';      // Modo oscuro
+

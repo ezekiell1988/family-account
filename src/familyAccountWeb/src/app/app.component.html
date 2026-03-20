@@ -1,0 +1,15 @@
+<!-- =====================================================
+     APP ROOT - Selector de Layout Responsivo
+     
+     Decide qué layout usar según el modo de plataforma:
+     - Mobile: app-mobile-layout (Ionic)
+     - Desktop: app-desktop-layout (Color-Admin)
+     ===================================================== -->
+
+@if (isMobile()) {
+  <app-mobile-layout></app-mobile-layout>
+}
+
+@if (isDesktop()) {
+  <app-desktop-layout></app-desktop-layout>
+}

@@ -1,0 +1,11 @@
+export { HomePage } from './home';
+export { ErrorPage } from './error';
+export { LoginPage } from './login';
+export { CampaignsListPage, CampaignDetailPage } from './reports';
+export { ClientPage, ContaboStoragePage, RedisCachePage, HangfireJobsPage, EmailTemplatesPage, EmailTemplatePreviewPage, MultimediaPage, SendgridSuppressionGroupsPage, SendgridListsPage, LoginsPage } from './maintenance';
+export { IntegrationOnePage, IntegrationTwoPage } from './process';
+// export { AddressPage } from './address';
+// export { VoiceShoppingPage } from './voice-shopping';
+// export { VoiceReviewPage } from './voice-review';
+// export { MediaFileListPage } from './media-file/media-file-list';
+// export { MediaFileUploadPage } from './media-file/media-file-upload';

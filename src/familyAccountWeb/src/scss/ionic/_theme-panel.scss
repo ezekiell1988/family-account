@@ -1,0 +1,73 @@
+/* =====================================================
+   THEME PANEL - Panel de Configuración Móvil
+   ===================================================== */
+
+// Selector de colores en grid
+.color-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.color-option {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.color-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  ion-icon {
+    color: white;
+    font-size: 28px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+  }
+  
+  // Efecto de selección
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    transition: border-color 0.2s ease;
+  }
+  
+  &:has(ion-icon)::after {
+    border-color: currentColor;
+  }
+}
+
+/* =====================================================
+   BACKGROUND COLOR UTILITIES
+   Clases de fondo usando las variables CSS del template
+   ===================================================== */
+
+.bg-red { background-color: var(--bs-red) !important; }
+.bg-pink { background-color: var(--bs-pink) !important; }
+.bg-orange { background-color: var(--bs-orange) !important; }
+.bg-yellow { background-color: var(--bs-yellow) !important; }
+.bg-lime { background-color: var(--bs-lime) !important; }
+.bg-green { background-color: var(--bs-green) !important; }
+.bg-teal { background-color: var(--bs-teal) !important; }
+.bg-cyan { background-color: var(--bs-cyan) !important; }
+.bg-blue { background-color: var(--bs-blue) !important; }
+.bg-purple { background-color: var(--bs-purple) !important; }
+.bg-indigo { background-color: var(--bs-indigo) !important; }
+.bg-gray-500 { background-color: var(--bs-gray-500) !important; }

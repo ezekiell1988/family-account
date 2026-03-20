@@ -1,0 +1,124 @@
+/* =====================================================
+   MOBILE LAYOUT COMPONENT
+   Estilos para el layout móvil con Ionic
+   ===================================================== */
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* =====================================================
+   MENÚ - Configuración General
+   ===================================================== */
+
+.menu-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  border-top: 1px solid var(--ion-border-color);
+}
+
+ion-content {
+  --background: var(--ion-background-color);
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
+}
+
+.ion-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* =====================================================
+   PERFIL DE USUARIO - Menú Móvil
+   ===================================================== */
+
+::ng-deep {
+  .user-profile-mobile {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--ion-border-color);
+    margin-bottom: 10px;
+    
+    .profile-avatar {
+      margin-bottom: 12px;
+      
+      img {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid var(--ion-color-primary);
+        object-fit: cover;
+      }
+    }
+    
+    .profile-info {
+      color: var(--ion-text-color);
+      margin: 0;
+      
+      h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0 0 4px 0;
+        color: var(--ion-text-color);
+        line-height: 1.3;
+      }
+      
+      p {
+        font-size: 14px;
+        margin: 0;
+        color: var(--ion-color-medium);
+        opacity: 0.8;
+        line-height: 1.3;
+      }
+    }
+  }
+
+  /* =====================================================
+     MENÚ - Item Seleccionado
+     ===================================================== */
+  
+  ion-menu ion-item.selected {
+    --background: var(--ion-color-primary-tint);
+    --color: var(--ion-color-primary);
+    
+    ion-label {
+      font-weight: 600;
+    }
+    
+    ion-icon[slot="start"] {
+      color: var(--ion-color-primary);
+    }
+  }
+
+  /* =====================================================
+     DARK MODE - Menú y Perfil
+     Ionic usa .ion-palette-dark según documentación oficial
+     ===================================================== */
+  
+  .ion-palette-dark {
+    .user-profile-mobile {
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    ion-menu ion-item.selected {
+      --background: rgba(52, 143, 226, 0.2);
+      --color: var(--ion-color-primary-tint);
+      
+      ion-label {
+        color: var(--ion-color-primary-tint);
+      }
+      
+      ion-icon[slot="start"] {
+        color: var(--ion-color-primary-tint);
+      }
+    }
+  }
+}

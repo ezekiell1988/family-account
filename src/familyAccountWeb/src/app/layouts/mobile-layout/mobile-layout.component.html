@@ -1,0 +1,24 @@
+<!-- =====================================================
+     MOBILE LAYOUT - Ionic Framework
+     
+     Estructura de la app móvil con:
+     - ion-menu: Menú lateral
+     - ion-header: Barra superior
+     - ion-content: Contenido principal
+     ===================================================== -->
+
+<ion-app>
+  <!-- Página principal - DEBE ir primero para estar en el DOM cuando carguen los menús -->
+  <div class="ion-page" id="main-content">
+    <ion-router-outlet></ion-router-outlet>
+  </div>
+
+  <!-- Menú lateral de Ionic -->
+  <sidebar></sidebar>
+
+  <!-- Theme Panel -->
+  <theme-panel
+    (appDarkModeChanged)="onAppDarkModeChanged($event)"
+    (appThemeChanged)="onAppThemeChanged($event)">
+  </theme-panel>
+</ion-app>

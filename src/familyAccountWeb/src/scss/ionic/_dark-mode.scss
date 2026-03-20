@@ -1,0 +1,105 @@
+/* =====================================================
+   DARK MODE - Configuración de Modo Oscuro
+   
+   Ionic usa la clase .ion-palette-dark en el elemento html según:
+   https://ionicframework.com/docs/theming/dark-mode
+   
+   El archivo dark.class.css de Ionic ya define las variables base.
+   Aquí solo personalizamos componentes específicos.
+   ===================================================== */
+
+.ion-palette-dark {
+  /* Las variables principales ya están definidas por dark.class.css:
+   * --ion-background-color, --ion-text-color, --ion-color-step-*, etc.
+   * Solo personalizamos componentes específicos
+   */
+  
+  // Asegurar que el fondo y texto usen las variables de Ionic
+  --ion-background-color: #121212;
+  --ion-background-color-rgb: 18, 18, 18;
+  --ion-text-color: #ffffff;
+  --ion-text-color-rgb: 255, 255, 255;
+  
+  // Toolbar
+  ion-toolbar {
+    --background: #1e1e1e;
+    --color: #ffffff;
+  }
+  
+  // Tab Bar
+  ion-tab-bar {
+    --background: #1e1e1e;
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  // Cards
+  ion-card {
+    --background: #1e1e1e;
+    --color: #ffffff;
+  }
+  
+  // Content
+  ion-content {
+    --background: #121212;
+    --color: #ffffff;
+  }
+  
+  // Footer
+  ion-footer {
+    border-top-color: rgba(255, 255, 255, 0.1);
+    
+    ion-toolbar {
+      --background: #1e1e1e;
+      --color: #ffffff;
+    }
+  }
+  
+  // Items
+  ion-item {
+    --background: #1e1e1e;
+    --color: #ffffff;
+    --border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  // Inputs (ion-input, ion-textarea, ion-select)
+  ion-input,
+  ion-textarea,
+  ion-select {
+    --background: #1e1e1e;
+    --color: #ffffff;
+    --placeholder-color: rgba(255, 255, 255, 0.6);
+    --placeholder-opacity: 0.6;
+  }
+  
+  // Select específico
+  ion-select::part(text) {
+    color: #ffffff;
+  }
+  
+  ion-select::part(icon) {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  
+  // Lists
+  ion-list {
+    background: #121212;
+  }
+  
+  ion-list-header {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  
+  // Balance Card (Home Page)
+  .balance-card {
+    background: linear-gradient(135deg, #1e3a5f, #0f1f33);
+  }
+  
+  // Theme Panel
+  .color-circle {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  }
+  
+  ion-toggle {
+    --background: rgba(255, 255, 255, 0.2);
+  }
+}

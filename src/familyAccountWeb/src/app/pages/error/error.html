@@ -1,0 +1,58 @@
+<!-- =====================================================
+     ERROR PAGE - RESPONSIVE DUAL TEMPLATE
+     
+     Template condicional según plataforma:
+     - Mobile: Ionic Cards y componentes
+     - Desktop: Color-Admin error layout
+     ===================================================== -->
+
+<!-- ========== VERSIÓN MÓVIL (IONIC) ========== -->
+@if (isMobile()) {
+<header [pageTitle]="getPageTitle()"></header>
+
+<ion-content class="ion-padding">
+  <div class="ion-padding ion-text-center" style="margin-top: 20%;">
+    <ion-card>
+      <ion-card-content>
+        <div style="font-size: 120px; font-weight: 700; color: var(--ion-color-medium); margin: 20px 0;">
+          404
+        </div>
+        <h2 style="color: var(--ion-color-dark); margin-bottom: 16px;">
+          {{ 'ERROR.TITLE' | translate }}
+        </h2>
+        <p style="color: var(--ion-color-medium); margin-bottom: 24px;">
+          {{ 'ERROR.MESSAGE' | translate }}<br />
+          {{ 'ERROR.SUGGESTION' | translate }}
+        </p>
+        <ion-button expand="block" routerLink="/" color="theme">
+          <ion-icon name="home-outline" slot="start"></ion-icon>
+          {{ 'ERROR.GO_HOME' | translate }}
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>
+
+<app-footer translucent="true" footerText="© {{ appSettings.nameCompany }} BackOffice" />
+}
+
+<!-- ========== VERSIÓN DESKTOP (COLOR-ADMIN) ========== -->
+@if (isDesktop()) {
+<!-- BEGIN error -->
+<div class="error">
+	<div class="error-code">404</div>
+	<div class="error-content">
+		<div class="error-message">{{ 'ERROR.TITLE' | translate }}</div>
+		<div class="error-desc mb-4">
+			{{ 'ERROR.MESSAGE' | translate }} <br />
+			{{ 'ERROR.SUGGESTION' | translate }}
+		</div>
+		<div>
+			<a routerLink="/" class="btn btn-theme px-3">
+				<i class="fa fa-home me-2"></i>{{ 'ERROR.GO_HOME' | translate }}
+			</a>
+		</div>
+	</div>
+</div>
+<!-- END error -->
+}
