@@ -56,5 +56,28 @@ public sealed class BankMovementTypeConfiguration : IEntityTypeConfiguration<Ban
             .WithMany()
             .HasForeignKey(bmt => bmt.IdAccountCounterpart)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Seed ──────────────────────────────────────────────────────────────────
+        // IdAccountCounterpart referencia el plan contable (AccountConfiguration seed)
+        //   44  → 4.1.01.01  ITQS Salario (Ingreso)
+        //   15  → 4.3        Otros Ingresos (Ingreso, agrupador)
+        //   96  → 5.12       Otros (Gasto, agrupador catch-all)
+        //   75  → 5.12.01    Gastos en Pareja (Gasto)
+        //   28  → 2.1.01     BAC Credomatic - Tarjetas (Pasivo, agrupador)
+        //   42  → 2.2.01.01  Coopealianza Préstamo (Pasivo)
+        //   34  → 1.1.03.01  BN Cuenta CRC (Activo) — contrapartida default en transferencias enviadas
+        builder.HasData(
+            // ── Abonos (entradas) ────────────────────────────────────────────────
+            new BankMovementType { IdBankMovementType = 1, CodeBankMovementType = "SAL",        NameBankMovementType = "Depósito de Salario",     IdAccountCounterpart = 44, MovementSign = "Abono", IsActive = true },
+            new BankMovementType { IdBankMovementType = 2, CodeBankMovementType = "DEP",        NameBankMovementType = "Depósito en Efectivo",    IdAccountCounterpart = 15, MovementSign = "Abono", IsActive = true },
+            new BankMovementType { IdBankMovementType = 3, CodeBankMovementType = "TRANSF-REC", NameBankMovementType = "Transferencia Recibida",  IdAccountCounterpart = 15, MovementSign = "Abono", IsActive = true },
+
+            // ── Cargos (salidas) ─────────────────────────────────────────────────
+            new BankMovementType { IdBankMovementType = 4, CodeBankMovementType = "GASTO",      NameBankMovementType = "Gasto General",           IdAccountCounterpart = 96, MovementSign = "Cargo", IsActive = true },
+            new BankMovementType { IdBankMovementType = 5, CodeBankMovementType = "RET",        NameBankMovementType = "Retiro en Efectivo",      IdAccountCounterpart = 75, MovementSign = "Cargo", IsActive = true },
+            new BankMovementType { IdBankMovementType = 6, CodeBankMovementType = "PAGO-TC",    NameBankMovementType = "Pago Tarjeta de Crédito", IdAccountCounterpart = 28, MovementSign = "Cargo", IsActive = true },
+            new BankMovementType { IdBankMovementType = 7, CodeBankMovementType = "PAGO-PREST", NameBankMovementType = "Pago de Préstamo",        IdAccountCounterpart = 42, MovementSign = "Cargo", IsActive = true },
+            new BankMovementType { IdBankMovementType = 8, CodeBankMovementType = "TRANSF-ENV", NameBankMovementType = "Transferencia Enviada",   IdAccountCounterpart = 34, MovementSign = "Cargo", IsActive = true }
+        );
     }
 }

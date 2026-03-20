@@ -38,5 +38,10 @@ public sealed class CostCenterConfiguration : IEntityTypeConfiguration<CostCente
         builder.HasIndex(cc => cc.CodeCostCenter)
             .IsUnique()
             .HasDatabaseName("UQ_costCenter_codeCostCenter");
-    }
+        // ── Seed ────────────────────────────────────────────────────────────
+        builder.HasData(
+            new CostCenter { IdCostCenter = 1, CodeCostCenter = "FAM-KYE",  NameCostCenter = "Familia Baltodano Soto (K & E)",    IsActive = true },
+            new CostCenter { IdCostCenter = 2, CodeCostCenter = "FAM-PAPA", NameCostCenter = "Familia Baltodano Cubillo (Papás)", IsActive = true },
+            new CostCenter { IdCostCenter = 3, CodeCostCenter = "OTROS",    NameCostCenter = "Otros",                             IsActive = true }
+        );    }
 }

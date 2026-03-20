@@ -35,5 +35,15 @@ public sealed class BankConfiguration : IEntityTypeConfiguration<Bank>
         builder.HasIndex(b => b.CodeBank)
             .IsUnique()
             .HasDatabaseName("UQ_bank_codeBank");
+
+        // ── Seed ──────────────────────────────────────────────────────────────
+        builder.HasData(
+            new Bank { IdBank = 1, CodeBank = "BCR",          NameBank = "Banco de Costa Rica",                    IsActive = true },
+            new Bank { IdBank = 2, CodeBank = "BAC",          NameBank = "BAC Credomatic",                         IsActive = true },
+            new Bank { IdBank = 3, CodeBank = "BN",           NameBank = "Banco Nacional de Costa Rica",           IsActive = true },
+            new Bank { IdBank = 4, CodeBank = "COOPEALIANZA", NameBank = "Coopealianza",                           IsActive = true },
+            new Bank { IdBank = 5, CodeBank = "DAVIVIENDA",   NameBank = "Davivienda",                             IsActive = true },
+            new Bank { IdBank = 6, CodeBank = "BPOPULAR",     NameBank = "Banco Popular y de Desarrollo Comunal", IsActive = true }
+        );
     }
 }

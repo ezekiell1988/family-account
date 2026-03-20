@@ -162,68 +162,69 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             new Account { IdAccount = 46, CodeAccount = "5.1.01", NameAccount = "Impuesto de Renta",           TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 45, AllowsMovements = true,  IsActive = true },
             new Account { IdAccount = 47, CodeAccount = "5.1.02", NameAccount = "CCSS - SEM Trabajador",       TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 45, AllowsMovements = true,  IsActive = true },
 
-            // ── 5.2 Familia Baltodano Soto (K & E) ───────────────────────────
-            new Account { IdAccount = 59, CodeAccount = "5.2",    NameAccount = "Familia Baltodano Soto (K & E)", TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,  AllowsMovements = false, IsActive = true },
+            // ── 5.2 Vivienda ──────────────────────────────────────────────────
+            new Account { IdAccount = 59,  CodeAccount = "5.2",     NameAccount = "Vivienda",                           TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 60,  CodeAccount = "5.2.01",  NameAccount = "Alquiler",                           TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 59,  AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 89, CodeAccount = "5.2.01",    NameAccount = "Vivienda",       TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 59, AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 60, CodeAccount = "5.2.01.01", NameAccount = "Alquiler",       TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 89, AllowsMovements = true,  IsActive = true },
+            // ── 5.3 Alimentación ──────────────────────────────────────────────
+            new Account { IdAccount = 90,  CodeAccount = "5.3",     NameAccount = "Alimentación",                       TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 61,  CodeAccount = "5.3.01",  NameAccount = "Alimentación",                       TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 90,  AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 90, CodeAccount = "5.2.02",    NameAccount = "Alimentación",   TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 59, AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 61, CodeAccount = "5.2.02.01", NameAccount = "Alimentación",   TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 90, AllowsMovements = true,  IsActive = true },
+            // ── 5.4 Transporte ────────────────────────────────────────────────
+            new Account { IdAccount = 91,  CodeAccount = "5.4",     NameAccount = "Transporte",                         TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 62,  CodeAccount = "5.4.01",  NameAccount = "Gasolina",                           TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 91,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 83,  CodeAccount = "5.4.02",  NameAccount = "Transporte Actividades",             TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 91,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 84,  CodeAccount = "5.4.03",  NameAccount = "Transporte Citas",                   TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 91,  AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 91, CodeAccount = "5.2.03",    NameAccount = "Transporte",     TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 59, AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 62, CodeAccount = "5.2.03.01", NameAccount = "Gasolina",       TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 91, AllowsMovements = true,  IsActive = true },
+            // ── 5.5 Finanzas ──────────────────────────────────────────────────
+            new Account { IdAccount = 92,  CodeAccount = "5.5",     NameAccount = "Finanzas",                           TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 63,  CodeAccount = "5.5.01",  NameAccount = "Tarjeta BN",                         TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 64,  CodeAccount = "5.5.02",  NameAccount = "Tarjeta BAC Tasa Cero",              TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 65,  CodeAccount = "5.5.03",  NameAccount = "Tarjeta BAC Préstamo 2M",            TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 66,  CodeAccount = "5.5.04",  NameAccount = "Coopealianza",                       TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92,  AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 92, CodeAccount = "5.2.04",    NameAccount = "Finanzas",       TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 59, AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 63, CodeAccount = "5.2.04.01", NameAccount = "Tarjeta BN",              TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 92, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 64, CodeAccount = "5.2.04.02", NameAccount = "Tarjeta BAC Tasa Cero",   TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 92, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 65, CodeAccount = "5.2.04.03", NameAccount = "Tarjeta BAC Préstamo 2M", TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 92, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 66, CodeAccount = "5.2.04.04", NameAccount = "Coopealianza",            TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 92, AllowsMovements = true,  IsActive = true },
+            // ── 5.6 Educación ─────────────────────────────────────────────────
+            new Account { IdAccount = 93,  CodeAccount = "5.6",     NameAccount = "Educación",                          TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 67,  CodeAccount = "5.6.01",  NameAccount = "Clases de Inglés",                   TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 93,  AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 93, CodeAccount = "5.2.05",    NameAccount = "Educación",      TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 59, AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 67, CodeAccount = "5.2.05.01", NameAccount = "Clases de Inglés", TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 93, AllowsMovements = true,  IsActive = true },
+            // ── 5.7 Comunicaciones ────────────────────────────────────────────
+            new Account { IdAccount = 94,  CodeAccount = "5.7",     NameAccount = "Comunicaciones",                     TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 68,  CodeAccount = "5.7.01",  NameAccount = "Teléfono Celular",                   TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 94,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 79,  CodeAccount = "5.7.02",  NameAccount = "Internet",                           TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 94,  AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 94, CodeAccount = "5.2.06",    NameAccount = "Comunicaciones", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 59, AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 68, CodeAccount = "5.2.06.01", NameAccount = "Teléfono Celular", TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 94, AllowsMovements = true,  IsActive = true },
+            // ── 5.8 Suscripciones ─────────────────────────────────────────────
+            new Account { IdAccount = 95,  CodeAccount = "5.8",     NameAccount = "Suscripciones",                      TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 69,  CodeAccount = "5.8.01",  NameAccount = "Netflix",                            TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 95,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 70,  CodeAccount = "5.8.02",  NameAccount = "App Anime",                          TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 95,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 71,  CodeAccount = "5.8.03",  NameAccount = "Apple Music",                        TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 95,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 72,  CodeAccount = "5.8.04",  NameAccount = "Apple iCloud",                       TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 95,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 73,  CodeAccount = "5.8.05",  NameAccount = "ChatGPT",                            TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 95,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 74,  CodeAccount = "5.8.06",  NameAccount = "Copilot",                            TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 95,  AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 95, CodeAccount = "5.2.07",    NameAccount = "Suscripciones",  TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 59, AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 69, CodeAccount = "5.2.07.01", NameAccount = "Netflix",        TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 95, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 70, CodeAccount = "5.2.07.02", NameAccount = "App Anime",      TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 95, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 71, CodeAccount = "5.2.07.03", NameAccount = "Apple Music",    TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 95, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 72, CodeAccount = "5.2.07.04", NameAccount = "Apple iCloud",   TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 95, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 73, CodeAccount = "5.2.07.05", NameAccount = "ChatGPT",        TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 95, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 74, CodeAccount = "5.2.07.06", NameAccount = "Copilot",        TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 95, AllowsMovements = true,  IsActive = true },
+            // ── 5.9 Servicios del Hogar ───────────────────────────────────────
+            new Account { IdAccount = 97,  CodeAccount = "5.9",     NameAccount = "Servicios del Hogar",                TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 80,  CodeAccount = "5.9.01",  NameAccount = "AyA",                                TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 97,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 81,  CodeAccount = "5.9.02",  NameAccount = "CNFL",                               TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 97,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 82,  CodeAccount = "5.9.03",  NameAccount = "Teléfono Casa",                      TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 97,  AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 96, CodeAccount = "5.2.08",    NameAccount = "Otros",          TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 59, AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 75, CodeAccount = "5.2.08.01", NameAccount = "Gastos en Pareja", TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 96, AllowsMovements = true,  IsActive = true },
+            // ── 5.10 Personal y Hogar ─────────────────────────────────────────
+            new Account { IdAccount = 99,  CodeAccount = "5.10",    NameAccount = "Personal y Hogar",                   TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 77,  CodeAccount = "5.10.01", NameAccount = "Aporte Familiar",                    TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 99,  AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 85,  CodeAccount = "5.10.02", NameAccount = "Ayuda en Casa",                      TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 99,  AllowsMovements = true,  IsActive = true },
 
-            // ── 5.3 Familia Baltodano Cubillo (Papás) ────────────────────────
-            new Account { IdAccount = 76, CodeAccount = "5.3",    NameAccount = "Familia Baltodano Cubillo (Papás)", TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,  AllowsMovements = false, IsActive = true },
+            // ── 5.11 Obligaciones ─────────────────────────────────────────────
+            new Account { IdAccount = 100, CodeAccount = "5.11",    NameAccount = "Obligaciones",                       TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 86,  CodeAccount = "5.11.01", NameAccount = "Municipalidad",                      TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 87,  CodeAccount = "5.11.02", NameAccount = "Campo Santo",                        TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 88,  CodeAccount = "5.11.03", NameAccount = "Campo Santo Mantenimiento",          TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 77, CodeAccount = "5.3.01", NameAccount = "Aporte",            TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 76, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 78, CodeAccount = "5.3.02", NameAccount = "Alimentación",      TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 76, AllowsMovements = true,  IsActive = true },
+            // ── 5.12 Otros ────────────────────────────────────────────────────
+            new Account { IdAccount = 96,  CodeAccount = "5.12",    NameAccount = "Otros",                              TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 75,  CodeAccount = "5.12.01", NameAccount = "Gastos en Pareja",                   TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 96,  AllowsMovements = true,  IsActive = true },
 
-            new Account { IdAccount = 97,  CodeAccount = "5.3.03",    NameAccount = "Servicios del Hogar",    TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 76,  AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 79,  CodeAccount = "5.3.03.01", NameAccount = "Internet",               TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 97,  AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 80,  CodeAccount = "5.3.03.02", NameAccount = "AyA",                    TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 97,  AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 81,  CodeAccount = "5.3.03.03", NameAccount = "CNFL",                   TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 97,  AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 82,  CodeAccount = "5.3.03.04", NameAccount = "Teléfono Casa",          TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 97,  AllowsMovements = true,  IsActive = true },
-
-            new Account { IdAccount = 98,  CodeAccount = "5.3.04",    NameAccount = "Transporte",             TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 76,  AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 83,  CodeAccount = "5.3.04.01", NameAccount = "Transporte Actividades", TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 98,  AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 84,  CodeAccount = "5.3.04.02", NameAccount = "Transporte Citas",       TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 98,  AllowsMovements = true,  IsActive = true },
-
-            new Account { IdAccount = 99,  CodeAccount = "5.3.05",    NameAccount = "Personal y Hogar",       TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 76,  AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 85,  CodeAccount = "5.3.05.01", NameAccount = "Ayuda en Casa",          TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 99,  AllowsMovements = true,  IsActive = true },
-
-            new Account { IdAccount = 100, CodeAccount = "5.3.06",    NameAccount = "Obligaciones",           TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 76,  AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 86,  CodeAccount = "5.3.06.01", NameAccount = "Municipalidad",          TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 87,  CodeAccount = "5.3.06.02", NameAccount = "Campo Santo",            TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 88,  CodeAccount = "5.3.06.03", NameAccount = "Campo Santo Mantenimiento", TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
-
-            // ── 5.4 Gastos Financieros ────────────────────────────────────────
-            new Account { IdAccount = 103, CodeAccount = "5.4",    NameAccount = "Gastos Financieros",                 TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 104, CodeAccount = "5.4.01", NameAccount = "Diferencial Cambiario Desfavorable", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 103, AllowsMovements = true,  IsActive = true }
+            // ── 5.13 Gastos Financieros ───────────────────────────────────────
+            new Account { IdAccount = 103, CodeAccount = "5.13",    NameAccount = "Gastos Financieros",                 TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 104, CodeAccount = "5.13.01", NameAccount = "Diferencial Cambiario Desfavorable", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 103, AllowsMovements = true,  IsActive = true }
         );
     }
 }
