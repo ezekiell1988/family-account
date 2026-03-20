@@ -54,7 +54,7 @@ internal sealed class BearerSecuritySchemeTransformer(
         //    ASP.NET Core inyecta en endpoints con RequireAuthorization().
         foreach (var (path, pathItem) in document.Paths)
         {
-            foreach (var (opType, operation) in pathItem.Operations)
+            foreach (var (opType, operation) in pathItem?.Operations ?? [])
             {
                 var isAnonymous = anonymousKeys.Contains(
                     (path, opType.ToString().ToUpperInvariant()));
