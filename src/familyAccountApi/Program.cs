@@ -6,6 +6,9 @@ using Microsoft.Extensions.Caching.Distributed;
 using FamilyAccountApi.Features.Auth;
 using FamilyAccountApi.Features.AccountingEntries;
 using FamilyAccountApi.Features.BankAccounts;
+using FamilyAccountApi.Features.BankStatementImports;
+using FamilyAccountApi.Features.BankStatementTemplates;
+using FamilyAccountApi.Features.BankStatementTransactions;
 using FamilyAccountApi.Features.Budgets;
 using FamilyAccountApi.Features.CostCenters;
 using FamilyAccountApi.Features.Currencies;
@@ -202,6 +205,9 @@ builder.Services.AddCurrenciesModule();
 builder.Services.AddExchangeRatesModule();
 builder.Services.AddBudgetsModule();
 builder.Services.AddBankAccountsModule();
+builder.Services.AddBankStatementTemplatesModule();
+builder.Services.AddBankStatementImportsModule();
+builder.Services.AddBankStatementTransactionsModule();
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -261,6 +267,9 @@ v1.MapCurrenciesEndpoints();
 v1.MapExchangeRatesEndpoints();
 v1.MapBudgetsEndpoints();
 v1.MapBankAccountsEndpoints();
+v1.MapBankStatementTemplatesEndpoints();
+v1.MapBankStatementImportsEndpoints();
+v1.MapBankStatementTransactionsEndpoints();
 
 // ─── Recurring jobs ──────────────────────────────────────────────────────────
 // Crea los 12 períodos del año en curso cada 1° de enero a las 3:00 AM UTC.
