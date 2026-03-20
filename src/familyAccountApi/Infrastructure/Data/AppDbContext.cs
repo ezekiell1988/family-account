@@ -13,6 +13,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Contact>            Contact            => Set<Contact>();
     public DbSet<ContactType>         ContactType        => Set<ContactType>();
     public DbSet<ContactContactType>  ContactContactType => Set<ContactContactType>();
+    public DbSet<ProductSKU>          ProductSKU         => Set<ProductSKU>();
+    public DbSet<Product>                  Product                  => Set<Product>();
+    public DbSet<ProductProductSKU>        ProductProductSKU        => Set<ProductProductSKU>();
+    public DbSet<ProductCategory>          ProductCategory          => Set<ProductCategory>();
+    public DbSet<ProductProductCategory>   ProductProductCategory   => Set<ProductProductCategory>();
+    public DbSet<Account>                  Account                  => Set<Account>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

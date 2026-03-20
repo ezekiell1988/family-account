@@ -5,6 +5,10 @@ using FamilyAccountApi.BackgroundJobs;
 using Microsoft.Extensions.Caching.Distributed;
 using FamilyAccountApi.Features.Auth;
 using FamilyAccountApi.Features.Email;
+using FamilyAccountApi.Features.Accounts;
+using FamilyAccountApi.Features.ProductCategories;
+using FamilyAccountApi.Features.Products;
+using FamilyAccountApi.Features.ProductSKUs;
 using FamilyAccountApi.Features.Users;
 using FamilyAccountApi.Hangfire;
 using FamilyAccountApi.Infrastructure.Data;
@@ -179,6 +183,10 @@ builder.Services.AddValidation();
 builder.Services.AddUsersModule();
 builder.Services.AddAuthModule();
 builder.Services.AddEmailModule();
+builder.Services.AddProductSKUsModule();
+builder.Services.AddProductsModule();
+builder.Services.AddProductCategoriesModule();
+builder.Services.AddAccountsModule();
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -227,6 +235,10 @@ var v1 = app.MapGroup("/api/v1")
 
 v1.MapUsersEndpoints();
 v1.MapAuthEndpoints();
+v1.MapProductSKUsEndpoints();
+v1.MapProductsEndpoints();
+v1.MapProductCategoriesEndpoints();
+v1.MapAccountsEndpoints();
 
 app.Run();
 

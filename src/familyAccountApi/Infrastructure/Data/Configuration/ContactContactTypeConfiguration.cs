@@ -8,9 +8,19 @@ public sealed class ContactContactTypeConfiguration : IEntityTypeConfiguration<C
 {
     public void Configure(EntityTypeBuilder<ContactContactType> builder)
     {
+        builder.ToTable(t => t.HasComment("Tabla de asociación muchos-a-muchos entre contactos y tipos de contacto. Permite que un mismo contacto sea clasificado como Cliente, Proveedor u otros tipos simultáneamente. No se permite la misma combinación contacto-tipo dos veces."));
+
         // ── PK ──────────────────────────────────────────────
         builder.HasKey(cct => cct.IdContactContactType);
-        builder.Property(cct => cct.IdContactContactType).ValueGeneratedOnAdd();
+        builder.Property(cct => cct.IdContactContactType)
+            .ValueGeneratedOnAdd()
+            .HasComment("Identificador único autoincremental de la asociación contacto-tipo.");
+
+        builder.Property(cct => cct.IdContact)
+            .HasComment("FK al contacto.");
+
+        builder.Property(cct => cct.IdContactType)
+            .HasComment("FK al tipo de contacto.");
 
         // ── Índice único compuesto ───────────────────────────
         builder.HasIndex(cct => new { cct.IdContact, cct.IdContactType })

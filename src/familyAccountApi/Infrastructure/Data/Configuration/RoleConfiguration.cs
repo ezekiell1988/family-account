@@ -8,22 +8,29 @@ public sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
 {
     public void Configure(EntityTypeBuilder<Role> builder)
     {
+        builder.ToTable(t => t.HasComment("Roles de acceso del sistema. Define los niveles de autorización: Developer (acceso total), Admin (acceso amplio), User (acceso básico). Los roles se asignan a usuarios a través de la tabla userRole."));
+
         builder.HasKey(r => r.IdRole);
-        builder.Property(r => r.IdRole).ValueGeneratedOnAdd();
+        builder.Property(r => r.IdRole)
+            .ValueGeneratedOnAdd()
+            .HasComment("Identificador único autoincremental del rol.");
 
         builder.Property(r => r.CreateAt)
             .HasColumnType("datetime")
             .HasDefaultValueSql("GETDATE()")
-            .IsRequired();
+            .IsRequired()
+            .HasComment("Fecha y hora de creación del rol.");
 
         builder.Property(r => r.NameRole)
             .HasMaxLength(50)
             .IsRequired()
-            .IsUnicode(false);
+            .IsUnicode(false)
+            .HasComment("Nombre único del rol. Valores del sistema: Developer, Admin, User.");
 
         builder.Property(r => r.DescriptionRole)
             .HasMaxLength(200)
-            .IsUnicode(false);
+            .IsUnicode(false)
+            .HasComment("Descripción del nivel de acceso y permisos que otorga el rol.");
 
         builder.HasIndex(r => r.NameRole)
             .IsUnique()

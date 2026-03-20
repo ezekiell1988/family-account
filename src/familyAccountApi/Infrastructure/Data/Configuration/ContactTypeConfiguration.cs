@@ -8,21 +8,27 @@ public sealed class ContactTypeConfiguration : IEntityTypeConfiguration<ContactT
 {
     public void Configure(EntityTypeBuilder<ContactType> builder)
     {
+        builder.ToTable(t => t.HasComment("Catálogo de tipos de contacto. Permite clasificar un contacto con una o más categorías (ej: Cliente, Proveedor). Los valores se asignan a contactos a través de la tabla contactContactType."));
+
         // ── PK ──────────────────────────────────────────────
         builder.HasKey(ct => ct.IdContactType);
-        builder.Property(ct => ct.IdContactType).ValueGeneratedOnAdd();
+        builder.Property(ct => ct.IdContactType)
+            .ValueGeneratedOnAdd()
+            .HasComment("Identificador único autoincremental del tipo de contacto.");
 
         // ── Código ──────────────────────────────────────────
         builder.Property(ct => ct.CodeContactType)
             .HasMaxLength(50)
             .IsRequired()
-            .IsUnicode(false);
+            .IsUnicode(false)
+            .HasComment("Código abreviado único del tipo de contacto. Ej: 'CLI' (Cliente), 'PRO' (Proveedor).");
 
         // ── Nombre ──────────────────────────────────────────
         builder.Property(ct => ct.Name)
             .HasMaxLength(200)
             .IsRequired()
-            .IsUnicode();
+            .IsUnicode()
+            .HasComment("Nombre descriptivo del tipo de contacto. Ej: 'Cliente', 'Proveedor'.");
 
         // ── Índices ─────────────────────────────────────────
         builder.HasIndex(ct => ct.CodeContactType)
