@@ -8,4 +8,6 @@ public sealed class Currency
     public string SymbolCurrency { get; set; } = null!;
 
     public ICollection<ExchangeRate> ExchangeRates { get; set; } = [];
+    public ICollection<AccountingEntry> AccountingEntries { get; set; } = [];
+    public ICollection<BankAccount> BankAccounts { get; set; } = [];
 }

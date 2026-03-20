@@ -25,6 +25,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CostCenter>               CostCenter               => Set<CostCenter>();
     public DbSet<Currency>                 Currency                 => Set<Currency>();
     public DbSet<ExchangeRate>             ExchangeRate             => Set<ExchangeRate>();
+    public DbSet<Budget>                   Budget                   => Set<Budget>();
+    public DbSet<BankAccount>              BankAccount              => Set<BankAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

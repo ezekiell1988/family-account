@@ -19,4 +19,6 @@ public sealed class Account
     public Account?             Parent   { get; set; }
     public ICollection<Account> Children { get; set; } = [];
     public ICollection<AccountingEntryLine> AccountingEntryLines { get; set; } = [];
+    public ICollection<Budget> Budgets { get; set; } = [];
+    public ICollection<BankAccount> BankAccounts { get; set; } = [];
 }

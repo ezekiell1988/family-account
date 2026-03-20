@@ -23,6 +23,10 @@ public sealed class AccountingEntryConfiguration : IEntityTypeConfiguration<Acco
             .IsRequired()
             .HasComment("FK al período fiscal al que pertenece el asiento contable.");
 
+        builder.Property(ae => ae.IdCurrency)
+            .IsRequired()
+            .HasComment("FK a la moneda en la que fue registrado el asiento contable.");
+
         builder.Property(ae => ae.NumberEntry)
             .HasMaxLength(30)
             .IsRequired()
@@ -49,6 +53,11 @@ public sealed class AccountingEntryConfiguration : IEntityTypeConfiguration<Acco
             .IsUnicode(false)
             .HasComment("Referencia opcional del asiento, como número de documento, factura o comprobante externo.");
 
+        builder.Property(ae => ae.ExchangeRateValue)
+            .HasPrecision(18, 6)
+            .IsRequired()
+            .HasComment("Tipo de cambio utilizado al momento de registrar el asiento contable.");
+
         builder.Property(ae => ae.CreatedAt)
             .ValueGeneratedOnAdd()
             .HasDefaultValueSql("GETDATE()")
@@ -58,9 +67,17 @@ public sealed class AccountingEntryConfiguration : IEntityTypeConfiguration<Acco
             .IsUnique()
             .HasDatabaseName("UQ_accountingEntry_idFiscalPeriod_numberEntry");
 
+        builder.HasIndex(ae => ae.IdCurrency)
+            .HasDatabaseName("IX_accountingEntry_idCurrency");
+
         builder.HasOne(ae => ae.IdFiscalPeriodNavigation)
             .WithMany(fp => fp.AccountingEntries)
             .HasForeignKey(ae => ae.IdFiscalPeriod)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(ae => ae.IdCurrencyNavigation)
+            .WithMany(c => c.AccountingEntries)
+            .HasForeignKey(ae => ae.IdCurrency)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

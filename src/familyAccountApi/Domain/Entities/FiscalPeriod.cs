@@ -11,4 +11,5 @@ public sealed class FiscalPeriod
     public DateOnly EndDate       { get; set; }
 
     public ICollection<AccountingEntry> AccountingEntries { get; set; } = [];
+    public ICollection<Budget> Budgets { get; set; } = [];
 }

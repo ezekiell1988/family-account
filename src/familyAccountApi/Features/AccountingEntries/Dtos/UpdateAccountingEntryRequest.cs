@@ -9,6 +9,10 @@ public sealed record UpdateAccountingEntryRequest
     [Description("Período fiscal al que pertenece el asiento")]
     public required int IdFiscalPeriod { get; init; }
 
+    [Required, Range(1, int.MaxValue)]
+    [Description("Moneda en la que se registra el asiento contable")]
+    public required int IdCurrency { get; init; }
+
     [Required, StringLength(30, MinimumLength = 1)]
     [Description("Número o consecutivo del asiento contable")]
     public required string NumberEntry { get; init; }
@@ -29,6 +33,10 @@ public sealed record UpdateAccountingEntryRequest
     [StringLength(100)]
     [Description("Referencia opcional del asiento, por ejemplo número de documento")]
     public string? ReferenceEntry { get; init; }
+
+    [Range(typeof(decimal), "0.000001", "999999999999999.999999")]
+    [Description("Tipo de cambio usado al registrar el asiento")]
+    public required decimal ExchangeRateValue { get; init; }
 
     [Required, MinLength(2)]
     [Description("Líneas contables del asiento. Debe incluir al menos dos movimientos")]

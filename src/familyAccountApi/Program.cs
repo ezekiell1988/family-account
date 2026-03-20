@@ -5,6 +5,8 @@ using FamilyAccountApi.BackgroundJobs;
 using Microsoft.Extensions.Caching.Distributed;
 using FamilyAccountApi.Features.Auth;
 using FamilyAccountApi.Features.AccountingEntries;
+using FamilyAccountApi.Features.BankAccounts;
+using FamilyAccountApi.Features.Budgets;
 using FamilyAccountApi.Features.CostCenters;
 using FamilyAccountApi.Features.Currencies;
 using FamilyAccountApi.Features.Email;
@@ -198,6 +200,8 @@ builder.Services.AddAccountingEntriesModule();
 builder.Services.AddCostCentersModule();
 builder.Services.AddCurrenciesModule();
 builder.Services.AddExchangeRatesModule();
+builder.Services.AddBudgetsModule();
+builder.Services.AddBankAccountsModule();
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -255,6 +259,8 @@ v1.MapAccountingEntriesEndpoints();
 v1.MapCostCentersEndpoints();
 v1.MapCurrenciesEndpoints();
 v1.MapExchangeRatesEndpoints();
+v1.MapBudgetsEndpoints();
+v1.MapBankAccountsEndpoints();
 
 // ─── Recurring jobs ──────────────────────────────────────────────────────────
 // Crea los 12 períodos del año en curso cada 1° de enero a las 3:00 AM UTC.

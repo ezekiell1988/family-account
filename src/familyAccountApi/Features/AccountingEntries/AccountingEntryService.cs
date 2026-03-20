@@ -26,17 +26,19 @@ public sealed class AccountingEntryService(AppDbContext db) : IAccountingEntrySe
 
     public async Task<AccountingEntryResponse> CreateAsync(CreateAccountingEntryRequest request, CancellationToken ct = default)
     {
-        await ValidateRequestAsync(request.IdFiscalPeriod, request.StatusEntry, request.Lines, ct);
+        await ValidateRequestAsync(request.IdFiscalPeriod, request.IdCurrency, request.ExchangeRateValue, request.StatusEntry, request.Lines, ct);
 
         var targetStatus = request.StatusEntry;
         var entity = new AccountingEntry
         {
             IdFiscalPeriod   = request.IdFiscalPeriod,
+            IdCurrency       = request.IdCurrency,
             NumberEntry      = request.NumberEntry.Trim(),
             DateEntry        = request.DateEntry,
             DescriptionEntry = request.DescriptionEntry.Trim(),
             StatusEntry      = targetStatus == "Publicado" ? "Borrador" : targetStatus,
             ReferenceEntry   = string.IsNullOrWhiteSpace(request.ReferenceEntry) ? null : request.ReferenceEntry.Trim(),
+            ExchangeRateValue = request.ExchangeRateValue,
             AccountingEntryLines = request.Lines.Select(line => new AccountingEntryLine
             {
                 IdAccount       = line.IdAccount,
@@ -69,15 +71,17 @@ public sealed class AccountingEntryService(AppDbContext db) : IAccountingEntrySe
         if (entity.StatusEntry == "Anulado")
             throw new InvalidOperationException("No se puede modificar un asiento anulado.");
 
-        await ValidateRequestAsync(request.IdFiscalPeriod, request.StatusEntry, request.Lines, ct);
+        await ValidateRequestAsync(request.IdFiscalPeriod, request.IdCurrency, request.ExchangeRateValue, request.StatusEntry, request.Lines, ct);
 
         var targetStatus = request.StatusEntry;
 
         entity.IdFiscalPeriod   = request.IdFiscalPeriod;
+        entity.IdCurrency       = request.IdCurrency;
         entity.NumberEntry      = request.NumberEntry.Trim();
         entity.DateEntry        = request.DateEntry;
         entity.DescriptionEntry = request.DescriptionEntry.Trim();
         entity.ReferenceEntry   = string.IsNullOrWhiteSpace(request.ReferenceEntry) ? null : request.ReferenceEntry.Trim();
+        entity.ExchangeRateValue = request.ExchangeRateValue;
         entity.StatusEntry      = targetStatus == "Publicado" ? "Borrador" : targetStatus;
 
         db.AccountingEntryLine.RemoveRange(entity.AccountingEntryLines);
@@ -120,6 +124,7 @@ public sealed class AccountingEntryService(AppDbContext db) : IAccountingEntrySe
             .AsNoTracking()
             .OrderBy(ae => ae.IdAccountingEntry)
             .Include(ae => ae.IdFiscalPeriodNavigation)
+            .Include(ae => ae.IdCurrencyNavigation)
             .Include(ae => ae.AccountingEntryLines)
                 .ThenInclude(line => line.IdAccountNavigation);
     }
@@ -130,11 +135,15 @@ public sealed class AccountingEntryService(AppDbContext db) : IAccountingEntrySe
             ae.IdAccountingEntry,
             ae.IdFiscalPeriod,
             ae.IdFiscalPeriodNavigation.NamePeriod,
+            ae.IdCurrency,
+            ae.IdCurrencyNavigation.CodeCurrency,
+            ae.IdCurrencyNavigation.NameCurrency,
             ae.NumberEntry,
             ae.DateEntry,
             ae.DescriptionEntry,
             ae.StatusEntry,
             ae.ReferenceEntry,
+            ae.ExchangeRateValue,
             ae.CreatedAt,
             ae.AccountingEntryLines
                 .OrderBy(line => line.IdAccountingEntryLine)
@@ -151,6 +160,8 @@ public sealed class AccountingEntryService(AppDbContext db) : IAccountingEntrySe
 
     private async Task ValidateRequestAsync(
         int idFiscalPeriod,
+        int idCurrency,
+        decimal exchangeRateValue,
         string statusEntry,
         IReadOnlyList<AccountingEntryLineRequest> lines,
         CancellationToken ct)
@@ -170,6 +181,16 @@ public sealed class AccountingEntryService(AppDbContext db) : IAccountingEntrySe
 
         if (fiscalPeriod.StatusPeriod != "Abierto")
             throw new InvalidOperationException("Solo se pueden registrar asientos en períodos fiscales abiertos.");
+
+        var currencyExists = await db.Currency
+            .AsNoTracking()
+            .AnyAsync(c => c.IdCurrency == idCurrency, ct);
+
+        if (!currencyExists)
+            throw new InvalidOperationException("La moneda indicada no existe.");
+
+        if (exchangeRateValue <= 0)
+            throw new InvalidOperationException("El tipo de cambio del asiento debe ser mayor que cero.");
 
         var totalDebit = 0m;
         var totalCredit = 0m;
