@@ -1,281 +1,94 @@
-/* =====================================================
-   HOME PAGE STYLES - MÍNIMOS NECESARIOS
-   
-   Solo estilos que no se pueden hacer con utilidades CSS
-   ===================================================== */
-
-/* ========== MÍNIMOS ESPECÍFICOS ========== */
-
-// Solo estilos que realmente no se pueden hacer con utilidades
-.ionic-mode {
-  // Los avatares de Ionic necesitan estos estilos para mostrar íconos correctamente
-  ion-avatar {
-    background: var(--ion-color-light);
-    
-    ion-icon {
-      font-size: 1.5rem;
-      color: var(--ion-color-medium);
-    }
-  }
-  
-  /* ========== GRADIENTES MÓVIL ========== */
-  // Ionic no tiene clases de gradientes predefinidas
-  // Estos gradientes son necesarios solo para la versión móvil
-  
-  .gradient-purple {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  }
-
-  .gradient-pink {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  }
-
-  .gradient-teal {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  }
-
-  .gradient-orange {
-    background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
-  }
-
-  .gradient-blue {
-    background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
-  }
+.home-page {
+  padding: 1.5rem;
 }
 
-/* ========== GRID UTILITIES ========== */
-
-.grid-2-cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-/* ========== BÚSQUEDA Y AUTOCOMPLETE ========== */
-
-.dropdown-menu.show {
-  display: block;
-  position: relative;
-  z-index: 1000;
-  margin-top: 0.25rem;
-  
-  .dropdown-item {
-    cursor: pointer;
-    transition: background-color 0.15s ease-in-out;
-    
-    &:hover {
-      background-color: rgba(var(--bs-primary-rgb), 0.1);
-    }
-    
-    &:active {
-      background-color: rgba(var(--bs-primary-rgb), 0.2);
-    }
-  }
-}
-
-// Animación del spinner de búsqueda
-.spinner-border-sm {
-  width: 1rem;
-  height: 1rem;
-  border-width: 0.15em;
-}
-
-// Resaltar input cuando hay búsqueda activa
-.form-control.border-primary:focus {
-  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-}
-
-/* ========== FONT SIZES CUSTOM ========== */
-
-.fs-0-8 {
-  font-size: 0.8rem;
-}
-
-.fs-0-85 {
-  font-size: 0.85rem;
-}
-
-.fs-0-9 {
-  font-size: 0.9rem;
-}
-
-.desktop-mode {
-  // Color Admin ya maneja todo esto con sus utilidades
-  // No necesitamos estilos custom aquí
-}
-
-/* ========== PANEL LOADING FIX ========== */
-
-// El panel-loader usa z-index: 1030 dentro de su propio stacking context (z-index: 0).
-// Sin este fix, el ng-dropdown-panel (z-index: 1050 en contexto raíz) queda por encima.
-.panel.panel-loading {
-  position: relative;
-  z-index: 1051;
-}
-
-// Mover el spinner al top para que sea visible sin hacer scroll
-.panel.panel-loading .panel-body .panel-loader {
-  align-items: flex-start;
-  padding-top: 1.25rem;
-}
-
-/* ========== NG-SELECT CUSTOM STYLES ========== */
-
-.ng-select-custom {
-  width: 100%;
-
-  .ng-select-container {
-    min-height: 38px;
-    border-radius: 0.25rem;
-
-    &:hover {
-      border-color: #80bdff;
-    }
-  }
-
-  // Valores seleccionados (tags múltiple) — solo layout, colores en angular.scss
-  .ng-value {
-    border-radius: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    margin: 2px;
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.875rem;
-
-    .ng-value-label {
-      display: inline-block;
-      padding-right: 0.25rem;
-    }
-
-    .ng-value-icon {
-      cursor: pointer;
-      font-size: 1.2rem;
-      line-height: 1;
-      padding-left: 0.25rem;
-
-      &:hover {
-        opacity: 0.8;
-      }
-    }
-  }
-
-  // Input de búsqueda
-  .ng-input {
-    input {
-      padding: 0.375rem 0.75rem;
-    }
-  }
-
-  // Dropdown
-  .ng-dropdown-panel {
-    .ng-dropdown-panel-items {
-      max-height: 300px;
-
-      .ng-option {
-        padding: 0.5rem 0.75rem;
-        cursor: pointer;
-        transition: background-color 0.15s ease-in-out;
-      }
-    }
-  }
-}
-
-/* ========== RESPONSIVE SOLO SI ES NECESARIO ========== */
-
-// Pequeños ajustes responsivos que no cubren las utilidades
-@media (max-width: 576px) {
-  .table-responsive {
-    font-size: 0.875rem;
-  }
-
-  .ng-select-custom {
-    .ng-value {
-      font-size: 0.75rem;
-      padding: 0.2rem 0.4rem;
-    }
-
-    .ng-dropdown-panel {
-      .ng-option {
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-      }
-    }
-  }
-}
-
-/* ========== CHAT MCP STYLES ========== */
-
-.chat-container {
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-    
-    &:hover {
-      background: #a1a1a1;
-    }
-  }
-}
-
-.message-bubble {
-  border-radius: 18px !important;
-  
-  .message-text {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-  
-  .message-time {
-    font-size: 0.75rem;
-  }
-}
-
-// Indicador de escritura (typing indicator)
-.typing-indicator {
+.home-hero {
   display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(13, 110, 253, 0.18), transparent 35%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(248, 249, 250, 0.96));
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hero-card {
+  margin-bottom: 1rem;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
+.lead-text {
+  margin: 0.75rem 0 1rem;
+  color: #495057;
+}
+
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.info-row {
+  display: flex;
+  gap: 0.75rem;
   align-items: center;
-  gap: 4px;
-  
-  .dot {
-    height: 8px;
-    width: 8px;
-    background-color: #bbb;
-    border-radius: 50%;
-    display: inline-block;
-    animation: typing 1.4s infinite ease-in-out both;
-    
-    &:nth-child(1) {
-      animation-delay: -0.32s;
-    }
-    
-    &:nth-child(2) {
-      animation-delay: -0.16s;
-    }
-  }
+  margin-bottom: 0.75rem;
 }
 
-@keyframes typing {
-  0%, 80%, 100% {
-    transform: scale(0);
-    opacity: 0.5;
-  }
-  
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
+.info-row ion-icon {
+  font-size: 2rem;
 }
 
-// Avatar del chat
-.avatar {
-  font-size: 14px;
-  min-width: 32px;
-  min-height: 32px;
+.detail-block {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.desktop-card-body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.user-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.muted-text {
+  color: #6c757d;
+}
+
+@media (max-width: 768px) {
+  .home-page {
+    padding: 1rem;
+  }
+
+  .mobile-home {
+    --padding-start: 0;
+    --padding-end: 0;
+  }
 }

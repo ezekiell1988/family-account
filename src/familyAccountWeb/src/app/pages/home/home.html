@@ -1,723 +1,109 @@
-<!-- =====================================================
-     HOME PAGE - CLIENTES ELASTICSEARCH
-     
-     Template condicional según plataforma:
-     - Mobile: Ionic Cards y componentes con refresher/infinite scroll
-     - Desktop: Color-Admin paneles con paginación
-     ===================================================== -->
-
-<!-- ========== VERSIÓN MÓVIL (IONIC) ========== -->
 @if (isMobile()) {
-<!-- Header con botón de atrás condicional -->
-<header [pageTitle]="currentView === 'clients' ? ('HOME.BREADCRUMB_CLIENTS' | translate) : currentView === 'invoices' ? ('HOME.BREADCRUMB_INVOICES' | translate) : ('HOME.BREADCRUMB_ADDRESSES' | translate)"
-  [showBackButton]="currentView !== 'clients'" (backClick)="backToClients()">
-</header>
+  <header pageTitle="Inicio"></header>
 
-<ion-content>
-  <!-- ========== VISTA: LISTA DE CLIENTES ========== -->
-  @if (currentView === 'clients') {
-  <!-- Refresher para pull-to-refresh -->
-  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
-    <ion-refresher-content pullingIcon="chevron-down-circle-outline" [pullingText]="'HOME.REFRESH' | translate"
-      refreshingSpinner="circles" [refreshingText]="'HOME.REFRESHING' | translate">
-    </ion-refresher-content>
-  </ion-refresher>
-
-  <!-- ========== ESTADÍSTICAS GENERALES ========== -->
-  <app-general-stats
-    [generalStats]="generalStats"
-    [loading]="loadingGeneralStats"
-    [isMobile]="true">
-  </app-general-stats>
-
-  <!-- Widget de Estadísticas de Filtros Actuales -->
-  @if (generalStats) {
-  <div class="ion-padding-horizontal ion-padding-bottom">
-    <div class="grid-2-cols">
-      <!-- Total Clientes Filtrados -->
-      <ion-card color="primary" class="ion-no-margin">
-        <ion-card-content>
-          <div class="ion-text-center">
-            <ion-icon name="people-outline" style="font-size: 1.5rem;"></ion-icon>
-            <div class="fs-4 fw-bold">{{ totalClients | number }}</div>
-            <div style="font-size: 0.8rem; opacity: 0.9;">{{ 'HOME.CLIENTS_LABEL' | translate }}</div>
-          </div>
-        </ion-card-content>
-      </ion-card>
-      <!-- Total Facturas Filtradas -->
-      <ion-card color="success" class="ion-no-margin">
-        <ion-card-content>
-          <div class="ion-text-center">
-            <ion-icon name="document-text-outline" style="font-size: 1.5rem;"></ion-icon>
-            <div class="fs-4 fw-bold">{{ totalInvoices | number }}</div>
-            <div style="font-size: 0.8rem; opacity: 0.9;">{{ 'HOME.INVOICES_LABEL' | translate }}</div>
-          </div>
-        </ion-card-content>
-      </ion-card>
-    </div>
-    <!-- Filtro Activo -->
-    <ion-card color="secondary" class="ion-no-margin ion-margin-top">
+  <ion-content class="home-page mobile-home">
+    <ion-card class="hero-card">
       <ion-card-content>
-        <div class="ion-display-flex ion-justify-content-between ion-align-items-center">
-          <div>
-            <ion-icon name="filter-outline" class="ion-margin-end"></ion-icon>
-            <strong>{{ 'HOME.ACTIVE_FILTER' | translate }}</strong> {{ getFilterTitle() }}
-          </div>
-          <ion-button fill="outline" color="light" size="small" (click)="clearAllFilters()">
-            <ion-icon name="close-circle-outline" slot="start"></ion-icon>
-            {{ 'HOME.CLEAR' | translate }}
-          </ion-button>
+        <div class="eyebrow">Panel principal</div>
+        <h1>{{ appSettings.nameCompany }}</h1>
+        <p class="lead-text">
+          La aplicación web quedó alineada con los módulos que existen actualmente en el frontend.
+        </p>
+        <div class="status-row">
+          <ion-badge color="success">
+            <ion-icon name="shield-checkmark-outline"></ion-icon>
+            Sesión activa
+          </ion-badge>
+          <ion-badge color="medium">
+            <ion-icon name="home-outline"></ion-icon>
+            Inicio disponible
+          </ion-badge>
         </div>
       </ion-card-content>
     </ion-card>
-  </div>
-  }
 
-  <!-- ========== TABS MÓVIL: CHAT IA Y FILTROS ========== -->
-  
-  <!-- Barra de tabs en la parte superior (en móvil) -->
-  <ion-card class="ion-no-margin">
-    <ion-segment [(ngModel)]="mobileTab" mode="md">
-      <ion-segment-button value="chat">
-        <ion-label>
-          <ion-icon name="chatbubbles-outline"></ion-icon>
-          {{ 'HOME.CHAT_AI' | translate }}
-        </ion-label>
-        <ion-badge [color]="wsConnected ? 'success' : 'danger'">{{ wsConnected ? '●' : '○' }}</ion-badge>
-      </ion-segment-button>
-      <ion-segment-button value="filters">
-        <ion-label>
-          <ion-icon name="filter-outline"></ion-icon>
-          {{ 'HOME.FILTERS' | translate }}
-        </ion-label>
-      </ion-segment-button>
-    </ion-segment>
-  </ion-card>
-    
-    <!-- ========== TAB 1: CHAT CON IA ========== -->
-    @if (mobileTab === 'chat') {
-    <div class="ion-padding">
-        <!-- Estado y controles WebSocket -->
-        <ion-card>
-          <ion-card-content>
-            <div class="ion-margin-bottom">
-              <ion-button expand="block" [color]="wsConnected ? 'danger' : 'success'"
-                (click)="toggleWebSocketConnection()">
-                <ion-icon [name]="wsConnected ? 'close-circle-outline' : 'flash-outline'" slot="start"></ion-icon>
-                {{ wsConnected ? ('HOME.DISCONNECT_WS' | translate) : ('HOME.CONNECT_WS' | translate) }}
-              </ion-button>
+    <ion-card>
+      <ion-card-content>
+        <div class="section-title">Usuario actual</div>
+        @if (currentUser(); as user) {
+          <div class="info-row">
+            <ion-icon name="person-circle-outline"></ion-icon>
+            <div>
+              <strong>{{ user.nameLogin }}</strong>
+              <div class="muted-text">{{ user.codeLogin }}</div>
             </div>
-
-            <div class="ion-text-center">
-              <ion-badge [color]="wsConnected ? 'success' : 'medium'" class="ion-margin-end">
-                <ion-icon [name]="wsConnected ? 'checkmark-circle-outline' : 'alert-circle-outline'"></ion-icon>
-                {{ (elasticsearchWsService.messages$ | async)?.length || 0 }} mensajes
-              </ion-badge>
-            </div>
-          </ion-card-content>
-        </ion-card>
-
-        <!-- Área de mensajes del chat -->
-        <ion-card>
-          <ion-card-content>
-            <div #chatContainer style="height: 50vh; overflow-y: auto; margin-bottom: 1rem;">
-              @if ((elasticsearchWsService.messages$ | async)?.length === 0 && !(elasticsearchWsService.connected$ | async)) {
-              <div class="ion-text-center ion-padding">
-                <ion-icon name="chatbubbles-outline" size="large" color="medium" class="ion-margin-bottom"></ion-icon>
-                <h6 class="ion-no-margin">{{ 'HOME.WELCOME_CHAT' | translate }}</h6>
-                <p class="ion-text-color-medium">{{ 'HOME.CONNECT_TO_START' | translate }}</p>
-              </div>
-              }
-
-              @for (message of (elasticsearchWsService.messages$ | async) || []; track trackByChatMessageId($index, message)) {
-              <div class="ion-margin-bottom" [class.ion-text-end]="message.type === 'user'">
-                <div class="ion-display-inline-block" style="max-width: 80%;">
-                  <!-- Contenido del mensaje -->
-                  <ion-card [color]="message.type === 'user' ? 'primary' : message.type === 'error' ? 'danger' : undefined"
-                    [class.ion-text-start]="message.type !== 'user'">
-                    <ion-card-content>
-                      @if (message.type === 'tool') {
-                      <div class="ion-text-color-primary ion-margin-bottom">
-                        <ion-icon name="construct-outline"></ion-icon>
-                        <strong>{{ message.toolName }}</strong>
-                      </div>
-                      }
-                      <div [innerHTML]="formatMessageText(message.text)"></div>
-                      <div class="ion-text-color-medium" style="font-size: 0.75rem; margin-top: 0.5rem;">
-                        {{ message.timestamp | date:'HH:mm:ss' }}
-                      </div>
-                    </ion-card-content>
-                  </ion-card>
-                </div>
-              </div>
-              }
-
-              @if (mcpChatLoading) {
-              <div class="ion-text-center ion-margin">
-                <ion-spinner name="dots"></ion-spinner>
-                <p class="ion-text-color-medium">{{ 'HOME.IA_TYPING' | translate }}</p>
-              </div>
-              }
-            </div>
-
-            <!-- Input de mensaje -->
-            <ion-item lines="none">
-              <ion-input type="text" [(ngModel)]="mcpCurrentMessage"
-                [placeholder]="'HOME.WRITE_QUERY' | translate"
-                (keyup.enter)="sendMcpMessage()"
-                [disabled]="(elasticsearchWsService.loading$ | async) || !(elasticsearchWsService.connected$ | async)">
-              </ion-input>
-              <ion-button slot="end" (click)="sendMcpMessage()"
-                [disabled]="!mcpCurrentMessage.trim() || (elasticsearchWsService.loading$ | async) || !(elasticsearchWsService.connected$ | async)">
-                <ion-icon [name]="(elasticsearchWsService.loading$ | async) ? 'hourglass-outline' : 'send-outline'" slot="icon-only"></ion-icon>
-              </ion-button>
-            </ion-item>
-
-            <!-- Botón limpiar chat -->
-            <ion-button expand="block" fill="outline" color="warning" (click)="clearMcpChat()"
-              class="ion-margin-top">
-              <ion-icon name="trash-outline" slot="start"></ion-icon>
-              {{ 'HOME.CLEAR_CHAT' | translate }}
-            </ion-button>
-          </ion-card-content>
-        </ion-card>
-      </div>
-    }
-
-    <!-- ========== TAB 2: FILTROS MANUALES ========== -->
-    @if (mobileTab === 'filters') {
-    <!-- app-client-filter renderiza todos los filtros para móvil -->
-
-    <app-client-filter [isMobile]="true"
-      [provinces]="provinces" [cantons]="cantons" [districts]="districts" [neighborhoods]="neighborhoods"
-      [restaurants]="restaurants" [devices]="devices" [products]="products" [timesOfDay]="timesOfDay"
-      [deliveryTypes]="deliveryTypes" [generalStats]="generalStats" [clientTypeOptions]="clientTypeOptions"
-      [dateRangeLocale]="dateRangeLocale"
-      [loadingProvinces]="loadingProvinces" [loadingCantons]="loadingCantons" [loadingDistricts]="loadingDistricts"
-      [loadingNeighborhoods]="loadingNeighborhoods" [loadingRestaurants]="loadingRestaurants"
-      [loadingDevices]="loadingDevices" [loadingProducts]="loadingProducts" [loadingTimesOfDay]="loadingTimesOfDay"
-      [loadingDeliveryTypes]="loadingDeliveryTypes"
-      [selectedFilter]="selectedFilter" [selectedPaid]="selectedPaid" [selectedDeliveryTypes]="selectedDeliveryTypes"
-      [selectedProvince]="selectedProvince" [selectedCanton]="selectedCanton" [selectedDistrict]="selectedDistrict"
-      [selectedNeighborhood]="selectedNeighborhood" [selectedTimeOfDay]="selectedTimeOfDay"
-      [selectedRestaurant]="selectedRestaurant" [selectedDevice]="selectedDevice"
-      [selectedProducts]="selectedProducts" [selectedExcludedProducts]="selectedExcludedProducts"
-      [selectedCustomers]="selectedCustomers"
-      [daysRange]="daysRange" [ordersRange]="ordersRange" [dateRange]="dateRange"
-      [selectedDateRange]="selectedDateRange" [searchQuery]="searchQuery"
-      [isSearchMode]="isSearchMode" [isSearching]="isSearching"
-      (filterChange)="onFilterChange($event)" (paidChange)="onPaidChange($event)"
-      (deliveryFilterChange)="onDeliveryFilterChange($event.name, $event.checked)"
-      (provinceChange)="onProvinceChange($event)" (cantonChange)="onCantonChange($event)"
-      (districtChange)="onDistrictChange($event)" (neighborhoodChange)="onNeighborhoodChange($event)"
-      (otherFilterChange)="onOtherFilterChange($event.filter, $event.value)"
-      (productsChange)="onProductsChange($event)" (excludedProductsChange)="onExcludedProductsChange($event)"
-      (customersChange)="onCustomersChange($event)"
-      (daysRangeChange)="onDaysRangeChange()" (ordersRangeChange)="onOrdersRangeChange()"
-      (dateFromChange)="onDateFromChange($event)" (dateToChange)="onDateToChange($event)"
-      (dateRangePickerChange)="onDateRangePickerChange($event)"
-      (clearAndRefresh)="clearAllFiltersAndRefresh()"
-      (searchQueryChange)="onSearchQueryChange($event)" (clearSearchEvent)="clearSearch()">
-    </app-client-filter>
-    }
-
-  <app-client-list [isMobile]="true"
-    [clients]="clients" [totalClients]="totalClients" [loading]="loading"
-    [pagination]="pagination" [clientsPageSize]="clientsPageSize" [currentPage]="currentPage"
-    [sorts]="sorts" [isSearchMode]="isSearchMode" [hasMore]="hasMore"
-    [isExporting]="isExporting" [isExportingInvalidContacts]="isExportingInvalidContacts" [isCreatingCampaign]="isCreatingCampaign"
-    [filterTitle]="getFilterTitle()" [sortField]="sortField" [sortOrder]="sortOrder"
-    [sortOptions]="sortOptions"
-    (viewInvoicesEvent)="viewInvoices($event)"
-    (viewAddressesEvent)="viewAddresses($event)"
-    (pageChange)="setPage($event)"
-    (sortEvent)="onSort($event)"
-    (pageSizeChange)="onPageSizeChange($event)"
-    (exportEvent)="exportData()"
-    (exportInvalidContactsEvent)="exportInvalidContacts()"
-    (createCampaignEvent)="showCreateCampaignForm()"
-    (loadMoreEvent)="loadMore($event)"
-    (sortFieldChange)="onSortFieldChange($event)"
-    (sortDirectionChange)="onSortChange()">
-  </app-client-list>
-  }
-  <!-- Fin Vista: Clientes -->
-
-  <!-- ========== VISTA: FACTURAS DEL CLIENTE ========== -->
-  @if (currentView === 'invoices' && selectedClient) {
-  <app-invoices [selectedClient]="selectedClient" [invoices]="invoices" [totalInvoices]="totalInvoicesFromServer"
-    [currentPage]="currentInvoicesPage" [loading]="loadingInvoices" [isMobile]="true" [hasMore]="hasMoreInvoices"
-    [pageSize]="invoicesPageSize" (loadMore)="loadMoreInvoices($event)">
-  </app-invoices>
-  }
-  <!-- Fin Vista: Facturas -->
-
-  <!-- ========== VISTA: DIRECCIONES DEL CLIENTE ========== -->
-  @if (currentView === 'addresses' && selectedClient) {
-  <app-addresses [selectedClient]="selectedClient" [addresses]="addresses" [totalAddresses]="totalAddressesFromServer"
-    [currentPage]="currentAddressesPage" [loading]="loadingAddresses" [isMobile]="true" [hasMore]="hasMoreAddresses"
-    [pageSize]="addressesPageSize" (loadMore)="loadMoreAddresses($event)">
-  </app-addresses>
-  }
-  <!-- Fin Vista: Direcciones -->
-
-</ion-content>
-
-<app-footer translucent="true" footerText="© {{ appSettings.nameCompany }} BackOffice" />
-}
-
-<!-- ========== VERSIÓN DESKTOP (COLOR-ADMIN) ========== -->
-@if (isDesktop()) {
-<!-- ========== VISTA: LISTA DE CLIENTES ========== -->
-@if (currentView.includes('clients', 'clientsFilter')) {
-<!-- begin breadcrumb -->
-<ol class="breadcrumb float-xl-end">
-  <li class="breadcrumb-item"><a href="javascript:;">{{ 'SIDEBAR.HOME' | translate }}</a></li>
-  <li class="breadcrumb-item"><a href="javascript:;">{{ 'HOME.BREADCRUMB_CLIENTS' | translate }}</a></li>
-  <li class="breadcrumb-item active">{{ 'HOME.CLIENTS_LIST_TITLE' | translate }}</li>
-</ol>
-<!-- end breadcrumb -->
-
-<!-- begin page-header -->
-<h1 class="page-header">
-  {{ 'HOME.BREADCRUMB_CLIENTS' | translate }} <small>{{ 'HOME.CLIENTS_PAGE_SUBTITLE' | translate }}</small>
-</h1>
-<!-- end page-header -->
-
-<!-- ========== ESTADÍSTICAS GENERALES DEL ÍNDICE ========== -->
-<app-general-stats
-  [generalStats]="generalStats"
-  [loading]="loadingGeneralStats"
-  [isMobile]="false">
-</app-general-stats>
-
-<!-- Widget de Estadísticas de Filtros Actuales -->
-<div class="row mb-4">
-  <!-- Total de Clientes -->
-  <div class="col-xl-3 col-md-6">
-    <div class="widget widget-stats bg-primary">
-      <div class="stats-icon"><i class="fa fa-users"></i></div>
-      <div class="stats-info">
-        <h4>{{ 'HOME.TOTAL_CLIENTS_WIDGET' | translate }}</h4>
-        <p>{{ totalClients | number }}</p>
-      </div>
-      <div class="stats-link">
-        <a href="javascript:;">{{ 'HOME.CLIENTS_UNIQUE_LINK' | translate }} <i class="fa fa-arrow-alt-circle-right"></i></a>
-      </div>
-    </div>
-  </div>
-  <!-- Total de Facturas -->
-  <div class="col-xl-3 col-md-6">
-    <div class="widget widget-stats bg-success">
-      <div class="stats-icon"><i class="fa fa-file-invoice"></i></div>
-      <div class="stats-info">
-        <h4>{{ 'HOME.TOTAL_INVOICES_WIDGET' | translate }}</h4>
-        <p>{{ totalInvoices | number }}</p>
-      </div>
-      <div class="stats-link">
-        <a href="javascript:;">{{ 'HOME.INVOICES_FILTERED_LINK' | translate }} <i class="fa fa-arrow-alt-circle-right"></i></a>
-      </div>
-    </div>
-  </div>
-  <!-- Filtro Activo -->
-  <div class="col-xl-3 col-md-6">
-    <div class="widget widget-stats bg-info">
-      <div class="stats-icon"><i class="fa fa-filter"></i></div>
-      <div class="stats-info">
-        <h4>{{ 'HOME.ACTIVE_FILTER_WIDGET' | translate }}</h4>
-        <p>{{ getFilterTitle() }}</p>
-      </div>
-      <div class="stats-link">
-        <a href="javascript:;" (click)="clearAllFilters()">{{ 'HOME.CLEAR_FILTERS_LINK' | translate }} <i class="fa fa-times-circle"></i></a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<ul class="nav nav-tabs">
-  <li class="nav-item">
-    <a href="#default-tab-1" data-bs-toggle="tab" class="nav-link" [class.active]="currentView === 'clients'"
-      (click)="currentView = 'clients'">{{ 'HOME.CHAT_TITLE' | translate }}</a>
-  </li>
-  <li class="nav-item">
-    <a href="#default-tab-2" data-bs-toggle="tab" class="nav-link" [class.active]="currentView === 'clientsFilter'"
-      (click)="currentView = 'clientsFilter'">{{ 'HOME.MANUAL_FILTERS' | translate }}</a>
-  </li>
-</ul>
-<div class="tab-content panel p-3 rounded-0 rounded-bottom">
-  <div class="tab-pane fade h-100 d-flex position-relative bg-body" [class.active]="currentView === 'clients'"
-    [class.show]="currentView === 'clients'" id="default-tab-1">
-    @if (currentView === 'clients') {
-    <a class="d-lg-none btn btn-icon btn-lg bg-component text-body rounded-0 z-3 rounded-end-3 mt-5 shadow-lg position-absolute top-0 start-0 "
-      data-bs-toggle="offcanvas" href="#aiChatSidebar" role="button" aria-controls="offcanvasExample">
-      <i class="fa fa-gear"></i>
-    </a>
-    <!-- BEGIN ai-chat-sidebar -->
-    <div
-      class="w-250px bg-component  bg-opacity-75 offcanvas offcanvas-start position-lg-relative transform-lg-none visibility-lg-initial z-lg-3"
-      id="aiChatSidebar">
-      <!-- BEGIN ai-chat-sidebar-mobile-bg -->
-      <div class="bg-component d-lg-none d-block position-absolute top-0 end-0 w-100 h-100"></div>
-      <!-- END ai-chat-sidebar-mobile-bg -->
-
-      <!-- BEGIN ai-chat-sidebar-content -->
-      <div class="position-relative h-100 d-flex flex-column">
-        <!-- BEGIN ai-chat-new-btn -->
-        <div class="p-3">
-          <button type="button"
-            class="btn bg-gradient-to-r bg-gradient-from-teal bg-gradient-to-blue text-white rounded-4 w-100 fw-bold border-0"
-            (click)="clearMcpChat()"><i class="fa fa-plus me-2 ms-n2 my-4px"></i> {{ 'HOME.CLEAR_CHAT' | translate }}</button>
-        </div>
-        <!-- END ai-chat-new-btn -->
-
-        <hr class="m-0 opacity-20" />
-
-        <!-- BEGIN ai-chat-history -->
-        <div class="flex-1 overflow-hidden text-body">
-          <!-- BEGIN scrollbar -->
-          <ng-scrollbar class="p-3 h-100">
-            <!-- Área de mensajes del chat -->
-            <div #chatContainer class="chat-container"
-              style="height: 80vh; overflow-y: auto; padding: 1rem 0;">
-              @if ((elasticsearchWsService.messages$ | async)?.length === 0 && !(elasticsearchWsService.connected$
-              | async)) {
-              <div class="text-center py-5">
-                <i class="fas fa-comments text-muted mb-3" style="font-size: 3rem;"></i>
-                <h6 class="text-muted">{{ 'HOME.WELCOME_CHAT' | translate }}</h6>
-                <p class="text-muted small">{{ 'HOME.CONNECT_TO_START_DESKTOP' | translate }}</p>
-                <button class="btn btn-success btn-sm" (click)="connectWebSocket()">
-                  <i class="fas fa-plug me-1"></i>
-                  {{ 'HOME.CONNECT_WS' | translate }}
-                </button>
-              </div>
-              }
-
-              @for (message of (elasticsearchWsService.messages$ | async) || []; track
-              trackByChatMessageId($index, message)) {
-              <div class="d-flex mb-3"
-                [class]="message.type === 'user' ? 'justify-content-end' : 'justify-content-start'">
-
-                @if (message.type !== 'user') {
-                <div class="flex-shrink-0 me-2">
-                  @if (message.type === 'assistant') {
-                  <div class="avatar bg-primary text-white d-flex align-items-center justify-content-center"
-                    style="width: 32px; height: 32px; border-radius: 50%;">
-                    <i class="fas fa-robot" style="font-size: 14px;"></i>
-                  </div>
-                  } @else if (message.type === 'tool') {
-                  <div class="avatar bg-purple text-white d-flex align-items-center justify-content-center"
-                    style="width: 32px; height: 32px; border-radius: 50%;">
-                    <i class="fas fa-tools" style="font-size: 14px;"></i>
-                  </div>
-                  } @else {
-                  <div class="avatar bg-info text-white d-flex align-items-center justify-content-center"
-                    style="width: 32px; height: 32px; border-radius: 50%;">
-                    <i class="fas fa-info" style="font-size: 14px;"></i>
-                  </div>
-                  }
-                </div>
-                }
-
-                <div class="message-content" style="max-width: 75%;">
-                  <div class="message-bubble rounded-4 px-3 py-2" [ngClass]="{
-                                         'bg-primary text-white': message.type === 'user',
-                                         'bg-component text-body border': message.type === 'system',
-                                         'bg-component text-body shadow-sm': message.type === 'assistant',
-                                         'bg-component text-body border-start border-primary border-3': message.type === 'tool',
-                                         'bg-danger text-white': message.type === 'error'
-                                       }">
-                    @if (message.type === 'tool') {
-                    <div class="fw-bold text-primary mb-1">
-                      <i class="fas fa-cog me-1"></i>
-                      {{ message.toolName }}
-                    </div>
-                    }
-                    <div class="message-text" [innerHTML]="formatMessageText(message.text)"></div>
-                    <div class="message-time mt-1 small opacity-75">
-                      {{ message.timestamp | date:'HH:mm:ss' }}
-                    </div>
-                  </div>
-                </div>
-
-                @if (message.type === 'user') {
-                <div class="flex-shrink-0 ms-2">
-                  <div class="avatar bg-secondary text-white d-flex align-items-center justify-content-center"
-                    style="width: 32px; height: 32px; border-radius: 50%;">
-                    <i class="fas fa-user" style="font-size: 14px;"></i>
-                  </div>
-                </div>
-                }
-              </div>
-              }
-
-              @if (mcpChatLoading) {
-              <div class="d-flex justify-content-start mb-3">
-                <div class="flex-shrink-0 me-2">
-                  <div class="avatar bg-primary text-white d-flex align-items-center justify-content-center"
-                    style="width: 32px; height: 32px; border-radius: 50%;">
-                    <i class="fas fa-robot" style="font-size: 14px;"></i>
-                  </div>
-                </div>
-                <div class="message-content">
-                  <div class="message-bubble rounded-4 px-3 py-2 bg-component text-body border">
-                    <div class="typing-indicator">
-                      <span class="dot"></span>
-                      <span class="dot"></span>
-                      <span class="dot"></span>
-                    </div>
-                    <div class="small text-muted mt-1">{{ 'HOME.IA_TYPING' | translate }}</div>
-                  </div>
-                </div>
-              </div>
-              }
-            </div>
-          </ng-scrollbar>
-          <!-- END scrollbar -->
-        </div>
-
-        <hr class="m-0 opacity-20" />
-
-        <!-- BEGIN ai-chat-user-info -->
-        <div class="rounded-4 px-3 py-3 border-0">
-          <div class="fw-bold flex-1 fs-13px text-body d-flex align-items-center">
-            @if (elasticsearchWsService.connected$ | async) {
-            <i class="fas fa-check-circle text-success me-1"></i>
-            Conectado - {{ (elasticsearchWsService.messages$ | async)?.length || 0 }} mensajes
-            } @else {
-            <i class="fas fa-exclamation-circle text-warning me-1"></i>
-            {{ 'HOME.DISCONNECTED' | translate }}
-            }
           </div>
-        </div>
-        <!-- END ai-chat-history -->
-      </div>
-      <!-- END ai-chat-sidebar-content -->
-    </div>
-    <!-- END ai-chat-sidebar -->
+          <div class="detail-block">
+            <div><strong>Email:</strong> {{ user.emailLogin || 'No disponible' }}</div>
+            <div><strong>Teléfono:</strong> {{ user.phoneLogin || 'No disponible' }}</div>
+            <div><strong>Roles:</strong> {{ rolesLabel() }}</div>
+          </div>
+        } @else {
+          <p class="muted-text">No hay un usuario cargado en memoria local.</p>
+        }
 
-    <!-- BEGIN ai-chat-content -->
-    <div class="flex-1 d-flex flex-column bg-light bg-opacity-75">
-      <!-- BEGIN ai-chat-tabs -->
-      <div class="flex-1 overflow-hidden tab-content p-2 p-lg-4 w-100">
-        <ng-scrollbar class="h-100">
-          <app-client-list [isMobile]="false"
-            [clients]="clients" [totalClients]="totalClients" [loading]="loading"
-            [pagination]="pagination" [clientsPageSize]="clientsPageSize" [currentPage]="currentPage"
-            [sorts]="sorts" [isSearchMode]="isSearchMode" [hasMore]="hasMore"
-            [isExporting]="isExporting" [isExportingInvalidContacts]="isExportingInvalidContacts" [isCreatingCampaign]="isCreatingCampaign"
-            [filterTitle]="getFilterTitle()" [sortField]="sortField" [sortOrder]="sortOrder"
-            [sortOptions]="sortOptions"
-            (viewInvoicesEvent)="viewInvoices($event)"
-            (viewAddressesEvent)="viewAddresses($event)"
-            (pageChange)="setPage($event)"
-            (sortEvent)="onSort($event)"
-            (pageSizeChange)="onPageSizeChange($event)"
-            (exportEvent)="exportData()"
-            (exportInvalidContactsEvent)="exportInvalidContacts()"
-            (createCampaignEvent)="showCreateCampaignForm()"
-            (loadMoreEvent)="loadMore($event)"
-            (sortFieldChange)="onSortFieldChange($event)"
-            (sortDirectionChange)="onSortChange()">
-          </app-client-list>
+        <ion-button expand="block" fill="outline" color="danger" (click)="logout()">
+          <ion-icon slot="start" name="log-out-outline"></ion-icon>
+          Cerrar sesión
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
 
-          <!-- END ai-chat-new -->
-        </ng-scrollbar>
-      </div>
-      <!-- END ai-chat-tabs -->
-
-      <!-- BEGIN ai-chat-input -->
+    <app-footer></app-footer>
+  </ion-content>
+} @else {
+  <div class="home-page desktop-home">
+    <section class="home-hero">
       <div>
-        <div class="px-lg-4 px-3 pb-3">
-          <div class="position-relative mx-lg-4 mx-2 h-100">
-            <div class="position-absolute start-0 bottom-0 px-3 pb-2">
-              <button type="button" class="btn btn-icon btn-lg text-body text-opacity-50"><i
-                  class="fa fa-fw fa-plus"></i></button>
+        <div class="eyebrow">Family Account</div>
+        <h1>{{ appSettings.nameCompany }}</h1>
+        <p>
+          Se retiraron dependencias del template que no existen en este repositorio y se dejó una portada estable para continuar el desarrollo.
+        </p>
+      </div>
+      <div class="hero-badges">
+        <span class="badge text-bg-success">Build consistente</span>
+        <span class="badge text-bg-secondary">Angular standalone</span>
+      </div>
+    </section>
 
-              @if (!(elasticsearchWsService.connected$ | async)) {
-              <button type="button" class="btn btn-icon btn-lg text-body" (click)="connectWebSocket()">
-                <i class="fa fa-fw fa-globe"></i>
-              </button>
-              } @else {
-              <button type="button" class="btn btn-icon btn-lg text-body text-opacity-50"
-                (click)="disconnectWebSocket()">
-                <i class="fa fa-fw fa-globe"></i>
-              </button>
-              }
+    <div class="row g-3">
+      <div class="col-xl-8">
+        <panel title="Estado de la aplicación" [noButton]="true">
+          <div class="desktop-card-body">
+            <p>
+              El Home anterior dependía de servicios, modelos y componentes que no existen en el árbol actual del proyecto. Esta versión mantiene la ruta operativa sin agregar dependencias ficticias.
+            </p>
+            <p class="muted-text mb-0">
+              Puedes volver a extender esta pantalla cuando los módulos reales estén implementados en el frontend.
+            </p>
+          </div>
+        </panel>
+      </div>
 
+      <div class="col-xl-4">
+        <panel title="Usuario actual" [noButton]="true">
+          <div class="desktop-card-body">
+            @if (currentUser(); as user) {
+              <div class="user-name">{{ user.nameLogin }}</div>
+              <div class="muted-text mb-2">{{ user.codeLogin }}</div>
+              <div><strong>Email:</strong> {{ user.emailLogin || 'No disponible' }}</div>
+              <div><strong>Teléfono:</strong> {{ user.phoneLogin || 'No disponible' }}</div>
+              <div><strong>Roles:</strong> {{ rolesLabel() }}</div>
+            } @else {
+              <p class="muted-text">No hay un usuario autenticado cargado en cliente.</p>
+            }
 
-              <button type="button" class="btn btn-icon btn-lg text-body text-opacity-50"><i
-                  class="fa fa-fw fa-microphone"></i></button>
-            </div>
-            <input type="text" class="form-control form-control-lg  border-0 shadow-none rounded-4 pb-80px pt-10px"
-              [(ngModel)]="mcpCurrentMessage" #userInput [placeholder]="'HOME.WRITE_QUERY' | translate"
-              (keyup.enter)="sendMcpMessage()"
-              [disabled]="(elasticsearchWsService.loading$ | async) || !(elasticsearchWsService.connected$ | async)"
-              autocomplete="off" />
-
-            <div class="position-absolute end-0 bottom-0 px-3 pb-2">
-              <button #sendButton
-                class="btn btn-inverse btn-lg btn-icon bg-gradient-45 bg-gradient-from-blue bg-gradient-to-teal"
-                (click)="sendMcpMessage()"
-                [disabled]="!mcpCurrentMessage.trim() || (elasticsearchWsService.loading$ | async) || !(elasticsearchWsService.connected$ | async)">
-                @if (elasticsearchWsService.loading$ | async) {
-                <i class="fas fa-spinner fa-spin me-1"></i>
-                } @else {
-                <i class="fa fa-arrow-right"></i>
-                }
+            <div class="mt-3">
+              <button class="btn btn-outline-danger" type="button" (click)="logout()">
+                Cerrar sesión
               </button>
             </div>
           </div>
-        </div>
+        </panel>
       </div>
-      <!-- END ai-chat-input -->
     </div>
-    <!-- END ai-chat-content -->
-    }
+
+    <app-footer></app-footer>
   </div>
-  <div class="tab-pane fade" [class.active]="currentView === 'clientsFilter'"
-    [class.show]="currentView === 'clientsFilter'" id="default-tab-2">
-    @if (currentView === 'clientsFilter') {
-    <app-client-filter [isMobile]="false"
-      [provinces]="provinces" [cantons]="cantons" [districts]="districts" [neighborhoods]="neighborhoods"
-      [restaurants]="restaurants" [devices]="devices" [products]="products" [timesOfDay]="timesOfDay"
-      [deliveryTypes]="deliveryTypes" [generalStats]="generalStats" [clientTypeOptions]="clientTypeOptions"
-      [dateRangeLocale]="dateRangeLocale"
-      [loadingProvinces]="loadingProvinces" [loadingCantons]="loadingCantons" [loadingDistricts]="loadingDistricts"
-      [loadingNeighborhoods]="loadingNeighborhoods" [loadingRestaurants]="loadingRestaurants"
-      [loadingDevices]="loadingDevices" [loadingProducts]="loadingProducts" [loadingTimesOfDay]="loadingTimesOfDay"
-      [loadingDeliveryTypes]="loadingDeliveryTypes"
-      [selectedFilter]="selectedFilter" [selectedPaid]="selectedPaid" [selectedDeliveryTypes]="selectedDeliveryTypes"
-      [selectedProvince]="selectedProvince" [selectedCanton]="selectedCanton" [selectedDistrict]="selectedDistrict"
-      [selectedNeighborhood]="selectedNeighborhood" [selectedTimeOfDay]="selectedTimeOfDay"
-      [selectedRestaurant]="selectedRestaurant" [selectedDevice]="selectedDevice"
-      [selectedProducts]="selectedProducts" [selectedExcludedProducts]="selectedExcludedProducts"
-      [selectedCustomers]="selectedCustomers"
-      [daysRange]="daysRange" [ordersRange]="ordersRange" [dateRange]="dateRange"
-      [selectedDateRange]="selectedDateRange" [searchQuery]="searchQuery"
-      [isSearchMode]="isSearchMode" [isSearching]="isSearching"
-      (filterChange)="onFilterChange($event)" (paidChange)="onPaidChange($event)"
-      (deliveryFilterChange)="onDeliveryFilterChange($event.name, $event.checked)"
-      (provinceChange)="onProvinceChange($event)" (cantonChange)="onCantonChange($event)"
-      (districtChange)="onDistrictChange($event)" (neighborhoodChange)="onNeighborhoodChange($event)"
-      (otherFilterChange)="onOtherFilterChange($event.filter, $event.value)"
-      (productsChange)="onProductsChange($event)" (excludedProductsChange)="onExcludedProductsChange($event)"
-      (customersChange)="onCustomersChange($event)"
-      (daysRangeChange)="onDaysRangeChange()" (ordersRangeChange)="onOrdersRangeChange()"
-      (dateFromChange)="onDateFromChange($event)" (dateToChange)="onDateToChange($event)"
-      (dateRangePickerChange)="onDateRangePickerChange($event)"
-      (clearAndRefresh)="clearAllFiltersAndRefresh()"
-      (searchQueryChange)="onSearchQueryChange($event)" (clearSearchEvent)="clearSearch()">
-    </app-client-filter>
-
-    <panel title="{{ 'HOME.CLIENTS_LIST_TITLE' | translate }} {{ getFilterTitle() }} - {{ getSelectedCompanyName() }}"
-      [headerClass]="'bg-inverse text-white'" [reload]="loading" [noButton]="false">
-
-      <app-client-list [isMobile]="false"
-        [clients]="clients" [totalClients]="totalClients" [loading]="loading"
-        [pagination]="pagination" [clientsPageSize]="clientsPageSize" [currentPage]="currentPage"
-        [sorts]="sorts" [isSearchMode]="isSearchMode" [hasMore]="hasMore"
-        [isExporting]="isExporting" [isExportingInvalidContacts]="isExportingInvalidContacts" [isCreatingCampaign]="isCreatingCampaign"
-        [filterTitle]="getFilterTitle()" [sortField]="sortField" [sortOrder]="sortOrder"
-        [sortOptions]="sortOptions"
-        (viewInvoicesEvent)="viewInvoices($event)"
-        (viewAddressesEvent)="viewAddresses($event)"
-        (pageChange)="setPage($event)"
-        (sortEvent)="onSort($event)"
-        (pageSizeChange)="onPageSizeChange($event)"
-        (exportEvent)="exportData()"
-        (exportInvalidContactsEvent)="exportInvalidContacts()"
-        (createCampaignEvent)="showCreateCampaignForm()"
-        (loadMoreEvent)="loadMore($event)"
-        (sortFieldChange)="onSortFieldChange($event)"
-        (sortDirectionChange)="onSortChange()">
-      </app-client-list>
-    </panel>
-    }
-  </div>
-</div>
-}
-<!-- Fin Vista: Clientes -->
-
-<!-- ========== VISTA: FACTURAS DEL CLIENTE ========== -->
-@if (currentView === 'invoices' && selectedClient) {
-<!-- begin breadcrumb -->
-<ol class="breadcrumb float-xl-end">
-  <li class="breadcrumb-item"><a href="javascript:;" (click)="backToClients()">{{ 'HOME.BREADCRUMB_CLIENTS' | translate }}</a></li>
-  <li class="breadcrumb-item active">{{ 'HOME.BREADCRUMB_INVOICES' | translate }}</li>
-</ol>
-<!-- end breadcrumb -->
-
-<!-- begin page-header -->
-<h1 class="page-header">
-  <button class="btn btn-outline-secondary btn-sm me-3" (click)="backToClients()">
-    <i class="fa fa-arrow-left"></i> {{ 'HOME.BACK' | translate }}
-  </button>
-  {{ 'HOME.BREADCRUMB_INVOICES' | translate }} {{ 'COMMON.OF' | translate }} {{ selectedClient.nameCustomer }}
-  <small>{{ selectedClient.phoneCustomer }}</small>
-</h1>
-<!-- end page-header -->
-
-<!-- Panel de Facturas -->
-<div class="row">
-  <div class="col-xl-12">
-    <app-invoices [selectedClient]="selectedClient" [invoices]="invoices" [totalInvoices]="totalInvoicesFromServer"
-      [currentPage]="currentInvoicesPage" [loading]="loadingInvoices" [isMobile]="false" [pageSize]="invoicesPageSize"
-      (pageChange)="onInvoicesPageChange($event)">
-    </app-invoices>
-  </div>
-</div>
-}
-<!-- Fin Vista: Facturas -->
-
-<!-- ========== VISTA: DIRECCIONES DEL CLIENTE ========== -->
-@if (currentView === 'addresses' && selectedClient) {
-<!-- begin breadcrumb -->
-<ol class="breadcrumb float-xl-end">
-  <li class="breadcrumb-item"><a href="javascript:;" (click)="backToClients()">{{ 'HOME.BREADCRUMB_CLIENTS' | translate }}</a></li>
-  <li class="breadcrumb-item active">{{ 'HOME.BREADCRUMB_ADDRESSES' | translate }}</li>
-</ol>
-<!-- end breadcrumb -->
-
-<!-- begin page-header -->
-<h1 class="page-header">
-  <button class="btn btn-outline-secondary btn-sm me-3" (click)="backToClients()">
-    <i class="fa fa-arrow-left"></i> {{ 'HOME.BACK' | translate }}
-  </button>
-  {{ 'HOME.BREADCRUMB_ADDRESSES' | translate }} {{ 'COMMON.OF' | translate }} {{ selectedClient.nameCustomer }}
-  <small>{{ selectedClient.phoneCustomer }}</small>
-</h1>
-<!-- end page-header -->
-
-<!-- Panel de Direcciones -->
-<div class="row">
-  <div class="col-xl-12">
-    <app-addresses [selectedClient]="selectedClient" [addresses]="addresses" [totalAddresses]="totalAddressesFromServer"
-      [currentPage]="currentAddressesPage" [loading]="loadingAddresses" [isMobile]="false"
-      [pageSize]="addressesPageSize" (pageChange)="onAddressesPageChange($event)">
-    </app-addresses>
-  </div>
-</div>
-}
-<!-- Fin Vista: Direcciones -->
-
-<!-- ==================== MODAL: FORMULARIO DE CAMPAÑA ==================== -->
-<app-campaign-form-modal
-  [show]="showCampaignForm"
-  [totalClients]="totalClients"
-  [senders]="senders"
-  [suppressionGroups]="suppressionGroups"
-  [loadingSenders]="loadingSenders"
-  [loadingGroups]="loadingGroups"
-  (closed)="closeCampaignForm()"
-  (campaignSubmitted)="onCampaignSubmitted($event)">
-</app-campaign-form-modal>
-
-<!-- ==================== MODAL: VISTA PREVIA DEL EMAIL ==================== -->
-<app-email-preview-modal
-  [show]="showPreviewModal"
-  [loading]="loadingPreview"
-  [html]="previewHtml"
-  [error]="previewError"
-  (closed)="closePreviewModal()">
-</app-email-preview-modal>
 }

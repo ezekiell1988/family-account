@@ -23,6 +23,8 @@ export class FooterComponent extends ResponsiveComponent {
   @Input() footerText = '';
   @Input() color = 'theme'; // Color del toolbar para versión móvil
   @Input() translucent = false; // Para footer translúcido en iOS
+  @Input() footerClass = '';
+  @Input() hasCustomContent = false;
 
   constructor(public appSettings: AppSettings) {
     super();

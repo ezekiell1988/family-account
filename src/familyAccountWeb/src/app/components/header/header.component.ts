@@ -3,7 +3,6 @@ import {
   Input,
   Output,
   EventEmitter,
-  Renderer2,
   OnInit,
   OnDestroy,
   ChangeDetectorRef,
@@ -61,6 +60,7 @@ declare var slideToggle: any;
 export class HeaderComponent extends ResponsiveComponent implements OnInit, OnDestroy {
   private readonly logger: Logger;
   private readonly http = inject(HttpClient);
+  private readonly notificationService = inject(NotificationService);
 
   // Imagen de perfil del cliente: se carga desde BD, fallback a estática
   private readonly fallbackPerfilUrl = 'assets/img/user.png';
@@ -84,8 +84,8 @@ export class HeaderComponent extends ResponsiveComponent implements OnInit, OnDe
   currentUser: UserData | null = null;
 
   /** Señales del servicio de notificaciones */
-  readonly notifications;
-  readonly unreadCount;
+  readonly notifications = this.notificationService.notifications;
+  readonly unreadCount = this.notificationService.unreadCount;
 
   /** Control del modal de resultado de campaña */
   readonly showCampaignResultModal = signal(false);
@@ -237,20 +237,14 @@ export class HeaderComponent extends ResponsiveComponent implements OnInit, OnDe
   }
 
   constructor(
-    private renderer: Renderer2, 
     public appSettings: AppSettings,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
     loggerService: LoggerService,
-    public languageService: LanguageService,
-    public notificationService: NotificationService
+    public languageService: LanguageService
   ) {
     super();
     this.logger = loggerService.getLogger('HeaderComponent');
-
-    // Exponer señales del servicio de notificaciones
-    this.notifications = this.notificationService.notifications;
-    this.unreadCount = this.notificationService.unreadCount;
     
     // Registrar íconos de Ionicons para el header móvil
     addIcons({
