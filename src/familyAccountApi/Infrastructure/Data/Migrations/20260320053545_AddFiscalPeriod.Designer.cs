@@ -4,6 +4,7 @@ using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260320053545_AddFiscalPeriod")]
+    partial class AddFiscalPeriod
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -150,131 +153,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             LevelAccount = 1,
                             NameAccount = "Control",
                             TypeAccount = "Control"
-                        });
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AccountingEntry", b =>
-                {
-                    b.Property<int>("IdAccountingEntry")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("idAccountingEntry")
-                        .HasComment("Identificador único autoincremental del asiento contable.");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdAccountingEntry"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasColumnName("createdAt")
-                        .HasDefaultValueSql("GETDATE()")
-                        .HasComment("Fecha y hora de creación del asiento contable.");
-
-                    b.Property<DateOnly>("DateEntry")
-                        .HasColumnType("date")
-                        .HasColumnName("dateEntry")
-                        .HasComment("Fecha contable del asiento.");
-
-                    b.Property<string>("DescriptionEntry")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)")
-                        .HasColumnName("descriptionEntry")
-                        .HasComment("Descripción general del asiento contable.");
-
-                    b.Property<int>("IdFiscalPeriod")
-                        .HasColumnType("int")
-                        .HasColumnName("idFiscalPeriod")
-                        .HasComment("FK al período fiscal al que pertenece el asiento contable.");
-
-                    b.Property<string>("NumberEntry")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(30)")
-                        .HasColumnName("numberEntry")
-                        .HasComment("Número o consecutivo del asiento contable dentro del período fiscal.");
-
-                    b.Property<string>("ReferenceEntry")
-                        .HasMaxLength(100)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("referenceEntry")
-                        .HasComment("Referencia opcional del asiento, como número de documento, factura o comprobante externo.");
-
-                    b.Property<string>("StatusEntry")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(20)")
-                        .HasColumnName("statusEntry")
-                        .HasComment("Estado del asiento contable: Borrador | Publicado | Anulado.");
-
-                    b.HasKey("IdAccountingEntry");
-
-                    b.HasIndex("IdFiscalPeriod", "NumberEntry")
-                        .IsUnique()
-                        .HasDatabaseName("UQ_accountingEntry_idFiscalPeriod_numberEntry");
-
-                    b.ToTable("accountingEntry", t =>
-                        {
-                            t.HasComment("Cabecera del asiento contable. Agrupa las líneas de débito y crédito registradas dentro de un período fiscal determinado.");
-
-                            t.HasCheckConstraint("CK_accountingEntry_statusEntry", "statusEntry IN ('Borrador', 'Publicado', 'Anulado')");
-                        });
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AccountingEntryLine", b =>
-                {
-                    b.Property<int>("IdAccountingEntryLine")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("idAccountingEntryLine")
-                        .HasComment("Identificador único autoincremental de la línea del asiento contable.");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdAccountingEntryLine"));
-
-                    b.Property<decimal>("CreditAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("creditAmount")
-                        .HasComment("Monto registrado al crédito. Debe ser mayor que cero solo cuando la línea es de crédito.");
-
-                    b.Property<decimal>("DebitAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("debitAmount")
-                        .HasComment("Monto registrado al débito. Debe ser mayor que cero solo cuando la línea es de débito.");
-
-                    b.Property<string>("DescriptionLine")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)")
-                        .HasColumnName("descriptionLine")
-                        .HasComment("Descripción opcional y específica de la línea del asiento contable.");
-
-                    b.Property<int>("IdAccount")
-                        .HasColumnType("int")
-                        .HasColumnName("idAccount")
-                        .HasComment("FK a la cuenta contable afectada por esta línea.");
-
-                    b.Property<int>("IdAccountingEntry")
-                        .HasColumnType("int")
-                        .HasColumnName("idAccountingEntry")
-                        .HasComment("FK al asiento contable al que pertenece la línea.");
-
-                    b.HasKey("IdAccountingEntryLine");
-
-                    b.HasIndex("IdAccount")
-                        .HasDatabaseName("IX_accountingEntryLine_idAccount");
-
-                    b.HasIndex("IdAccountingEntry")
-                        .HasDatabaseName("IX_accountingEntryLine_idAccountingEntry");
-
-                    b.ToTable("accountingEntryLine", t =>
-                        {
-                            t.HasComment("Líneas del asiento contable. Cada línea afecta una cuenta contable con un monto al débito o al crédito.");
-
-                            t.HasCheckConstraint("CK_accountingEntryLine_singleSidedAmount", "((debitAmount > 0 AND creditAmount = 0) OR (debitAmount = 0 AND creditAmount > 0))");
                         });
                 });
 
@@ -1023,36 +901,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("Parent");
                 });
 
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AccountingEntry", b =>
-                {
-                    b.HasOne("FamilyAccountApi.Domain.Entities.FiscalPeriod", "IdFiscalPeriodNavigation")
-                        .WithMany("AccountingEntries")
-                        .HasForeignKey("IdFiscalPeriod")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("IdFiscalPeriodNavigation");
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AccountingEntryLine", b =>
-                {
-                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountNavigation")
-                        .WithMany("AccountingEntryLines")
-                        .HasForeignKey("IdAccount")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("FamilyAccountApi.Domain.Entities.AccountingEntry", "IdAccountingEntryNavigation")
-                        .WithMany("AccountingEntryLines")
-                        .HasForeignKey("IdAccountingEntry")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("IdAccountNavigation");
-
-                    b.Navigation("IdAccountingEntryNavigation");
-                });
-
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ContactContactType", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.Contact", "Contact")
@@ -1142,14 +990,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Account", b =>
                 {
-                    b.Navigation("AccountingEntryLines");
-
                     b.Navigation("Children");
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AccountingEntry", b =>
-                {
-                    b.Navigation("AccountingEntryLines");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Contact", b =>
@@ -1160,11 +1001,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ContactType", b =>
                 {
                     b.Navigation("ContactContactTypes");
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FiscalPeriod", b =>
-                {
-                    b.Navigation("AccountingEntries");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Product", b =>

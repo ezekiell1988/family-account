@@ -19,6 +19,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ProductCategory>          ProductCategory          => Set<ProductCategory>();
     public DbSet<ProductProductCategory>   ProductProductCategory   => Set<ProductProductCategory>();
     public DbSet<Account>                  Account                  => Set<Account>();
+    public DbSet<FiscalPeriod>             FiscalPeriod             => Set<FiscalPeriod>();
+    public DbSet<AccountingEntry>          AccountingEntry          => Set<AccountingEntry>();
+    public DbSet<AccountingEntryLine>      AccountingEntryLine      => Set<AccountingEntryLine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

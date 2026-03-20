@@ -4,8 +4,10 @@ using Azure.Identity;
 using FamilyAccountApi.BackgroundJobs;
 using Microsoft.Extensions.Caching.Distributed;
 using FamilyAccountApi.Features.Auth;
+using FamilyAccountApi.Features.AccountingEntries;
 using FamilyAccountApi.Features.Email;
 using FamilyAccountApi.Features.Accounts;
+using FamilyAccountApi.Features.FiscalPeriods;
 using FamilyAccountApi.Features.ProductCategories;
 using FamilyAccountApi.Features.Products;
 using FamilyAccountApi.Features.ProductSKUs;
@@ -113,6 +115,7 @@ builder.Services.AddHangfireServer(options =>
 // Registrar jobs de Hangfire en DI
 builder.Services.AddScoped<EmailJobs>();
 builder.Services.AddScoped<PinJobs>();
+builder.Services.AddScoped<FiscalPeriodJobs>();
 
 // ─── Auth (JWT Bearer) ───────────────────────────────────────────────────────
 var jwtSection = builder.Configuration.GetSection(JwtOptions.Section);
@@ -187,6 +190,8 @@ builder.Services.AddProductSKUsModule();
 builder.Services.AddProductsModule();
 builder.Services.AddProductCategoriesModule();
 builder.Services.AddAccountsModule();
+builder.Services.AddFiscalPeriodsModule();
+builder.Services.AddAccountingEntriesModule();
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -239,6 +244,15 @@ v1.MapProductSKUsEndpoints();
 v1.MapProductsEndpoints();
 v1.MapProductCategoriesEndpoints();
 v1.MapAccountsEndpoints();
+v1.MapFiscalPeriodsEndpoints();
+v1.MapAccountingEntriesEndpoints();
+
+// ─── Recurring jobs ──────────────────────────────────────────────────────────
+// Crea los 12 períodos del año en curso cada 1° de enero a las 3:00 AM UTC.
+RecurringJob.AddOrUpdate<FiscalPeriodJobs>(
+    "create-fiscal-year-periods",
+    job => job.CreateCurrentYearPeriodsAsync(),
+    "0 3 1 1 *");
 
 app.Run();
 

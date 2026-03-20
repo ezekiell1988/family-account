@@ -18,4 +18,5 @@ public sealed class Account
     // Navegaciones (auto-referencia)
     public Account?             Parent   { get; set; }
     public ICollection<Account> Children { get; set; } = [];
+    public ICollection<AccountingEntryLine> AccountingEntryLines { get; set; } = [];
 }

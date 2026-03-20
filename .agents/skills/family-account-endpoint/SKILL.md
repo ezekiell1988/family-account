@@ -11,6 +11,12 @@ description: >
 
 Patrón end-to-end usado en el proyecto: entidad → configuración → DbSet → DTOs → service → module → Program.cs.
 
+Este skill cubre dos escenarios:
+- **Entidad simple CRUD**: una tabla principal con endpoints CRUD directos.
+- **Agregado cabecera/detalle o tabla intermedia**: una tabla principal con hijos (ej. `accountingEntry` + `accountingEntryLine`) o una tabla de relación explícita (ej. `productProductCategory`).
+
+Cuando la feature tiene hijos, validaciones entre filas o reglas contables, **no seguir el ejemplo simple de manera literal**: adaptar DTOs, service, module y migración según las reglas de este mismo skill.
+
 ## Estructura de Archivos
 
 ```
@@ -37,6 +43,43 @@ Features/
 Program.cs                          ← AddXxxModule() + MapXxxEndpoints()
 ```
 
+### Estructura cuando la feature es cabecera/detalle
+
+```text
+Domain/
+    Entities/
+        {Cabecera}.cs
+        {Detalle}.cs
+
+Infrastructure/
+    Data/
+        Configuration/
+            {Cabecera}Configuration.cs
+            {Detalle}Configuration.cs
+        AppDbContext.cs
+
+Features/
+    {Cabeceras}/
+        Dtos/
+            {Cabecera}Response.cs
+            {Detalle}Response.cs
+            {Detalle}Request.cs
+            Create{Cabecera}Request.cs
+            Update{Cabecera}Request.cs
+        I{Cabecera}Service.cs
+        {Cabecera}Service.cs
+        {Cabeceras}Module.cs
+```
+
+### Estructura cuando la feature es tabla intermedia explícita
+
+Usar una entidad propia cuando la relación necesita columnas adicionales, comentarios, índices únicos o endpoints específicos.
+
+Ejemplo:
+- `ProductProductCategory`
+- `ContactContactType`
+- `AccountingEntryLine` si se desea tratarla como tabla hija explícita del asiento
+
 ---
 
 ## 1. Entidad (`Domain/Entities/{Entidad}.cs`)
@@ -60,6 +103,9 @@ public sealed class Product
 - PK: `id{NombreEntidad}` — entero (EF lo mapea a columna `id{NombreEntidad}`).
 - Strings no nulables → `= null!;`  |  opcionales → `string?`
 - Colecciones de navegación → `= [];`
+- Las navegaciones inversas son **opcionales**. Solo agregarlas si realmente aportan claridad o facilitan la consulta.
+- Si la relación es cabecera/detalle, modelar la FK real en la tabla hija (`Id{Cabecera}`) y usar colección en la cabecera solo si conviene.
+- Si la relación requiere una tabla explícita, crear una entidad propia; no depender de many-to-many implícito.
 - Sin lógica de negocio.
 
 ---
@@ -77,23 +123,37 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
     {
+        // ── Comentario de tabla ──────────────────────────────
+        builder.ToTable(t => t.HasComment("Catálogo de productos disponibles para venta o uso interno"));
+        // Si la tabla también tiene check constraint, combinar en el mismo lambda:
+        // builder.ToTable(t =>
+        // {
+        //     t.HasComment("...");
+        //     t.HasCheckConstraint("CK_product_typeProduct", "typeProduct IN ('A', 'B')");
+        // });
+
         // ── PK ──────────────────────────────────────────────
         builder.HasKey(p => p.IdProduct);
-        builder.Property(p => p.IdProduct).ValueGeneratedOnAdd();
+        builder.Property(p => p.IdProduct)
+            .ValueGeneratedOnAdd()
+            .HasComment("Identificador único del producto");
 
         // ── Campos obligatorios ─────────────────────────────
         builder.Property(p => p.CodeProduct)
             .HasMaxLength(50)
             .IsRequired()
-            .IsUnicode(false);   // ASCII: códigos, emails, teléfonos
+            .IsUnicode(false)   // ASCII: códigos, emails, teléfonos
+            .HasComment("Código único del producto (p. ej. PROD-001)");
 
         builder.Property(p => p.NameProduct)
             .HasMaxLength(200)
-            .IsRequired();       // sin IsUnicode → Unicode para nombres/textos
+            .IsRequired()       // sin IsUnicode → Unicode para nombres/textos
+            .HasComment("Nombre descriptivo del producto");
 
         // ── Campos opcionales ───────────────────────────────
         builder.Property(p => p.Description)
-            .HasMaxLength(500);  // IsUnicode() por defecto
+            .HasMaxLength(500)  // IsUnicode() por defecto
+            .HasComment("Descripción detallada del producto");
 
         // ── Índice único ─────────────────────────────────────
         builder.HasIndex(p => p.CodeProduct)
@@ -112,6 +172,22 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
     }
 }
 ```
+
+**Reglas de `HasComment()` — OBLIGATORIO en TODAS las configuraciones:**
+- **Tabla**: `builder.ToTable(t => t.HasComment("Descripción de la tabla"))`.  
+  Si la tabla tiene check constraint, combinar ambas en el mismo lambda:
+  ```csharp
+  builder.ToTable(t =>
+  {
+      t.HasComment("...");
+      t.HasCheckConstraint("CK_tabla_campo", "campo IN ('A', 'B')");
+  });
+  ```
+- **Columnas**: encadenar `.HasComment("Descripción del campo")` al final de cada `Property()`.
+- Los comentarios se guardan en SQL Server como `sp_addextendedproperty` — permiten documentar el esquema directamente en la BD.
+- Ser descriptivo: mencionar propósito, rango de valores o ejemplos cuando sea útil.
+
+---
 
 **Convenciones de nombres en BD** (la conversión camelCase es global en `AppDbContext`):
 
@@ -177,13 +253,21 @@ public sealed record CreateProductRequest
 
 ### Update Request (`Dtos/Update{Entidad}Request.cs`)
 
-Idéntico a `Create` — mismos campos y validaciones.
+Para **entidades simples**, puede ser idéntico a `Create`.
+
+Para **cabecera/detalle**, no asumir que es igual:
+- puede requerir una colección `Lines` o `Details`
+- puede requerir reemplazar por completo las líneas hijas
+- puede prohibir edición según estado (`Publicado`, `Anulado`, etc.)
+- puede requerir validaciones adicionales entre filas
 
 **Reglas de DTOs:**
 - `sealed record` siempre.
 - Request: propiedades con `required` + `{ get; init; }`.
 - Validación con atributos `[Required]`, `[StringLength]`, `[EmailAddress]`, etc. — el middleware `.AddValidation()` los procesa automáticamente con código 400.
 - `[Description]` para documentar en Scalar/OpenAPI.
+- Cuando existe detalle hijo, crear DTO separado para la línea: `AccountingEntryLineRequest`, `AccountingEntryLineResponse`, etc.
+- Si una regla depende de más de una fila, validarla también en el service y, si es crítica, reforzarla en BD.
 
 ---
 
@@ -277,10 +361,13 @@ public sealed class ProductService(AppDbContext db) : IProductService
 - Constructor primario con `AppDbContext db` (DI por parámetro).
 - `AsNoTracking()` en lecturas.
 - `Select()` en proyección directa (evita cargar la entidad completa en lecturas simples).
-- Si se necesitan navegaciones → usar `Include().ThenInclude()` en lugar de `Select()`.
+- Si hay hijos o navegaciones, **preferir seguir proyectando con `Select()` a DTO**. Usar `Include().ThenInclude()` solo cuando realmente necesites materializar entidades completas.
 - `FindAsync([id], ct)` para cargar por PK en escrituras (usa el caché de tracking de EF).
 - `ExecuteDeleteAsync()` para deletes sin cargar la entidad.
 - No atrapar `DbUpdateException` aquí — se atrapa en el Module.
+- Para cabecera/detalle, usar una sola unidad de trabajo para guardar cabecera e hijos en la misma transacción implícita de `SaveChangesAsync()`.
+- Para updates de cabecera/detalle, normalmente: cargar cabecera + hijos, validar estado, eliminar/reemplazar o sincronizar líneas, luego `SaveChangesAsync()`.
+- Reglas de negocio críticas como “la suma del débito debe ser igual a la suma del crédito” deben validarse aquí **y también en la BD si no se puede confiar solo en la API**.
 
 ---
 
@@ -402,6 +489,7 @@ public static class ProductsModule
 - Usar `TypedResults` (no `Results`) — necesario para que OpenAPI genere los tipos correctamente.
 - `ValidationProblem` se incluye en la firma de Create/Update aunque el middleware lo maneja — mantiene el contrato OpenAPI visible.
 - Atrapar `DbUpdateException` en Create y Update con `when` filtrando por el nombre del índice único (`UQ_{tabla}_{campo}`).
+- Para agregados complejos, el module no está limitado a 5 endpoints. Se pueden agregar endpoints adicionales como `GetByYear`, `PostLine`, `ClosePeriod`, `PublishEntry`, etc.
 - Políticas de autorización del proyecto:
   - `RequireAuthorization()` sin política → roles: Developer, Admin, User
   - `RequireAuthorization("Admin")` → roles: Developer, Admin
@@ -441,18 +529,87 @@ dotnet ef database update --project src/familyAccountApi
 > Ver skill `family-account-ef-migrate` para resolución de errores comunes
 > (`PendingModelChangesWarning`, tablas duplicadas, BD existente).
 
+### Cuando la regla NO puede expresarse con check constraint
+
+Si la regla depende de múltiples filas o del agregado completo, **crear la migración primero y luego editarla manualmente**.
+
+Ejemplo típico:
+- `SUM(debitAmount) = SUM(creditAmount)` por asiento contable
+
+En ese caso:
+1. Generar la migración con `dotnet ef migrations add ...`
+2. Editar el archivo de migración recién generado
+3. Agregar `migrationBuilder.Sql(...)` en `Up()` para crear el trigger
+4. Agregar `migrationBuilder.Sql(...)` en `Down()` para eliminar el trigger
+5. Luego ejecutar `dotnet ef database update`
+
+Plantilla base:
+
+```csharp
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+    // ... tablas e índices generados por EF
+
+    migrationBuilder.Sql(
+        """
+        CREATE TRIGGER TR_accountingEntryLine_ValidateBalance
+        ON accountingEntryLine
+        AFTER INSERT, UPDATE, DELETE
+        AS
+        BEGIN
+            SET NOCOUNT ON;
+
+            IF EXISTS
+            (
+                SELECT 1
+                FROM accountingEntryLine ael
+                WHERE ael.idAccountingEntry IN
+                (
+                    SELECT idAccountingEntry FROM inserted
+                    UNION
+                    SELECT idAccountingEntry FROM deleted
+                )
+                GROUP BY ael.idAccountingEntry
+                HAVING SUM(ael.debitAmount) <> SUM(ael.creditAmount)
+            )
+            BEGIN
+                THROW 50001, 'El asiento contable está desbalanceado.', 1;
+            END
+        END
+        """);
+}
+
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+    migrationBuilder.Sql(
+        """
+        IF OBJECT_ID('TR_accountingEntryLine_ValidateBalance', 'TR') IS NOT NULL
+            DROP TRIGGER TR_accountingEntryLine_ValidateBalance;
+        """);
+
+    // ... resto del down generado por EF
+}
+```
+
+**Importante:**
+- Un `CHECK CONSTRAINT` no puede resolver correctamente reglas agregadas entre varias filas.
+- Para integridad real de contabilidad, la validación debe vivir también en la BD.
+- Si el trigger bloquea inserts parciales de líneas, considerar insertar primero todas las líneas del asiento en la misma operación o crear la cabecera y sus detalles dentro de la misma transacción desde la API.
+
 ---
 
 ## Checklist Completo
 
 - [ ] `Domain/Entities/{Entidad}.cs` — PK `id{Entidad}`, strings `= null!`
-- [ ] `Infrastructure/Data/Configuration/{Entidad}Configuration.cs` — PK, campos, índices, FKs
+- [ ] `Infrastructure/Data/Configuration/{Entidad}Configuration.cs` — PK, campos, índices, FKs, **HasComment() en tabla y TODAS las columnas**
 - [ ] `AppDbContext.cs` — `DbSet<{Entidad}>`
 - [ ] `Features/{Entidades}/Dtos/{Entidad}Response.cs` — sealed record positional
 - [ ] `Features/{Entidades}/Dtos/Create{Entidad}Request.cs` — validaciones
 - [ ] `Features/{Entidades}/Dtos/Update{Entidad}Request.cs` — validaciones
+- [ ] Si hay detalle: DTOs hijos `LineRequest` / `LineResponse`
 - [ ] `Features/{Entidades}/I{Entidad}Service.cs` — 5 métodos CRUD
 - [ ] `Features/{Entidades}/`{Entidad}Service.cs` — implementación
-- [ ] `Features/{Entidades}/{Entidades}Module.cs` — Add + Map, 5 endpoints
+- [ ] `Features/{Entidades}/{Entidades}Module.cs` — Add + Map, endpoints necesarios para la feature
 - [ ] `Program.cs` — `AddXxxModule()` + `MapXxxEndpoints()`
+- [ ] Si hay regla agregada crítica: trigger o SQL manual agregado en la migración
 - [ ] Migración generada y aplicada
