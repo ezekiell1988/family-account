@@ -13,7 +13,7 @@ public sealed class BankStatementImportConfiguration : IEntityTypeConfiguration<
             t.HasComment("Registro de importaciones de extractos bancarios");
             t.HasCheckConstraint(
                 "CK_bankStatementImport_status",
-                "status IN ('Pending', 'Processing', 'Completed', 'Failed')"
+                "status IN ('Pendiente', 'Procesando', 'Completado', 'Fallido')"
             );
         });
 
@@ -50,8 +50,8 @@ public sealed class BankStatementImportConfiguration : IEntityTypeConfiguration<
             .HasMaxLength(20)
             .IsRequired()
             .IsUnicode(false)
-            .HasDefaultValue("Pending")
-            .HasComment("Estado de la importación: Pending, Processing, Completed, Failed");
+            .HasDefaultValue("Pendiente")
+            .HasComment("Estado de la importación: Pendiente, Procesando, Completado, Fallido");
 
         builder.Property(b => b.TotalTransactions)
             .IsRequired()

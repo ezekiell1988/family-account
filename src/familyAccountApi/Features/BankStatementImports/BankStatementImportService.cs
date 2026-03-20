@@ -1,5 +1,6 @@
 using FamilyAccountApi.Domain.Entities;
 using FamilyAccountApi.Features.BankStatementImports.Dtos;
+using FamilyAccountApi.Features.BankStatementImports.Parsers;
 using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -163,5 +164,97 @@ public sealed class BankStatementImportService(AppDbContext db) : IBankStatement
             b.TotalTransactions,
             b.ProcessedTransactions,
             b.ErrorMessage);
+    }
+
+    public async Task<BankStatementImportResponse> UploadAsync(
+        IFormFile file,
+        int       idBankAccount,
+        int       idBankStatementTemplate,
+        int       importedBy,
+        CancellationToken ct = default)
+    {
+        var bankAccountExists = await db.BankAccount
+            .AsNoTracking()
+            .AnyAsync(b => b.IdBankAccount == idBankAccount, ct);
+        if (!bankAccountExists)
+            throw new InvalidOperationException($"La cuenta bancaria con ID {idBankAccount} no existe.");
+
+        var template = await db.BankStatementTemplate
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.IdBankStatementTemplate == idBankStatementTemplate, ct)
+            ?? throw new InvalidOperationException($"La plantilla con ID {idBankStatementTemplate} no existe.");
+
+        // Parsear el archivo HTML-XLS
+        using var stream = file.OpenReadStream();
+        var parsed = BcrXlsParser.Parse(
+            stream,
+            template.ColumnMappings,
+            template.DateFormat,
+            template.TimeFormat);
+
+        var import = new BankStatementImport
+        {
+            IdBankAccount              = idBankAccount,
+            IdBankStatementTemplate    = idBankStatementTemplate,
+            FileName                   = file.FileName,
+            ImportDate                 = DateTime.UtcNow,
+            ImportedBy                 = importedBy,
+            Status                     = "Completado",
+            TotalTransactions          = parsed.Count,
+            ProcessedTransactions      = parsed.Count,
+            ErrorMessage               = null
+        };
+
+        db.BankStatementImport.Add(import);
+        await db.SaveChangesAsync(ct);
+
+        var transactions = parsed.Select(p => new BankStatementTransaction
+        {
+            IdBankStatementImport = import.IdBankStatementImport,
+            AccountingDate        = p.AccountingDate,
+            TransactionDate       = p.TransactionDate,
+            TransactionTime       = p.TransactionTime,
+            DocumentNumber        = p.DocumentNumber,
+            Description           = p.Description,
+            DebitAmount           = p.DebitAmount,
+            CreditAmount          = p.CreditAmount,
+            Balance               = p.Balance,
+            IsReconciled          = false
+        }).ToList();
+
+        db.BankStatementTransaction.AddRange(transactions);
+        await db.SaveChangesAsync(ct);
+
+        // Cargar navegaciones para el response
+        await db.Entry(import)
+            .Reference(e => e.IdBankAccountNavigation)
+            .Query()
+            .Include(b => b.IdAccountNavigation)
+            .LoadAsync(ct);
+
+        await db.Entry(import)
+            .Reference(e => e.IdBankStatementTemplateNavigation)
+            .LoadAsync(ct);
+
+        await db.Entry(import)
+            .Reference(e => e.ImportedByNavigation)
+            .LoadAsync(ct);
+
+        return new BankStatementImportResponse(
+            import.IdBankStatementImport,
+            import.IdBankAccount,
+            import.IdBankAccountNavigation.CodeBankAccount,
+            import.IdBankAccountNavigation.IdAccountNavigation.NameAccount,
+            import.IdBankStatementTemplate,
+            import.IdBankStatementTemplateNavigation.CodeTemplate,
+            import.IdBankStatementTemplateNavigation.NameTemplate,
+            import.FileName,
+            import.ImportDate,
+            import.ImportedBy,
+            import.ImportedByNavigation.NameUser,
+            import.Status,
+            import.TotalTransactions,
+            import.ProcessedTransactions,
+            import.ErrorMessage);
     }
 }

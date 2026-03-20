@@ -25,14 +25,14 @@ public sealed class BankAccountService(AppDbContext db) : IBankAccountService
 
     public async Task<BankAccountResponse> CreateAsync(CreateBankAccountRequest request, CancellationToken ct = default)
     {
-        await ValidateRequestAsync(request.IdAccount, request.IdCurrency, ct);
+        await ValidateRequestAsync(request.IdBank, request.IdAccount, request.IdCurrency, ct);
 
         var entity = new BankAccount
         {
+            IdBank = request.IdBank,
             IdAccount = request.IdAccount,
             IdCurrency = request.IdCurrency,
             CodeBankAccount = request.CodeBankAccount.Trim(),
-            BankName = request.BankName.Trim(),
             AccountNumber = request.AccountNumber.Trim(),
             AccountHolder = request.AccountHolder.Trim(),
             IsActive = request.IsActive
@@ -49,12 +49,12 @@ public sealed class BankAccountService(AppDbContext db) : IBankAccountService
         var entity = await db.BankAccount.FindAsync([idBankAccount], ct);
         if (entity is null) return null;
 
-        await ValidateRequestAsync(request.IdAccount, request.IdCurrency, ct);
+        await ValidateRequestAsync(request.IdBank, request.IdAccount, request.IdCurrency, ct);
 
+        entity.IdBank = request.IdBank;
         entity.IdAccount = request.IdAccount;
         entity.IdCurrency = request.IdCurrency;
         entity.CodeBankAccount = request.CodeBankAccount.Trim();
-        entity.BankName = request.BankName.Trim();
         entity.AccountNumber = request.AccountNumber.Trim();
         entity.AccountHolder = request.AccountHolder.Trim();
         entity.IsActive = request.IsActive;
@@ -76,6 +76,7 @@ public sealed class BankAccountService(AppDbContext db) : IBankAccountService
     {
         return db.BankAccount
             .AsNoTracking()
+            .Include(ba => ba.IdBankNavigation)
             .Include(ba => ba.IdAccountNavigation)
             .Include(ba => ba.IdCurrencyNavigation);
     }
@@ -84,6 +85,9 @@ public sealed class BankAccountService(AppDbContext db) : IBankAccountService
     {
         return ba => new BankAccountResponse(
             ba.IdBankAccount,
+            ba.IdBank,
+            ba.IdBankNavigation.CodeBank,
+            ba.IdBankNavigation.NameBank,
             ba.IdAccount,
             ba.IdAccountNavigation.CodeAccount,
             ba.IdAccountNavigation.NameAccount,
@@ -91,14 +95,20 @@ public sealed class BankAccountService(AppDbContext db) : IBankAccountService
             ba.IdCurrencyNavigation.CodeCurrency,
             ba.IdCurrencyNavigation.NameCurrency,
             ba.CodeBankAccount,
-            ba.BankName,
             ba.AccountNumber,
             ba.AccountHolder,
             ba.IsActive);
     }
 
-    private async Task ValidateRequestAsync(int idAccount, int idCurrency, CancellationToken ct)
+    private async Task ValidateRequestAsync(int idBank, int idAccount, int idCurrency, CancellationToken ct)
     {
+        var bankExists = await db.Bank
+            .AsNoTracking()
+            .AnyAsync(b => b.IdBank == idBank, ct);
+
+        if (!bankExists)
+            throw new InvalidOperationException("El banco indicado no existe.");
+
         var account = await db.Account
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.IdAccount == idAccount, ct);

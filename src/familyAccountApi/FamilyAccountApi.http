@@ -1,4 +1,4 @@
-@FamilyAccountApi_HostAddress = http://localhost:5132
+@FamilyAccountApi_HostAddress = https://localhost:7243
 
 GET {{FamilyAccountApi_HostAddress}}/weatherforecast/
 Accept: application/json

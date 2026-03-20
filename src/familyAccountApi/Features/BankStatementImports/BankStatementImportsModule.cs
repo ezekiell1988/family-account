@@ -43,6 +43,12 @@ public static class BankStatementImportsModule
             .WithSummary("Eliminar importación")
             .RequireAuthorization("Admin");
 
+        group.MapPost("/upload/{idBankAccount:int}/{idBankStatementTemplate:int}", Upload)
+            .WithName("UploadBankStatement")
+            .WithSummary("Cargar extracto bancario en formato HTML-XLS (BCR)")
+            .RequireAuthorization("Admin")
+            .DisableAntiforgery();
+
         return app;
     }
 
@@ -65,7 +71,7 @@ public static class BankStatementImportsModule
     {
         try
         {
-            var userIdClaim = user.FindFirst("IdUser")?.Value;
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
             {
                 return TypedResults.BadRequest(new ProblemDetails
@@ -102,5 +108,50 @@ public static class BankStatementImportsModule
     {
         var deleted = await service.DeleteAsync(id, ct);
         return deleted ? TypedResults.NoContent() : TypedResults.NotFound();
+    }
+
+    private static async Task<Results<Created<BankStatementImportResponse>, BadRequest<ProblemDetails>>> Upload(
+        int                  idBankAccount,
+        int                  idBankStatementTemplate,
+        [FromForm] IFormFile file,
+        IBankStatementImportService service,
+        ClaimsPrincipal user,
+        CancellationToken ct)
+    {
+        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return TypedResults.BadRequest(new ProblemDetails
+            {
+                Title  = "Usuario no identificado",
+                Detail = "No se pudo obtener el ID del usuario del token.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        if (file.Length == 0)
+        {
+            return TypedResults.BadRequest(new ProblemDetails
+            {
+                Title  = "Archivo vacío",
+                Detail = "El archivo enviado no contiene datos.",
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+
+        try
+        {
+            var result = await service.UploadAsync(file, idBankAccount, idBankStatementTemplate, userId, ct);
+            return TypedResults.Created($"/bank-statement-imports/{result.IdBankStatementImport}", result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.BadRequest(new ProblemDetails
+            {
+                Title  = "Error de importación",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
     }
 }

@@ -6,6 +6,10 @@ namespace FamilyAccountApi.Features.BankAccounts.Dtos;
 public sealed record UpdateBankAccountRequest
 {
     [Required, Range(1, int.MaxValue)]
+    [Description("Banco o institución financiera")]
+    public required int IdBank { get; init; }
+
+    [Required, Range(1, int.MaxValue)]
     [Description("Cuenta contable vinculada a la cuenta bancaria")]
     public required int IdAccount { get; init; }
 
@@ -16,10 +20,6 @@ public sealed record UpdateBankAccountRequest
     [Required, StringLength(50, MinimumLength = 1)]
     [Description("Código interno de la cuenta bancaria")]
     public required string CodeBankAccount { get; init; }
-
-    [Required, StringLength(150, MinimumLength = 1)]
-    [Description("Nombre del banco")]
-    public required string BankName { get; init; }
 
     [Required, StringLength(100, MinimumLength = 1)]
     [Description("Número de cuenta bancaria o IBAN")]

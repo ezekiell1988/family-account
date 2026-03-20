@@ -18,7 +18,7 @@ public sealed record CreateBankStatementImportRequest
     public required string FileName { get; init; }
 
     [Description("Estado de la importación")]
-    public string Status { get; init; } = "Pending";
+    public string Status { get; init; } = "Pendiente";
 
     [Description("Total de transacciones en el archivo")]
     public int TotalTransactions { get; init; } = 0;

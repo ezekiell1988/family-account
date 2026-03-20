@@ -16,6 +16,10 @@ public sealed class BankAccountConfiguration : IEntityTypeConfiguration<BankAcco
             .ValueGeneratedOnAdd()
             .HasComment("Identificador único autoincremental de la cuenta bancaria.");
 
+        builder.Property(ba => ba.IdBank)
+            .IsRequired()
+            .HasComment("FK a la entidad bancaria (banco o cooperativa) a la que pertenece esta cuenta.");
+
         builder.Property(ba => ba.IdAccount)
             .IsRequired()
             .HasComment("FK a la cuenta contable que representa esta cuenta bancaria en el mayor.");
@@ -29,11 +33,6 @@ public sealed class BankAccountConfiguration : IEntityTypeConfiguration<BankAcco
             .IsRequired()
             .IsUnicode(false)
             .HasComment("Código interno único de la cuenta bancaria.");
-
-        builder.Property(ba => ba.BankName)
-            .HasMaxLength(150)
-            .IsRequired()
-            .HasComment("Nombre de la entidad bancaria.");
 
         builder.Property(ba => ba.AccountNumber)
             .HasMaxLength(100)
@@ -59,11 +58,19 @@ public sealed class BankAccountConfiguration : IEntityTypeConfiguration<BankAcco
             .IsUnique()
             .HasDatabaseName("UQ_bankAccount_accountNumber");
 
+        builder.HasIndex(ba => ba.IdBank)
+            .HasDatabaseName("IX_bankAccount_idBank");
+
         builder.HasIndex(ba => ba.IdAccount)
             .HasDatabaseName("IX_bankAccount_idAccount");
 
         builder.HasIndex(ba => ba.IdCurrency)
             .HasDatabaseName("IX_bankAccount_idCurrency");
+
+        builder.HasOne(ba => ba.IdBankNavigation)
+            .WithMany(b => b.BankAccounts)
+            .HasForeignKey(ba => ba.IdBank)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(ba => ba.IdAccountNavigation)
             .WithMany(a => a.BankAccounts)

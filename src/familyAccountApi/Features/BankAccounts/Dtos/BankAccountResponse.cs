@@ -1,15 +1,17 @@
 namespace FamilyAccountApi.Features.BankAccounts.Dtos;
 
 public sealed record BankAccountResponse(
-    int IdBankAccount,
-    int IdAccount,
+    int    IdBankAccount,
+    int    IdBank,
+    string CodeBank,
+    string NameBank,
+    int    IdAccount,
     string CodeAccount,
     string NameAccount,
-    int IdCurrency,
+    int    IdCurrency,
     string CodeCurrency,
     string NameCurrency,
     string CodeBankAccount,
-    string BankName,
     string AccountNumber,
     string AccountHolder,
-    bool IsActive);
+    bool   IsActive);

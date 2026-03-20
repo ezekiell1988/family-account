@@ -26,7 +26,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Currency>                 Currency                 => Set<Currency>();
     public DbSet<ExchangeRate>             ExchangeRate             => Set<ExchangeRate>();
     public DbSet<Budget>                   Budget                   => Set<Budget>();
+    public DbSet<Bank>                     Bank                     => Set<Bank>();
     public DbSet<BankAccount>              BankAccount              => Set<BankAccount>();
+    public DbSet<BankMovementType>         BankMovementType         => Set<BankMovementType>();
+    public DbSet<BankMovement>             BankMovement             => Set<BankMovement>();
+    public DbSet<BankMovementDocument>     BankMovementDocument     => Set<BankMovementDocument>();
     public DbSet<BankStatementTemplate>    BankStatementTemplate    => Set<BankStatementTemplate>();
     public DbSet<BankStatementImport>      BankStatementImport      => Set<BankStatementImport>();
     public DbSet<BankStatementTransaction> BankStatementTransaction => Set<BankStatementTransaction>();
