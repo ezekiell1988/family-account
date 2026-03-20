@@ -10,6 +10,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<UserPin>  UserPin  => Set<UserPin>();
     public DbSet<Role>     Role     => Set<Role>();
     public DbSet<UserRole> UserRole => Set<UserRole>();
+    public DbSet<Contact>            Contact            => Set<Contact>();
+    public DbSet<ContactType>         ContactType        => Set<ContactType>();
+    public DbSet<ContactContactType>  ContactContactType => Set<ContactContactType>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
