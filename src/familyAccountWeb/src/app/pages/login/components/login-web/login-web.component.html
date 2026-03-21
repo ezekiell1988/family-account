@@ -1,0 +1,145 @@
+<!-- BEGIN login -->
+<div class="login login-with-news-feed">
+
+  <!-- BEGIN news-feed -->
+  <div class="news-feed">
+    @if (bgLoading()) {
+      <div style="position:absolute;inset:0;background:#1a1a2e;display:flex;align-items:center;justify-content:center;z-index:10;">
+        <div class="spinner-border text-light" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+      </div>
+    }
+    <div class="news-image" [style.background-image]="loginBgUrl() ? 'url(' + loginBgUrl() + ')' : 'none'"></div>
+    <div class="news-caption">
+      <h4 class="caption-title"><b>ClickEat</b> {{ 'LOGIN.SUBTITLE' | translate }}</h4>
+      <p>{{ 'LOGIN.DESCRIPTION' | translate }}</p>
+    </div>
+  </div>
+  <!-- END news-feed -->
+
+  <!-- BEGIN login-container -->
+  <div class="login-container">
+
+    <!-- BEGIN login-header -->
+    <div class="login-header mb-30px">
+      <div class="brand">
+        <div class="d-flex align-items-center">
+          <span class="logo"></span>
+          <b>ClickEat</b>
+        </div>
+        <small>{{ 'LOGIN.SUBTITLE' | translate }}</small>
+      </div>
+      <div class="icon">
+        <i class="fa fa-sign-in-alt"></i>
+      </div>
+    </div>
+    <!-- END login-header -->
+
+    <!-- BEGIN login-content -->
+    <div class="login-content">
+
+      <!-- Mensaje de error -->
+      @if (errorMessage()) {
+        <div class="alert alert-danger mb-15px" role="alert">
+          <i class="fa fa-exclamation-circle me-2"></i>
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <form #fDesktop="ngForm" (ngSubmit)="formSubmit(fDesktop)" class="fs-13px">
+
+        <!-- Correo electrónico -->
+        <div class="form-floating mb-10px">
+          <input
+            type="email"
+            class="form-control h-45px fs-13px bg-white border"
+            placeholder="correo@ejemplo.com"
+            id="emailUserDesktop"
+            name="emailUserDesktop"
+            [(ngModel)]="emailUser"
+            required
+            email
+            [disabled]="loading()"
+            autocomplete="email"
+          />
+          <label for="emailUserDesktop" class="d-flex align-items-center fs-13px">
+            <i class="fa fa-envelope me-2"></i> {{ 'LOGIN.CODE_LABEL' | translate }}
+          </label>
+        </div>
+
+        <!-- Botón solicitar PIN -->
+        <div class="mb-15px">
+          <button
+            type="button"
+            class="btn btn-outline-theme d-block h-40px w-100 fs-13px"
+            [disabled]="!emailUser || requestingPin() || loading()"
+            (click)="onRequestPin()"
+          >
+            @if (requestingPin()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+            } @else {
+              <i class="fa fa-paper-plane me-2"></i>
+            }
+            {{ 'LOGIN.REQUEST_PIN' | translate }}
+          </button>
+        </div>
+
+        @if (pinMessage()) {
+          <div class="alert alert-success mb-15px fs-13px" role="alert">
+            <i class="fa fa-check-circle me-2"></i>{{ pinMessage() }}
+          </div>
+        }
+
+        <!-- Token (PIN de 5 dígitos) -->
+        <div class="form-floating mb-15px">
+          <input
+            type="password"
+            class="form-control h-45px fs-13px bg-white border"
+            placeholder="PIN"
+            id="tokenDesktop"
+            name="tokenDesktop"
+            [(ngModel)]="token"
+            required
+            maxlength="5"
+            minlength="5"
+            pattern="[0-9]{5}"
+            [disabled]="loading()"
+            autocomplete="one-time-code"
+          />
+          <label for="tokenDesktop" class="d-flex align-items-center fs-13px">
+            <i class="fa fa-key me-2"></i> {{ 'LOGIN.TOKEN_LABEL' | translate }}
+          </label>
+        </div>
+
+        <!-- Botón de login -->
+        <div class="mb-15px">
+          <button
+            type="submit"
+            class="btn btn-theme d-block h-45px w-100 btn-lg fs-14px"
+            [disabled]="loading() || !fDesktop.valid"
+          >
+            @if (loading()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              {{ 'LOGIN.BUTTON_LOADING' | translate }}
+            } @else {
+              <i class="fa fa-sign-in-alt me-2"></i>
+              {{ 'LOGIN.BUTTON' | translate }}
+            }
+          </button>
+        </div>
+
+        <hr class="bg-gray-600 opacity-2" />
+        <div class="text-gray-600 text-center mb-0">
+          &copy; ClickEat {{ currentYear() }}
+        </div>
+
+      </form>
+    </div>
+    <!-- END login-content -->
+
+  </div>
+  <!-- END login-container -->
+
+</div>
+<!-- END login -->

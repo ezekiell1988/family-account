@@ -1,0 +1,112 @@
+<ion-content class="ion-padding">
+  <div class="login-mobile-container">
+
+    <!-- Logo y título -->
+    <div class="login-header">
+      <div class="brand">
+        <h1>ClickEat</h1>
+        <p>{{ 'LOGIN.SUBTITLE' | translate }}</p>
+      </div>
+    </div>
+
+    <!-- Formulario -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="log-in-outline"></ion-icon>
+          {{ 'LOGIN.TITLE' | translate }}
+        </ion-card-title>
+      </ion-card-header>
+
+      <ion-card-content>
+
+        <!-- Mensaje de error -->
+        @if (errorMessage()) {
+          <div class="alert-error">
+            <ion-icon name="alert-circle-outline"></ion-icon>
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <form #fMobile="ngForm" (ngSubmit)="formSubmit(fMobile)">
+
+          <!-- Correo electrónico -->
+          <ion-item lines="none" class="ion-margin-bottom">
+            <ion-icon name="person-outline" slot="start"></ion-icon>
+            <ion-label position="floating">{{ 'LOGIN.CODE_LABEL' | translate }}</ion-label>
+            <ion-input
+              type="email"
+              name="emailUserMobile"
+              [(ngModel)]="emailUser"
+              required
+              [disabled]="loading()"
+              autocomplete="email"
+            ></ion-input>
+          </ion-item>
+
+          <!-- Botón solicitar PIN -->
+          <ion-button
+            expand="block"
+            fill="outline"
+            type="button"
+            [disabled]="!emailUser || requestingPin() || loading()"
+            (click)="onRequestPin()"
+            class="ion-margin-bottom"
+          >
+            @if (requestingPin()) {
+              <ion-spinner name="crescent" slot="start"></ion-spinner>
+            }
+            {{ 'LOGIN.REQUEST_PIN' | translate }}
+          </ion-button>
+
+          @if (pinMessage()) {
+            <div class="alert-success ion-margin-bottom">
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
+              {{ pinMessage() }}
+            </div>
+          }
+
+          <!-- Token -->
+          <ion-item lines="none" class="ion-margin-bottom">
+            <ion-icon name="key-outline" slot="start"></ion-icon>
+            <ion-label position="floating">{{ 'LOGIN.TOKEN_LABEL' | translate }}</ion-label>
+            <ion-input
+              type="password"
+              name="tokenMobile"
+              [(ngModel)]="token"
+              required
+              maxlength="5"
+              minlength="5"
+              pattern="[0-9]{5}"
+              [disabled]="loading()"
+              autocomplete="one-time-code"
+            ></ion-input>
+          </ion-item>
+
+          <!-- Botón de login -->
+          <ion-button
+            expand="block"
+            type="submit"
+            [disabled]="loading() || !fMobile.valid"
+            class="ion-margin-top"
+          >
+            @if (loading()) {
+              <ion-spinner name="crescent" slot="start"></ion-spinner>
+              {{ 'LOGIN.BUTTON_LOADING' | translate }}
+            } @else {
+              <ion-icon name="log-in-outline" slot="start"></ion-icon>
+              {{ 'LOGIN.BUTTON' | translate }}
+            }
+          </ion-button>
+
+        </form>
+
+        <div class="text-center ion-margin-top">
+          <small>&copy; ClickEat {{ currentYear() }}</small>
+        </div>
+
+      </ion-card-content>
+    </ion-card>
+
+  </div>
+</ion-content>
