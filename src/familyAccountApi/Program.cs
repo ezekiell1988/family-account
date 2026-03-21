@@ -5,6 +5,7 @@ using FamilyAccountApi.BackgroundJobs;
 using Microsoft.Extensions.Caching.Distributed;
 using FamilyAccountApi.Features.Auth;
 using FamilyAccountApi.Features.AccountingEntries;
+using FamilyAccountApi.Features.Health;
 using FamilyAccountApi.Features.BankAccounts;
 using FamilyAccountApi.Features.BankMovements;
 using FamilyAccountApi.Features.BankMovementTypes;
@@ -69,6 +70,11 @@ var dbConnectionString    = RequireConnectionString(builder.Configuration, "Db:C
 var redisConnectionString = RequireConnectionString(builder.Configuration, "Redis:ConnectionString", "RedisBase64", "REDIS_CONNECTION_STRING_BASE64");
 
 // ─── Options ────────────────────────────────────────────────────────────────
+builder.Services.AddOptions<AppOptions>()
+    .BindConfiguration(AppOptions.Section)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 builder.Services.AddOptions<JwtOptions>()
     .BindConfiguration(JwtOptions.Section)
     .ValidateDataAnnotations()
@@ -256,6 +262,9 @@ if (app.Environment.IsDevelopment())
         options.ShowSidebar = true;
     });
 }
+
+// ─── Health (fuera del grupo /api/v1) ────────────────────────────────────────
+app.MapHealthEndpoints();
 
 // ─── Endpoints v1 ────────────────────────────────────────────────────────────
 var v1 = app.MapGroup("/api/v1")

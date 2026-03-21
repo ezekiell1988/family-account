@@ -13,7 +13,6 @@ import { AppMenuService } from './service/app-menus.service';
 import { PlatformDetectorService } from './service/platform-detector.service';
 import { AuthService, LoggerService } from './service';
 import { authInterceptor } from './shared/interceptors';
-import { environment } from '../environments/environment';
 
 /**
  * Factory para inicializar la configuración remota ANTES de que arranque la aplicación
@@ -23,25 +22,16 @@ import { environment } from '../environments/environment';
  */
 async function initializeAppConfig(appSettings: AppSettings, authService: AuthService, loggerService: LoggerService, appVariables: AppVariablesService): Promise<void> {
   const logger = loggerService.getLogger('AppInitializer');
-  
-    // 0. Inicializar Device ID + Device.getInfo() primero
-    try {
-      await appVariables.initializeDeviceId();
-      const deviceId = await appVariables.getDeviceId();
-      logger.info('Device ID inicializado:', deviceId);
-    } catch (error) {
-      logger.error('Error inicializando Device ID:', error);
-      // No bloquear la carga de la app por errores de Device ID
-    }
 
     // 1. Cargar configuración remota y registrar el dispositivo en el mismo paso
-    const configUrl = 'health';
+    const deviceId = await appVariables.getDeviceId();
+    const configUrl = deviceId ? `health/${encodeURIComponent(deviceId)}` : 'health';
     const maxRetries = 3;
     let retryCount = 0;
 
     while (retryCount < maxRetries) {
       try {
-        const response = await fetch(configUrl);
+        const response = await fetch(configUrl, { credentials: 'include' });
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -62,8 +52,7 @@ async function initializeAppConfig(appSettings: AppSettings, authService: AuthSe
         
         break;
         
-      } catch (error) {
-        retryCount++;
+      } catch (error) {        retryCount++;
         logger.error(`Error al cargar configuración (intento ${retryCount}/${maxRetries}):`, error);
         
         if (retryCount < maxRetries) {
@@ -77,43 +66,6 @@ async function initializeAppConfig(appSettings: AppSettings, authService: AuthSe
           appSettings.configLoaded = true;
         }
       }
-    }
-
-    // 1b. Registrar el dispositivo para obtener el device_token (JWT anónimo de dispositivo)
-    //     Se envía solo si aún no existe una cookie device_token válida
-    try {
-      const deviceInfo = await appVariables.getDeviceInfo();
-      const existingDeviceToken = getCookie('device_token');
-
-      if (!existingDeviceToken) {
-        const deviceResponse = await fetch('device', {
-          method: 'POST',
-          credentials: 'include', // Necesario para que el backend pueda setear la cookie device_token
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            uuidApp: deviceInfo.uuidApp,
-            platform: deviceInfo.platform,
-            model: deviceInfo.model,
-            osVersion: deviceInfo.osVersion,
-            manufacturer: deviceInfo.manufacturer,
-            isVirtual: deviceInfo.isVirtual,
-            webUserAgent: deviceInfo.webUserAgent
-          })
-        });
-
-        if (deviceResponse.ok) {
-          const deviceData = await deviceResponse.json();
-          logger.success('Device token registrado:', deviceData.message);
-          // El backend ya setea la cookie device_token via Set-Cookie
-        } else {
-          logger.warn('No se pudo registrar el device token, status:', deviceResponse.status);
-        }
-      } else {
-        logger.info('Device token ya existe, omitiendo registro');
-      }
-    } catch (error) {
-      logger.error('Error registrando device token:', error);
-      // No bloquear la carga de la app
     }
 
     // 2. Validar y refrescar token de autenticación si es necesario
@@ -155,12 +107,6 @@ async function initializeAppConfig(appSettings: AppSettings, authService: AuthSe
     } catch (error) {
       logger.error('Error validando token en inicialización:', error);
     }
-}
-
-/** Lee el valor de una cookie por nombre */
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
-  return match ? decodeURIComponent(match[1]) : null;
 }
 
 export const appConfig: ApplicationConfig = {
