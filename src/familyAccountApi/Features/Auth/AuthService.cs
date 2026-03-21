@@ -147,4 +147,30 @@ public sealed class AuthService(
             .Select(u => new MeResponse(u.IdUser, u.CodeUser, u.NameUser, u.EmailUser))
             .FirstOrDefaultAsync(ct);
     }
+
+    public async Task<CheckAuthResponse> CheckAuthAsync(int idUser, DateTime tokenExpiresAt, CancellationToken ct = default)
+    {
+        var user = await db.User
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.IdUser == idUser, ct);
+
+        if (user is null)
+            return new CheckAuthResponse(false, false, "Usuario no encontrado", null, null);
+
+        var roleIds = await db.UserRole
+            .AsNoTracking()
+            .Where(ur => ur.IdUser == idUser)
+            .Select(ur => ur.IdRole)
+            .ToListAsync(ct);
+
+        var userResponse = new CheckAuthUserResponse(
+            user.IdUser,
+            user.CodeUser,
+            user.NameUser,
+            user.PhoneUser,
+            user.EmailUser,
+            roleIds);
+
+        return new CheckAuthResponse(true, true, "Token válido", userResponse, tokenExpiresAt);
+    }
 }

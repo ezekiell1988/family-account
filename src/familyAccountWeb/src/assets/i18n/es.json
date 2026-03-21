@@ -64,8 +64,9 @@
   "LOGIN": {
     "TITLE": "Iniciar Sesión",
     "SUBTITLE": "Sistema de Gestión",
-    "CODE_LABEL": "Código de usuario",
+    "CODE_LABEL": "Correo electrónico",
     "TOKEN_LABEL": "Token (5 dígitos)",
+    "REQUEST_PIN": "Solicitar PIN al correo",
     "BUTTON": "Iniciar sesión",
     "BUTTON_LOADING": "Iniciando sesión...",
     "REMEMBER_ME": "Recordarme",

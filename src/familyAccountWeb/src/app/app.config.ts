@@ -25,7 +25,7 @@ async function initializeAppConfig(appSettings: AppSettings, authService: AuthSe
 
     // 1. Cargar configuración remota y registrar el dispositivo en el mismo paso
     const deviceId = await appVariables.getDeviceId();
-    const configUrl = deviceId ? `health/${encodeURIComponent(deviceId)}` : 'health';
+    const configUrl = deviceId ? `/health/${encodeURIComponent(deviceId)}.json` : '/health.json';
     const maxRetries = 3;
     let retryCount = 0;
 

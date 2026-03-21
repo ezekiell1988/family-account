@@ -9,20 +9,25 @@
 // ========================================
 
 /**
- * Paso 1: Solicitar token temporal (PIN)
- * POST /api/v1/auth/request-token
+ * Paso 1: Solicitar PIN por correo
+ * POST /api/v1/auth/request-pin
  */
+export interface RequestPinRequest {
+  emailUser: string;
+}
+
+/** @deprecated Usar RequestPinRequest */
 export interface RequestTokenRequest {
-  codeLogin: string;
+  emailUser: string;
 }
 
 /**
- * Paso 2: Login con token temporal
+ * Paso 2: Login con email + PIN
  * POST /api/v1/auth/login
  */
 export interface LoginRequest {
-  codeLogin: string;
-  token: string;
+  emailUser: string;
+  pin: string;
 }
 
 /**

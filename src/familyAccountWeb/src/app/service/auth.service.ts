@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { tap, map, catchError, shareReplay } from 'rxjs/operators';
+import { tap, map, catchError, shareReplay, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { LoggerService } from './logger.service';
@@ -63,6 +63,9 @@ export class AuthService {
   /** Token de autenticación JWE */
   readonly token = signal<string | null>(this.getTokenFromStorage());
   
+  /** Refresh token para renovar el access token */
+  readonly refreshTokenValue = signal<string | null>(localStorage.getItem('refreshToken'));
+
   /** Fecha de expiración del token */
   readonly tokenExpiresAt = signal<string | null>(localStorage.getItem('tokenExpiresAt'));
   
@@ -123,6 +126,16 @@ export class AuthService {
         localStorage.removeItem('token');
       }
     });
+
+    // Effect para sincronizar el refresh token con localStorage
+    effect(() => {
+      const rt = this.refreshTokenValue();
+      if (rt) {
+        localStorage.setItem('refreshToken', rt);
+      } else {
+        localStorage.removeItem('refreshToken');
+      }
+    });
   }
 
   // ========================================
@@ -136,15 +149,15 @@ export class AuthService {
    * @param codeLogin Código de usuario
    * @returns Observable con respuesta de solicitud de token
    */
-  requestLoginToken(codeLogin: string): Observable<RequestTokenResponse> {
-    const url = `${this.apiUrl}request-token`;
-    const body: RequestTokenRequest = { codeLogin };
+  requestLoginToken(emailUser: string): Observable<RequestTokenResponse> {
+    const url = `${this.apiUrl}request-pin`;
+    const body = { emailUser };
 
-    this.logger.debug('Solicitando token para:', codeLogin);
+    this.logger.debug('Solicitando PIN para:', emailUser);
 
     return this.http.post<RequestTokenResponse>(url, body).pipe(
       tap(response => {
-        this.logger.debug('Respuesta solicitud token:', response);
+        this.logger.debug('Respuesta solicitud PIN:', response);
       })
     );
   }
@@ -157,32 +170,45 @@ export class AuthService {
    * @param token PIN de 5 dígitos
    * @returns Observable con respuesta de login
    */
-  loginWithToken(codeLogin: string, token: string): Observable<LoginResponse> {
+  loginWithToken(emailUser: string, pin: string): Observable<LoginResponse> {
     const url = `${this.apiUrl}login`;
-    const body: LoginRequest = { codeLogin, token };
+    const body = { emailUser, pin };
 
-    this.logger.debug('Iniciando sesión con token:', { codeLogin, token: '****' });
+    this.logger.debug('Iniciando sesión:', { emailUser, pin: '****' });
 
-    return this.http.post<LoginResponse>(url, body).pipe(
-      tap((response: LoginResponse) => {
-        this.logger.debug('Respuesta login:', { ...response, accessToken: '****' });
-        
-        if (response.success && response.accessToken) {
-          // Actualizar signals (automáticamente sincroniza con localStorage vía effects)
+    return this.http.post<any>(url, body).pipe(
+      switchMap((response: any) => {
+        this.logger.debug('Respuesta login recibida');
+
+        // La API devuelve: { accessToken, refreshToken, expiresAt }
+        if (response?.accessToken) {
           this.token.set(response.accessToken);
-          this.currentUser.set(response.user);
+          this.refreshTokenValue.set(response.refreshToken ?? null);
           if (response.expiresAt) {
             this.tokenExpiresAt.set(response.expiresAt);
             localStorage.setItem('tokenExpiresAt', response.expiresAt);
           }
-          
-          // Limpiar cache de autenticación para forzar nueva verificación
           this.clearAuthCache();
-          
-          this.logger.success('Sesión iniciada correctamente');
-          this.logger.debug('Usuario:', response.user.nameLogin);
-          this.logger.debug('Expira:', response.expiresAt);
+
+          // Obtener datos del usuario desde /auth/me.json
+          return this.http.get<any>(`${this.apiUrl}me.json`).pipe(
+            tap(me => {
+              const userData: UserData = {
+                idLogin:    me.idUser,
+                codeLogin:  me.codeUser,
+                nameLogin:  me.nameUser,
+                phoneLogin: null,
+                emailLogin: me.emailUser,
+                roles:      []
+              };
+              this.currentUser.set(userData);
+              this.logger.success('Sesión iniciada:', userData.nameLogin);
+            }),
+            map(() => ({ success: true, message: 'OK', user: this.currentUser()!, accessToken: response.accessToken, expiresAt: response.expiresAt } as LoginResponse))
+          );
         }
+
+        return of({ success: false, message: 'Login fallido', user: null as any, accessToken: null, expiresAt: null } as LoginResponse);
       })
     );
   }
@@ -275,27 +301,33 @@ export class AuthService {
    */
   refreshToken(): Observable<RefreshTokenResponse> {
     const url = `${this.apiUrl}refresh`;
-    
+    const rt = this.refreshTokenValue();
+
     this.logger.debug('Refrescando token...');
-    
-    return this.http.put<RefreshTokenResponse>(url, {}, {
-      withCredentials: true,
-      headers: this.getAuthHeaders()
+
+    return this.http.post<any>(url, { refreshToken: rt ?? '' }, {
+      withCredentials: true
     }).pipe(
-      tap((response: RefreshTokenResponse) => {
+      tap((response: any) => {
         this.logger.success('Token refrescado exitosamente');
-        
-        if (response?.success && response?.accessToken) {
-          // Actualizar signals
+
+        // La API devuelve AuthResponse: { accessToken, refreshToken, expiresAt }
+        if (response?.accessToken) {
           this.token.set(response.accessToken);
-          this.tokenExpiresAt.set(response.expiresAt);
-          
-          // Guardar fecha de expiración
-          localStorage.setItem('tokenExpiresAt', response.expiresAt);
-          
+          this.refreshTokenValue.set(response.refreshToken ?? null);
+          if (response.expiresAt) {
+            this.tokenExpiresAt.set(response.expiresAt);
+            localStorage.setItem('tokenExpiresAt', response.expiresAt);
+          }
           this.logger.debug('Nueva expiración:', response.expiresAt);
         }
-      })
+      }),
+      map(response => ({
+        success: !!response?.accessToken,
+        message: response?.accessToken ? 'Token refrescado' : 'Refresh fallido',
+        accessToken: response?.accessToken ?? null,
+        expiresAt:   response?.expiresAt   ?? null
+      } as RefreshTokenResponse))
     );
   }
 
@@ -316,6 +348,12 @@ export class AuthService {
    * @returns Observable<boolean> - true si está autenticado
    */
   checkAuthentication(): Observable<boolean> {
+    // Si no hay token local, no tiene sentido llamar al backend
+    if (!this.getToken()) {
+      this.logger.debug('⚡ Sin token local — no autenticado');
+      return of(false);
+    }
+
     const now = Date.now();
     
     // Si hay un cache válido, retornarlo
@@ -540,11 +578,13 @@ export class AuthService {
     
     // Limpiar signals
     this.token.set(null);
+    this.refreshTokenValue.set(null);
     this.currentUser.set(null);
     this.tokenExpiresAt.set(null);
     
     // Limpiar localStorage
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('userData');
     localStorage.removeItem('tokenExpiresAt');
     

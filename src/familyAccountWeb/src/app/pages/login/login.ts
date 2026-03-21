@@ -54,12 +54,15 @@ export class LoginPage extends ResponsiveComponent implements OnInit, OnDestroy 
   private readonly http        = inject(HttpClient);
 
   // Campos del formulario
-  codeLogin: string = '';
+  emailUser: string = '';
   token: string = '';
 
   // Estado del componente
   loading: boolean = false;
+  requestingPin: boolean = false;
+  pinRequested: boolean = false;
   errorMessage: string = '';
+  pinMessage: string = '';
   currentYear: number = new Date().getFullYear();
 
   // Fondo de login: se intenta cargar desde la BD; fallback a imagen estática
@@ -137,6 +140,32 @@ export class LoginPage extends ResponsiveComponent implements OnInit, OnDestroy 
   }
 
   /**
+   * Solicitar PIN al backend (paso 1)
+   */
+  requestPin(): void {
+    if (!this.emailUser || this.requestingPin) return;
+
+    this.requestingPin = true;
+    this.pinMessage = '';
+    this.errorMessage = '';
+
+    this.authService.requestLoginToken(this.emailUser).subscribe({
+      next: () => {
+        this.pinRequested = true;
+        this.pinMessage = 'PIN enviado a tu correo. Revisa tu bandeja de entrada.';
+        this.logger.info('PIN solicitado para:', this.emailUser);
+      },
+      error: (err) => {
+        this.errorMessage = err.status === 404
+          ? 'No existe un usuario con ese correo.'
+          : 'Error al solicitar el PIN. Intenta de nuevo.';
+        this.logger.error('Error solicitando PIN:', err);
+      },
+      complete: () => { this.requestingPin = false; }
+    });
+  }
+
+  /**
    * Manejar el envío del formulario de login
    */
   formSubmit(f: NgForm) {
@@ -148,25 +177,25 @@ export class LoginPage extends ResponsiveComponent implements OnInit, OnDestroy 
     }
     
     // Validar campos manualmente
-    if (!this.codeLogin || !this.token) {
+    if (!this.emailUser || !this.token) {
       this.logger.warn('Campos vacíos');
-      this.errorMessage = 'Por favor, ingresa tu código de usuario y token.';
+      this.errorMessage = 'Por favor, ingresa tu correo y el PIN.';
       return;
     }
     
     // Validar que el token tenga exactamente 5 dígitos
     if (!/^[0-9]{5}$/.test(this.token)) {
       this.logger.warn('Token inválido:', this.token);
-      this.errorMessage = 'El token debe tener exactamente 5 dígitos numéricos.';
+      this.errorMessage = 'El PIN debe tener exactamente 5 dígitos numéricos.';
       return;
     }
     
-    this.logger.info('Iniciando login...', { codeLogin: this.codeLogin });
+    this.logger.info('Iniciando login...', { emailUser: this.emailUser });
     this.loading = true;
     this.errorMessage = '';
     
     // Llamar al servicio de autenticación
-    this.authService.loginWithToken(this.codeLogin, this.token).subscribe({
+    this.authService.loginWithToken(this.emailUser, this.token).subscribe({
       next: (response) => {
         this.logger.success('Login exitoso:', response);
         

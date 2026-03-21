@@ -9,4 +9,5 @@ public interface IAuthService
     Task<AuthResponse?> RefreshTokenAsync(string refreshToken, CancellationToken ct = default);
     Task<bool> LogoutAsync(int idUser, string jti, DateTime tokenExpiresAt, string refreshToken, CancellationToken ct = default);
     Task<MeResponse?> GetMeAsync(int idUser, CancellationToken ct = default);
+    Task<CheckAuthResponse> CheckAuthAsync(int idUser, DateTime tokenExpiresAt, CancellationToken ct = default);
 }

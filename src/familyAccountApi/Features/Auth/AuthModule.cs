@@ -45,6 +45,11 @@ public static class AuthModule
             .WithSummary("Cerrar sesión y revocar tokens")
             .RequireAuthorization();
 
+        group.MapGet("/check", Check)
+            .WithName("CheckAuth")
+            .WithSummary("Verificar si el usuario está autenticado")
+            .RequireAuthorization();
+
         return app;
     }
 
@@ -117,5 +122,20 @@ public static class AuthModule
         await authService.LogoutAsync(idUser, jti, expiresAt, request.RefreshToken ?? string.Empty, ct);
 
         return TypedResults.NoContent();
+    }
+
+    private static async Task<Results<Ok<CheckAuthResponse>, UnauthorizedHttpResult>> Check(
+        ClaimsPrincipal user,
+        IAuthService authService,
+        CancellationToken ct)
+    {
+        if (!int.TryParse(user.FindFirstValue(JwtRegisteredClaimNames.Sub), out var idUser))
+            return TypedResults.Unauthorized();
+
+        var expClaim = user.FindFirstValue(JwtRegisteredClaimNames.Exp);
+        var expiresAt = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expClaim ?? "0")).UtcDateTime;
+
+        var result = await authService.CheckAuthAsync(idUser, expiresAt, ct);
+        return TypedResults.Ok(result);
     }
 }

@@ -29,20 +29,41 @@
 				}
 
 				<form #fMobile="ngForm" (ngSubmit)="formSubmit(fMobile)">
-					<!-- Código de usuario -->
+					<!-- Correo electrónico -->
 					<ion-item lines="none" class="ion-margin-bottom">
 						<ion-icon name="person-outline" slot="start"></ion-icon>
 						<ion-label position="floating">{{ 'LOGIN.CODE_LABEL' | translate }}</ion-label>
 						<ion-input
-							type="text"
-							name="codeLoginMobile"
-							[(ngModel)]="codeLogin"
+							type="email"
+							name="emailUserMobile"
+							[(ngModel)]="emailUser"
 							required
-							maxlength="10"
 							[disabled]="loading"
-							autocomplete="username"
+							autocomplete="email"
 						></ion-input>
 					</ion-item>
+
+					<!-- Botón solicitar PIN -->
+					<ion-button
+						expand="block"
+						fill="outline"
+						type="button"
+						[disabled]="!emailUser || requestingPin || loading"
+						(click)="requestPin()"
+						class="ion-margin-bottom"
+					>
+						@if (requestingPin) {
+							<ion-spinner name="crescent" slot="start"></ion-spinner>
+						}
+						{{ 'LOGIN.REQUEST_PIN' | translate }}
+					</ion-button>
+
+					@if (pinMessage) {
+						<div class="alert-success ion-margin-bottom">
+							<ion-icon name="checkmark-circle-outline"></ion-icon>
+							{{ pinMessage }}
+						</div>
+					}
 
 					<!-- Token -->
 					<ion-item lines="none" class="ion-margin-bottom">
@@ -57,7 +78,7 @@
 							minlength="5"
 							pattern="[0-9]{5}"
 							[disabled]="loading"
-							autocomplete="current-password"
+							autocomplete="one-time-code"
 						></ion-input>
 					</ion-item>
 
@@ -136,40 +157,63 @@
 			}
 			
 			<form #fDesktop="ngForm" (ngSubmit)="formSubmit(fDesktop)" class="fs-13px">
-				<!-- Código de usuario -->
-				<div class="form-floating mb-15px">
-					<input 
-						type="text" 
-						class="form-control h-45px fs-13px bg-white border" 
-						placeholder="Código de usuario" 
-						id="codeLoginDesktop"
-						name="codeLoginDesktop"
-						[(ngModel)]="codeLogin"
-						required
-						maxlength="10"
-						[disabled]="loading"
-						autocomplete="username"
-					/>
-					<label for="codeLoginDesktop" class="d-flex align-items-center fs-13px">
-						<i class="fa fa-user me-2"></i> {{ 'LOGIN.CODE_LABEL' | translate }}
-					</label>
-				</div>
-				
-				<!-- Token (PIN de 5 dígitos) -->
-				<div class="form-floating mb-15px">
-					<input 
-						type="password" 
-						class="form-control h-45px fs-13px bg-white border" 
-						placeholder="Token" 
-						id="tokenDesktop"
-						name="tokenDesktop"
-						[(ngModel)]="token"
-						required
-						maxlength="5"
-						minlength="5"
-						pattern="[0-9]{5}"
-						[disabled]="loading"
-						autocomplete="current-password"
+					<!-- Correo electrónico -->
+					<div class="form-floating mb-10px">
+						<input 
+							type="email" 
+							class="form-control h-45px fs-13px bg-white border" 
+							placeholder="correo@ejemplo.com" 
+							id="emailUserDesktop"
+							name="emailUserDesktop"
+							[(ngModel)]="emailUser"
+							required
+							email
+							[disabled]="loading"
+							autocomplete="email"
+						/>
+						<label for="emailUserDesktop" class="d-flex align-items-center fs-13px">
+							<i class="fa fa-envelope me-2"></i> {{ 'LOGIN.CODE_LABEL' | translate }}
+						</label>
+					</div>
+
+					<!-- Botón solicitar PIN -->
+					<div class="mb-15px">
+						<button
+							type="button"
+							class="btn btn-outline-theme d-block h-40px w-100 fs-13px"
+							[disabled]="!emailUser || requestingPin || loading"
+							(click)="requestPin()"
+						>
+							@if (requestingPin) {
+								<span class="spinner-border spinner-border-sm me-2" role="status"></span>
+							} @else {
+								<i class="fa fa-paper-plane me-2"></i>
+							}
+							{{ 'LOGIN.REQUEST_PIN' | translate }}
+						</button>
+					</div>
+
+					@if (pinMessage) {
+						<div class="alert alert-success mb-15px fs-13px" role="alert">
+							<i class="fa fa-check-circle me-2"></i>{{ pinMessage }}
+						</div>
+					}
+
+					<!-- Token (PIN de 5 dígitos) -->
+					<div class="form-floating mb-15px">
+						<input 
+							type="password" 
+							class="form-control h-45px fs-13px bg-white border" 
+							placeholder="PIN" 
+							id="tokenDesktop"
+							name="tokenDesktop"
+							[(ngModel)]="token"
+							required
+							maxlength="5"
+							minlength="5"
+							pattern="[0-9]{5}"
+							[disabled]="loading"
+							autocomplete="one-time-code"
 					/>
 					<label for="tokenDesktop" class="d-flex align-items-center fs-13px">
 						<i class="fa fa-key me-2"></i> {{ 'LOGIN.TOKEN_LABEL' | translate }}

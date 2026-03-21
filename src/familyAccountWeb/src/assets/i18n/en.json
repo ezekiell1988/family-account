@@ -64,8 +64,9 @@
   "LOGIN": {
     "TITLE": "Sign In",
     "SUBTITLE": "Management System",
-    "CODE_LABEL": "User code",
+    "CODE_LABEL": "Email address",
     "TOKEN_LABEL": "Token (5 digits)",
+    "REQUEST_PIN": "Send PIN to email",
     "BUTTON": "Sign in",
     "BUTTON_LOADING": "Signing in...",
     "REMEMBER_ME": "Remember me",
