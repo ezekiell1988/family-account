@@ -62,9 +62,8 @@ export class HeaderComponent extends ResponsiveComponent implements OnInit, OnDe
   private readonly http = inject(HttpClient);
   private readonly notificationService = inject(NotificationService);
 
-  // Imagen de perfil del cliente: se carga desde BD, fallback a estática
+  // Imagen de perfil del cliente: imagen estática
   private readonly fallbackPerfilUrl = 'assets/img/user.png';
-  perfilObjectUrl: string | null = null;
   readonly perfilUrl = signal<string>('');
   readonly perfilLoading = signal(true);
   
@@ -155,10 +154,6 @@ export class HeaderComponent extends ResponsiveComponent implements OnInit, OnDe
 
   override ngOnDestroy() {
     this.appSettings.appHeaderMegaMenuMobileToggled = false;
-    if (this.perfilObjectUrl) {
-      URL.revokeObjectURL(this.perfilObjectUrl);
-      this.perfilObjectUrl = null;
-    }
     super.ngOnDestroy();
   }
 
@@ -168,19 +163,8 @@ export class HeaderComponent extends ResponsiveComponent implements OnInit, OnDe
       this.pageTitle = this.appSettings.nameCompany;
     }
 
-    // Cargar imagen de perfil desde la BD
-    const apiUrl = `${environment.apiUrl}Multimedia/perfil`;
-    this.http.get(apiUrl, { responseType: 'blob' }).subscribe({
-      next: (blob) => {
-        this.perfilObjectUrl = URL.createObjectURL(blob);
-        this.perfilUrl.set(this.perfilObjectUrl);
-        this.perfilLoading.set(false);
-      },
-      error: () => {
-        this.perfilUrl.set(this.fallbackPerfilUrl);
-        this.perfilLoading.set(false);
-      },
-    });
+    this.perfilUrl.set(this.fallbackPerfilUrl);
+    this.perfilLoading.set(false);
   }
 
   markAllAsRead(): void {

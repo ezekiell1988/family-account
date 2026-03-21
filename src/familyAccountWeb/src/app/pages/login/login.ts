@@ -2,11 +2,9 @@ import { Component, OnDestroy, OnInit, Renderer2, inject, signal } from '@angula
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AppSettings, AuthService, LoggerService } from '../../service';
 import { ResponsiveComponent } from '../../shared';
-import { environment } from '../../../environments/environment';
 import { addIcons } from 'ionicons';
 import { logInOutline, keyOutline, personOutline } from 'ionicons/icons';
 import {
@@ -51,7 +49,6 @@ export class LoginPage extends ResponsiveComponent implements OnInit, OnDestroy 
   private readonly authService = inject(AuthService);
   private readonly logger      = inject(LoggerService).getLogger('LoginPage');
   private readonly route       = inject(ActivatedRoute);
-  private readonly http        = inject(HttpClient);
 
   // Campos del formulario
   emailUser: string = '';
@@ -65,9 +62,8 @@ export class LoginPage extends ResponsiveComponent implements OnInit, OnDestroy 
   pinMessage: string = '';
   currentYear: number = new Date().getFullYear();
 
-  // Fondo de login: se intenta cargar desde la BD; fallback a imagen estática
+  // Fondo de login: imagen estática
   private readonly fallbackBgUrl = '/assets/img/login-bg.png';
-  private bgObjectUrl: string | null = null;
   loginBgUrl = signal<string>('');
   bgLoading = signal(true);
 
@@ -115,28 +111,11 @@ export class LoginPage extends ResponsiveComponent implements OnInit, OnDestroy 
   override ngOnDestroy() {
     this.appSettings.appEmpty = false;
     this.renderer.removeClass(document.body, 'bg-white');
-    // Liberar blob URL si se creó
-    if (this.bgObjectUrl) {
-      URL.revokeObjectURL(this.bgObjectUrl);
-      this.bgObjectUrl = null;
-    }
   }
 
   ngOnInit(): void {
-    const apiUrl = `${environment.apiUrl}Multimedia/login-background`;
-    this.http.get(apiUrl, { responseType: 'blob' }).subscribe({
-      next: (blob) => {
-        this.bgObjectUrl = URL.createObjectURL(blob);
-        this.loginBgUrl.set(this.bgObjectUrl);
-        this.bgLoading.set(false);
-        this.logger.debug('Login background cargado desde API');
-      },
-      error: () => {
-        this.loginBgUrl.set(this.fallbackBgUrl);
-        this.bgLoading.set(false);
-        this.logger.debug('No hay login background en BD, usando fallback');
-      },
-    });
+    this.loginBgUrl.set(this.fallbackBgUrl);
+    this.bgLoading.set(false);
   }
 
   /**
