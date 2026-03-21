@@ -1,11 +1,9 @@
-using System.Text;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
 using FamilyAccountApi.BackgroundJobs;
-using Microsoft.Extensions.Caching.Distributed;
-using FamilyAccountApi.Features.Auth;
 using FamilyAccountApi.Features.AccountingEntries;
-using FamilyAccountApi.Features.Health;
+using FamilyAccountApi.Features.Accounts;
+using FamilyAccountApi.Features.Auth;
 using FamilyAccountApi.Features.BankAccounts;
 using FamilyAccountApi.Features.BankMovements;
 using FamilyAccountApi.Features.BankMovementTypes;
@@ -18,218 +16,69 @@ using FamilyAccountApi.Features.CostCenters;
 using FamilyAccountApi.Features.Currencies;
 using FamilyAccountApi.Features.Email;
 using FamilyAccountApi.Features.ExchangeRates;
-using FamilyAccountApi.Features.Accounts;
 using FamilyAccountApi.Features.FiscalPeriods;
+using FamilyAccountApi.Features.Health;
 using FamilyAccountApi.Features.ProductCategories;
 using FamilyAccountApi.Features.Products;
 using FamilyAccountApi.Features.ProductSKUs;
 using FamilyAccountApi.Features.Users;
 using FamilyAccountApi.Hangfire;
-using FamilyAccountApi.Infrastructure.Data;
+using FamilyAccountApi.Infrastructure.Extensions;
 using FamilyAccountApi.Infrastructure.Options;
 using FamilyAccountApi.OpenApi;
 using Hangfire;
-using Hangfire.SqlServer;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── Azure Key Vault (producción) ────────────────────────────────────────────
-// El contenedor debe tener la variable AZURE_KEYVAULT_URI y Managed Identity
-// con el rol "Key Vault Secrets User" asignado.
 var keyVaultUri = Environment.GetEnvironmentVariable("AZURE_KEYVAULT_URI");
 if (!string.IsNullOrWhiteSpace(keyVaultUri))
-{
-    builder.Configuration.AddAzureKeyVault(
-        new Uri(keyVaultUri),
-        new DefaultAzureCredential());
-}
+    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
 
-// ─── Resolución de connection strings ────────────────────────────────────────
-// Prioridad: 1) Key Vault (plain text)  2) appsettings base64  3) env var base64
-static string? TryDecodeBase64(string? value)
-{
-    if (value is null) return null;
-    try { return Encoding.UTF8.GetString(Convert.FromBase64String(value)); }
-    catch { return null; }
-}
+// ─── Infraestructura (Options + EF Core + Redis + Hangfire) ──────────────────
+builder.AddInfrastructure();
 
-static string RequireConnectionString(IConfiguration config, string kvKey, string base64ConfigKey, string envVar)
-    => config[kvKey]                                              // Key Vault (plain text)
-        ?? TryDecodeBase64(config.GetConnectionString(base64ConfigKey))  // appsettings base64
-        ?? TryDecodeBase64(Environment.GetEnvironmentVariable(envVar))   // env var base64
-        ?? throw new InvalidOperationException(
-            $"Connection string no encontrado. Configure '{kvKey}' en Key Vault, " +
-            $"'ConnectionStrings:{base64ConfigKey}' en appsettings (base64) " +
-            $"o la variable de entorno '{envVar}' en base64.");
-
-var dbConnectionString    = RequireConnectionString(builder.Configuration, "Db:ConnectionString",    "DbBase64",    "DB_CONNECTION_STRING_BASE64");
-var redisConnectionString = RequireConnectionString(builder.Configuration, "Redis:ConnectionString", "RedisBase64", "REDIS_CONNECTION_STRING_BASE64");
-
-// ─── Options ────────────────────────────────────────────────────────────────
-builder.Services.AddOptions<AppOptions>()
-    .BindConfiguration(AppOptions.Section)
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-
-builder.Services.AddOptions<JwtOptions>()
-    .BindConfiguration(JwtOptions.Section)
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-
-builder.Services.AddOptions<SmtpOptions>()
-    .BindConfiguration(SmtpOptions.Section)
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-
-builder.Services.AddOptions<HangfireOptions>()
-    .BindConfiguration(HangfireOptions.Section)
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-
-// ─── Entity Framework Core ──────────────────────────────────────────────────
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(dbConnectionString, sqlOptions =>
-        sqlOptions.EnableRetryOnFailure(maxRetryCount: 3)));
-
-// ─── Redis Distributed Cache ────────────────────────────────────────────────
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = redisConnectionString;
-    options.InstanceName = "FamilyAccount:";
-});
-
-// ─── Hangfire ───────────────────────────────────────────────────────────────
-var hangfireOpts = builder.Configuration
-    .GetSection(HangfireOptions.Section)
-    .Get<HangfireOptions>() ?? new HangfireOptions();
-
-GlobalJobFilters.Filters.Add(
-    new Hangfire.AutomaticRetryAttribute { Attempts = hangfireOpts.AutomaticRetryAttempts });
-
-builder.Services.AddHangfire(config => config
-    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-    .UseSimpleAssemblyNameTypeSerializer()
-    .UseRecommendedSerializerSettings()
-    .UseSqlServerStorage(dbConnectionString, new SqlServerStorageOptions
-    {
-        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-        QueuePollInterval = TimeSpan.Zero,
-        UseRecommendedIsolationLevel = true,
-        DisableGlobalLocks = true
-    }));
-
-builder.Services.AddHangfireServer(options =>
-{
-    options.WorkerCount = hangfireOpts.WorkerCount;
-    options.Queues = hangfireOpts.Queues;
-});
-
-// Registrar jobs de Hangfire en DI
-builder.Services.AddScoped<EmailJobs>();
-builder.Services.AddScoped<PinJobs>();
-builder.Services.AddScoped<FiscalPeriodJobs>();
-builder.Services.AddScoped<BankStatementImportJob>();
-
-// ─── Auth (JWT Bearer) ───────────────────────────────────────────────────────
-var jwtSection = builder.Configuration.GetSection(JwtOptions.Section);
-
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwtSection["Issuer"],
-            ValidateAudience = true,
-            ValidAudience = jwtSection["Audience"],
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtSection["Secret"]
-                    ?? throw new InvalidOperationException("Jwt:Secret no configurado"))),
-            ClockSkew = TimeSpan.Zero
-        };
-
-        // Verificar blacklist de JWTs revocados
-        options.Events = new JwtBearerEvents
-        {
-            OnTokenValidated = async ctx =>
-            {
-                var cache = ctx.HttpContext.RequestServices
-                    .GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
-                var jti = ctx.Principal?.FindFirst(
-                    System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti)?.Value;
-
-                if (jti is not null)
-                {
-                    var revoked = await cache.GetStringAsync($"revoked:{jti}");
-                    if (revoked is not null)
-                        ctx.Fail("Token revocado.");
-                }
-            }
-        };
-    });
-
-builder.Services.AddAuthorization(options =>
-{
-    // Acceso total: solo Developer
-    options.AddPolicy("Developer", p => p.RequireRole("Developer"));
-    // Acceso amplio: Developer + Admin
-    options.AddPolicy("Admin",     p => p.RequireRole("Developer", "Admin"));
-    // Acceso básico: todos los roles autenticados
-    options.AddPolicy("User",      p => p.RequireRole("Developer", "Admin", "User"));
-});
+// ─── Seguridad (JWT Bearer + Authorization) ───────────────────────────────────
+builder.Services.AddJwtSecurity(builder.Configuration);
 
 // ─── OpenAPI + Scalar ────────────────────────────────────────────────────────
 builder.Services.AddOpenApi("v1", options =>
-{
-    // BearerSecuritySchemeTransformer es un DocumentTransformer (corre último),
-    // por lo que sobrescribe el {} vacío que ASP.NET Core inyecta internamente.
-    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
-});
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
-// ─── Problem Details (RFC 9457) ──────────────────────────────────────────────
+// ─── Cross-cutting services ───────────────────────────────────────────────────
 builder.Services.AddProblemDetails();
-
-// ─── Validation (.NET 10 built-in) ──────────────────────────────────────────
 builder.Services.AddValidation();
 
 // ─── Módulos de features ─────────────────────────────────────────────────────
-builder.Services.AddUsersModule();
-builder.Services.AddAuthModule();
-builder.Services.AddEmailModule();
-builder.Services.AddProductSKUsModule();
-builder.Services.AddProductsModule();
-builder.Services.AddProductCategoriesModule();
-builder.Services.AddAccountsModule();
-builder.Services.AddFiscalPeriodsModule();
-builder.Services.AddAccountingEntriesModule();
-builder.Services.AddCostCentersModule();
-builder.Services.AddCurrenciesModule();
-builder.Services.AddExchangeRatesModule();
-builder.Services.AddBudgetsModule();
-builder.Services.AddBanksModule();
-builder.Services.AddBankAccountsModule();
-builder.Services.AddBankMovementTypesModule();
-builder.Services.AddBankMovementsModule();
-builder.Services.AddBankStatementTemplatesModule();
-builder.Services.AddBankStatementImportsModule();
-builder.Services.AddBankStatementTransactionsModule();
+builder.Services
+    .AddUsersModule()
+    .AddAuthModule()
+    .AddEmailModule()
+    .AddProductSKUsModule()
+    .AddProductsModule()
+    .AddProductCategoriesModule()
+    .AddAccountsModule()
+    .AddFiscalPeriodsModule()
+    .AddAccountingEntriesModule()
+    .AddCostCentersModule()
+    .AddCurrenciesModule()
+    .AddExchangeRatesModule()
+    .AddBudgetsModule()
+    .AddBanksModule()
+    .AddBankAccountsModule()
+    .AddBankMovementTypesModule()
+    .AddBankMovementsModule()
+    .AddBankStatementTemplatesModule()
+    .AddBankStatementImportsModule()
+    .AddBankStatementTransactionsModule();
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
-{
     options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader());
-});
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
 var app = builder.Build();
 
@@ -239,7 +88,15 @@ app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 
-// Hangfire Dashboard con autenticación Basic Auth admin/12345
+// ─── SPA Angular (archivos estáticos desde src/familyAccountWeb/www) ──────────
+var spaRoot = Path.GetFullPath(
+    Path.Combine(builder.Environment.ContentRootPath, "..", "familyAccountWeb", "www"));
+
+if (Directory.Exists(spaRoot))
+    app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(spaRoot) });
+
+// ─── Hangfire Dashboard ───────────────────────────────────────────────────────
+var hangfireOpts = app.Services.GetRequiredService<IOptions<HangfireOptions>>().Value;
 app.UseHangfireDashboard(hangfireOpts.DashboardPath, new DashboardOptions
 {
     Authorization = [new HangfireBasicAuthFilter()],
@@ -267,8 +124,7 @@ if (app.Environment.IsDevelopment())
 app.MapHealthEndpoints();
 
 // ─── Endpoints v1 ────────────────────────────────────────────────────────────
-var v1 = app.MapGroup("/api/v1")
-    .WithGroupName("v1");
+var v1 = app.MapGroup("/api/v1").WithGroupName("v1");
 
 v1.MapUsersEndpoints();
 v1.MapAuthEndpoints();
@@ -290,12 +146,26 @@ v1.MapBankStatementTemplatesEndpoints();
 v1.MapBankStatementImportsEndpoints();
 v1.MapBankStatementTransactionsEndpoints();
 
-// ─── Recurring jobs ──────────────────────────────────────────────────────────
-// Crea los 12 períodos del año en curso cada 1° de enero a las 3:00 AM UTC.
+// ─── Recurring jobs ───────────────────────────────────────────────────────────
 RecurringJob.AddOrUpdate<FiscalPeriodJobs>(
     "create-fiscal-year-periods",
     job => job.CreateCurrentYearPeriodsAsync(),
     "0 3 1 1 *");
+
+// ─── SPA Fallback ─────────────────────────────────────────────────────────────
+if (Directory.Exists(spaRoot))
+{
+    app.MapFallback(async ctx =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api"))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+        ctx.Response.ContentType = "text/html; charset=utf-8";
+        await ctx.Response.SendFileAsync(Path.Combine(spaRoot, "index.html"));
+    });
+}
 
 app.Run();
 
