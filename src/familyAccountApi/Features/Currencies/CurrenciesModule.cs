@@ -19,11 +19,11 @@ public static class CurrenciesModule
             .WithTags("Currencies")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllCurrencies")
             .WithSummary("Obtener todas las monedas");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetCurrencyById")
             .WithSummary("Obtener moneda por ID");
 
@@ -65,7 +65,7 @@ public static class CurrenciesModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/currencies/{item.IdCurrency}", item);
+            return TypedResults.Created($"/api/v1/currencies/{item.IdCurrency}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_currency_codeCurrency") == true)
         {

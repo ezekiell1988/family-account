@@ -19,15 +19,15 @@ public static class ExchangeRatesModule
             .WithTags("ExchangeRates")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllExchangeRates")
             .WithSummary("Obtener todos los tipos de cambio");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetExchangeRateById")
             .WithSummary("Obtener tipo de cambio por ID");
 
-        group.MapGet("/currency/{idCurrency:int}", GetByCurrency)
+        group.MapGet("/currency/{idCurrency:int}.json", GetByCurrency)
             .WithName("GetExchangeRatesByCurrency")
             .WithSummary("Obtener tipos de cambio por moneda");
 
@@ -76,7 +76,7 @@ public static class ExchangeRatesModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/exchange-rates/{item.IdExchangeRate}", item);
+            return TypedResults.Created($"/api/v1/exchange-rates/{item.IdExchangeRate}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_exchangeRate_idCurrency_rateDate") == true)
         {

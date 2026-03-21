@@ -19,11 +19,11 @@ public static class BudgetsModule
             .WithTags("Budgets")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllBudgets")
             .WithSummary("Obtener todos los presupuestos");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetBudgetById")
             .WithSummary("Obtener presupuesto por ID");
 
@@ -65,7 +65,7 @@ public static class BudgetsModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/budgets/{item.IdBudget}", item);
+            return TypedResults.Created($"/api/v1/budgets/{item.IdBudget}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_budget_idAccount_idFiscalPeriod") == true)
         {

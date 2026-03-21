@@ -395,11 +395,11 @@ public static class ProductsModule
             .WithTags("Products")
             .RequireAuthorization();             // todos los endpoints requieren token
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllProducts")
             .WithSummary("Obtener todos los productos");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetProductById")
             .WithSummary("Obtener producto por ID");
 
@@ -441,7 +441,7 @@ public static class ProductsModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/products/{item.IdProduct}", item);
+            return TypedResults.Created($"/api/v1/products/{item.IdProduct}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_product_codeProduct") == true)
         {
@@ -490,6 +490,13 @@ public static class ProductsModule
 - `ValidationProblem` se incluye en la firma de Create/Update aunque el middleware lo maneja — mantiene el contrato OpenAPI visible.
 - Atrapar `DbUpdateException` en Create y Update con `when` filtrando por el nombre del índice único (`UQ_{tabla}_{campo}`).
 - Para agregados complejos, el module no está limitado a 5 endpoints. Se pueden agregar endpoints adicionales como `GetByYear`, `PostLine`, `ClosePeriod`, `PublishEntry`, etc.
+- **Rutas GET terminan en `.json`** — para habilitar caché de Cloudflare en el futuro:
+  - Lista raíz: `MapGet(".json", ...)` (ya que el grupo es `/productos`, la URL final es `/api/v1/productos.json`)
+  - Por ID: `MapGet("/{id:int}.json", ...)`
+  - Rutas especiales: `MapGet("/year/{year:int}.json", ...)`, `MapGet("/currency/{id:int}.json", ...)`, etc.
+  - La URL en `TypedResults.Created(...)` también debe llevar `.json`: `$"/api/v1/products/{item.IdProduct}.json"`
+  - **Excepción**: ASP.NET no permite litreales después de parámetros opcionales (`{x?}.json` lanza ASP0017). En ese caso, declarar dos rutas explícitas: una sin parámetro y otra con parámetro requerido.
+  - `POST`, `PUT`, `DELETE` **no** llevan `.json` — Cloudflare solo cachea GET.
 - Políticas de autorización del proyecto:
   - `RequireAuthorization()` sin política → roles: Developer, Admin, User
   - `RequireAuthorization("Admin")` → roles: Developer, Admin

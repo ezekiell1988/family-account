@@ -19,11 +19,11 @@ public static class BankAccountsModule
             .WithTags("BankAccounts")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllBankAccounts")
             .WithSummary("Obtener todas las cuentas bancarias");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetBankAccountById")
             .WithSummary("Obtener cuenta bancaria por ID");
 
@@ -65,7 +65,7 @@ public static class BankAccountsModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/bank-accounts/{item.IdBankAccount}", item);
+            return TypedResults.Created($"/api/v1/bank-accounts/{item.IdBankAccount}.json", item);
         }
         catch (DbUpdateException ex) when (
             ex.InnerException?.Message.Contains("UQ_bankAccount_codeBankAccount") == true ||

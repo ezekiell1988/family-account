@@ -20,11 +20,11 @@ public static class ProductsModule
             .RequireAuthorization();
 
         // ── CRUD base ────────────────────────────────────────
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllProducts")
             .WithSummary("Obtener todos los productos");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetProductById")
             .WithSummary("Obtener producto por ID (incluye SKUs asociados)");
 
@@ -84,7 +84,7 @@ public static class ProductsModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/products/{item.IdProduct}", item);
+            return TypedResults.Created($"/api/v1/products/{item.IdProduct}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_product_codeProduct") == true)
         {

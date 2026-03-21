@@ -19,11 +19,11 @@ public static class ProductSKUsModule
             .WithTags("ProductSKUs")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllProductSKUs")
             .WithSummary("Obtener todos los productos SKU");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetProductSKUById")
             .WithSummary("Obtener producto SKU por ID");
 
@@ -72,7 +72,7 @@ public static class ProductSKUsModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/product-skus/{item.IdProductSKU}", item);
+            return TypedResults.Created($"/api/v1/product-skus/{item.IdProductSKU}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_productSKU_codeProductSKU") == true)
         {

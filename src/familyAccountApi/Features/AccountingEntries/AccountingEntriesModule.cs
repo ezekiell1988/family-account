@@ -19,11 +19,11 @@ public static class AccountingEntriesModule
             .WithTags("AccountingEntries")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllAccountingEntries")
             .WithSummary("Obtener todos los asientos contables");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetAccountingEntryById")
             .WithSummary("Obtener asiento contable por ID");
 
@@ -70,7 +70,7 @@ public static class AccountingEntriesModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/accounting-entries/{item.IdAccountingEntry}", item);
+            return TypedResults.Created($"/api/v1/accounting-entries/{item.IdAccountingEntry}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_accountingEntry_idFiscalPeriod_numberEntry") == true)
         {

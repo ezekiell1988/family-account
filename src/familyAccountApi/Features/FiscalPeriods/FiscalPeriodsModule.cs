@@ -19,15 +19,15 @@ public static class FiscalPeriodsModule
             .WithTags("FiscalPeriods")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllFiscalPeriods")
             .WithSummary("Obtener todos los períodos fiscales");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetFiscalPeriodById")
             .WithSummary("Obtener período fiscal por ID");
 
-        group.MapGet("/year/{year:int}", GetByYear)
+        group.MapGet("/year/{year:int}.json", GetByYear)
             .WithName("GetFiscalPeriodsByYear")
             .WithSummary("Obtener todos los períodos fiscales de un año");
 
@@ -76,7 +76,7 @@ public static class FiscalPeriodsModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/fiscal-periods/{item.IdFiscalPeriod}", item);
+            return TypedResults.Created($"/api/v1/fiscal-periods/{item.IdFiscalPeriod}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_fiscalPeriod_yearPeriod_monthPeriod") == true)
         {

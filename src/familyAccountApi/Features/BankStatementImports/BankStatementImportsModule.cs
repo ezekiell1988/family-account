@@ -20,11 +20,11 @@ public static class BankStatementImportsModule
             .WithTags("Bank Statement Imports")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllBankStatementImports")
             .WithSummary("Obtener todas las importaciones de extractos bancarios");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetBankStatementImportById")
             .WithSummary("Obtener importación por ID");
 
@@ -83,7 +83,7 @@ public static class BankStatementImportsModule
             }
 
             var created = await service.CreateAsync(request, userId, ct);
-            return TypedResults.Created($"/bank-statement-imports/{created.IdBankStatementImport}", created);
+            return TypedResults.Created($"/bank-statement-imports/{created.IdBankStatementImport}.json", created);
         }
         catch (InvalidOperationException ex)
         {
@@ -142,7 +142,7 @@ public static class BankStatementImportsModule
         try
         {
             var result = await service.UploadAsync(file, idBankAccount, idBankStatementTemplate, userId, ct);
-            return TypedResults.Created($"/bank-statement-imports/{result.IdBankStatementImport}", result);
+            return TypedResults.Created($"/bank-statement-imports/{result.IdBankStatementImport}.json", result);
         }
         catch (Exception ex)
         {

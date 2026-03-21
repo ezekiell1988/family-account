@@ -19,11 +19,11 @@ public static class UsersModule
             .WithTags("Users")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllUsers")
             .WithSummary("Obtener todos los usuarios");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetUserById")
             .WithSummary("Obtener usuario por ID");
 
@@ -72,7 +72,7 @@ public static class UsersModule
         try
         {
             var user = await userService.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/users/{user.IdUser}", user);
+            return TypedResults.Created($"/api/v1/users/{user.IdUser}.json", user);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_user_codeUser") == true)
         {

@@ -7,9 +7,14 @@ public static class HealthModule
 {
     public static IEndpointRouteBuilder MapHealthEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/health/{uuidApp?}", GetHealth)
+        app.MapGet("/health.json", GetHealth)
             .WithName("GetHealth")
             .WithSummary("Estado del API y configuración de la aplicación")
+            .AllowAnonymous();
+
+        app.MapGet("/health/{uuidApp}.json", GetHealth)
+            .WithName("GetHealthWithDevice")
+            .WithSummary("Estado del API y registro del dispositivo")
             .AllowAnonymous();
 
         return app;

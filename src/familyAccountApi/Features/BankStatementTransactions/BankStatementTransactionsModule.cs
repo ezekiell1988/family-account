@@ -19,15 +19,15 @@ public static class BankStatementTransactionsModule
             .WithTags("Bank Statement Transactions")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllBankStatementTransactions")
             .WithSummary("Obtener todas las transacciones de extractos bancarios");
 
-        group.MapGet("/import/{importId:int}", GetByImportId)
+        group.MapGet("/import/{importId:int}.json", GetByImportId)
             .WithName("GetBankStatementTransactionsByImportId")
             .WithSummary("Obtener transacciones por ID de importación");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetBankStatementTransactionById")
             .WithSummary("Obtener transacción por ID");
 
@@ -86,7 +86,7 @@ public static class BankStatementTransactionsModule
         try
         {
             var created = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/bank-statement-transactions/{created.IdBankStatementTransaction}", created);
+            return TypedResults.Created($"/bank-statement-transactions/{created.IdBankStatementTransaction}.json", created);
         }
         catch (InvalidOperationException ex)
         {
@@ -156,7 +156,7 @@ public static class BankStatementTransactionsModule
         try
         {
             var movement = await service.CreateMovementFromTransactionAsync(id, request, ct);
-            return TypedResults.Created($"/bank-movements/{movement.IdBankMovement}", movement);
+            return TypedResults.Created($"/bank-movements/{movement.IdBankMovement}.json", movement);
         }
         catch (InvalidOperationException ex)
         {

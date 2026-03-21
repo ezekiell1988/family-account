@@ -19,15 +19,15 @@ public static class AccountsModule
             .WithTags("Accounts")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllAccounts")
             .WithSummary("Obtener todas las cuentas contables");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetAccountById")
             .WithSummary("Obtener cuenta contable por ID");
 
-        group.MapGet("/{id:int}/children", GetChildren)
+        group.MapGet("/{id:int}/children.json", GetChildren)
             .WithName("GetAccountChildren")
             .WithSummary("Obtener cuentas hijas de una cuenta");
 
@@ -76,7 +76,7 @@ public static class AccountsModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/accounts/{item.IdAccount}", item);
+            return TypedResults.Created($"/api/v1/accounts/{item.IdAccount}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_account_codeAccount") == true)
         {

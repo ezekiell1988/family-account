@@ -19,11 +19,11 @@ public static class BankStatementTemplatesModule
             .WithTags("Bank Statement Templates")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllBankStatementTemplates")
             .WithSummary("Obtener todas las plantillas de extractos bancarios");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetBankStatementTemplateById")
             .WithSummary("Obtener plantilla por ID");
 
@@ -65,7 +65,7 @@ public static class BankStatementTemplatesModule
         try
         {
             var created = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/bank-statement-templates/{created.IdBankStatementTemplate}", created);
+            return TypedResults.Created($"/bank-statement-templates/{created.IdBankStatementTemplate}.json", created);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_bankStatementTemplate_codeTemplate") == true)
         {

@@ -19,11 +19,11 @@ public static class CostCentersModule
             .WithTags("CostCenters")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllCostCenters")
             .WithSummary("Obtener todos los centros de costo");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetCostCenterById")
             .WithSummary("Obtener centro de costo por ID");
 
@@ -65,7 +65,7 @@ public static class CostCentersModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/cost-centers/{item.IdCostCenter}", item);
+            return TypedResults.Created($"/api/v1/cost-centers/{item.IdCostCenter}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_costCenter_codeCostCenter") == true)
         {

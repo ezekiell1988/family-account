@@ -19,11 +19,11 @@ public static class BanksModule
             .WithTags("Banks")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllBanks")
             .WithSummary("Obtener todos los bancos");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetBankById")
             .WithSummary("Obtener banco por ID");
 
@@ -65,7 +65,7 @@ public static class BanksModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/banks/{item.IdBank}", item);
+            return TypedResults.Created($"/api/v1/banks/{item.IdBank}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_bank_codeBank") == true)
         {

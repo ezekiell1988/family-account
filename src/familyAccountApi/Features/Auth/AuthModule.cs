@@ -35,7 +35,7 @@ public static class AuthModule
             .WithSummary("Renovar access token con refresh token")
             .AllowAnonymous();
 
-        group.MapGet("/me", Me)
+        group.MapGet("/me.json", Me)
             .WithName("GetMe")
             .WithSummary("Obtener datos del usuario autenticado")
             .RequireAuthorization();

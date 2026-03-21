@@ -18,11 +18,11 @@ public static class ProductCategoriesModule
             .WithTags("ProductCategories")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllProductCategories")
             .WithSummary("Obtener todas las categorías de producto");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetProductCategoryById")
             .WithSummary("Obtener categoría por ID");
 
@@ -73,7 +73,7 @@ public static class ProductCategoriesModule
         CreateProductCategoryRequest request, IProductCategoryService service, CancellationToken ct)
     {
         var item = await service.CreateAsync(request, ct);
-        return TypedResults.Created($"/api/v1/product-categories/{item.IdProductCategory}", item);
+        return TypedResults.Created($"/api/v1/product-categories/{item.IdProductCategory}.json", item);
     }
 
     private static async Task<Results<Ok<ProductCategoryResponse>, NotFound>> Update(

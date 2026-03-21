@@ -19,11 +19,11 @@ public static class BankMovementsModule
             .WithTags("BankMovements")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllBankMovements")
             .WithSummary("Obtener todos los movimientos bancarios");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetBankMovementById")
             .WithSummary("Obtener movimiento bancario por ID");
 
@@ -75,7 +75,7 @@ public static class BankMovementsModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/bank-movements/{item.IdBankMovement}", item);
+            return TypedResults.Created($"/api/v1/bank-movements/{item.IdBankMovement}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_bankMovement_numberMovement") == true)
         {

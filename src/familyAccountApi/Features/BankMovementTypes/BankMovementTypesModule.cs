@@ -19,11 +19,11 @@ public static class BankMovementTypesModule
             .WithTags("BankMovementTypes")
             .RequireAuthorization();
 
-        group.MapGet("/", GetAll)
+        group.MapGet(".json", GetAll)
             .WithName("GetAllBankMovementTypes")
             .WithSummary("Obtener todos los tipos de movimiento bancario");
 
-        group.MapGet("/{id:int}", GetById)
+        group.MapGet("/{id:int}.json", GetById)
             .WithName("GetBankMovementTypeById")
             .WithSummary("Obtener tipo de movimiento bancario por ID");
 
@@ -65,7 +65,7 @@ public static class BankMovementTypesModule
         try
         {
             var item = await service.CreateAsync(request, ct);
-            return TypedResults.Created($"/api/v1/bank-movement-types/{item.IdBankMovementType}", item);
+            return TypedResults.Created($"/api/v1/bank-movement-types/{item.IdBankMovementType}.json", item);
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_bankMovementType_codeBankMovementType") == true)
         {
