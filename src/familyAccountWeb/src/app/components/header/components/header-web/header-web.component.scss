@@ -1,0 +1,76 @@
+// ── Notificaciones dropdown ──────────────────────────────────────────
+.header-notifications-dropdown {
+  width: 320px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.header-notif-item {
+  cursor: default;
+}
+
+.header-notif-message {
+  font-size: .8rem;
+}
+
+.header-notif-time {
+  font-size: .7rem;
+}
+
+.header-notif-progress {
+  height: 6px;
+}
+
+.header-notif-progress-text {
+  font-size: .7rem;
+}
+
+.header-notif-action-btn {
+  font-size: .75rem;
+}
+
+.header-notif-badge-new {
+  font-size: .65rem;
+}
+
+.header-notif-close {
+  font-size: .65rem;
+}
+
+// ── Caché spinner ────────────────────────────────────────────────────
+.header-cache-spinner {
+  width: .9rem;
+  height: .9rem;
+  border-width: 2px;
+}
+
+// ── Usuario ──────────────────────────────────────────────────────────
+.header-user-toggle {
+  cursor: pointer;
+}
+
+.header-user-name {
+  color: inherit;
+}
+
+// ── Imagen de perfil ─────────────────────────────────────────────────
+.header-perfil-cover {
+  background-size: cover;
+  background-position: center;
+}
+
+.header-perfil-zoom {
+  background-size: cover;
+  background-position: center;
+  cursor: zoom-in;
+}
+
+// ── Modal de perfil ──────────────────────────────────────────────────
+.header-perfil-overlay {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.header-perfil-photo {
+  max-height: 70vh;
+  object-fit: contain;
+}

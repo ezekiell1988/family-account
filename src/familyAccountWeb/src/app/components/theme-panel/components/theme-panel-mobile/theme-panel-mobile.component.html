@@ -1,0 +1,86 @@
+<!-- Botón flotante -->
+@if (showFab) {
+<ion-fab slot="fixed" vertical="center" horizontal="end">
+	<ion-fab-button (click)="openMobileSettings()" color="theme">
+		<ion-icon name="settings-outline"></ion-icon>
+	</ion-fab-button>
+</ion-fab>
+}
+
+<!-- Menú lateral derecho -->
+<ion-menu contentId="main-content" menuId="settings-menu" side="end" type="overlay" [swipeGesture]="false"
+	[disabled]="!showFab">
+	<ion-header>
+		<ion-toolbar color="theme">
+			<ion-title>{{ 'THEME.TITLE' | translate }}</ion-title>
+			<ion-buttons slot="end">
+				<ion-button (click)="closeMobileSettings()">
+					<ion-icon name="close-outline" slot="icon-only"></ion-icon>
+				</ion-button>
+			</ion-buttons>
+		</ion-toolbar>
+	</ion-header>
+
+	<ion-content>
+		<!-- Selector de Color -->
+		<ion-list>
+			<ion-list-header>
+				<ion-label>{{ 'THEME.COLOR' | translate }}</ion-label>
+			</ion-list-header>
+
+			<div class="color-selector-grid ion-padding">
+				@for (theme of themes; track $index) {
+				<div class="color-option" (click)="toggleTheme(theme, $event)">
+					<div class="color-circle" [ngClass]="'bg-' + theme">
+						@if (selectedTheme === theme) {
+						<ion-icon name="checkmark-outline"></ion-icon>
+						}
+					</div>
+				</div>
+				}
+			</div>
+		</ion-list>
+
+		<!-- Opciones de Configuración -->
+		<ion-list>
+			<ion-list-header>
+				<ion-label>{{ 'THEME.APPEARANCE' | translate }}</ion-label>
+			</ion-list-header>
+
+			<!-- Modo Oscuro -->
+			<ion-item>
+				<ion-icon name="moon-outline" slot="start" color="medium"></ion-icon>
+				<ion-label>
+					<h2>{{ 'THEME.DARK_MODE' | translate }}</h2>
+					<p>{{ 'THEME.DARK_MODE_DESC' | translate }}</p>
+				</ion-label>
+				<ion-toggle slot="end" [(ngModel)]="appThemeDarkModeCheckbox" (ionChange)="toggleDarkMode($event)"
+					color="theme"></ion-toggle>
+			</ion-item>
+
+			<!-- Modo RTL -->
+			<ion-item lines="none">
+				<ion-icon name="text-outline" slot="start" color="medium"></ion-icon>
+				<ion-label>
+					<h2>{{ 'THEME.RTL' | translate }}</h2>
+					<p>{{ 'THEME.RTL_DESC' | translate }}</p>
+				</ion-label>
+				<ion-toggle slot="end" [(ngModel)]="appRtlEnabledCheckbox" (ionChange)="toggleRtlEnabled($event)"
+					color="theme"></ion-toggle>
+			</ion-item>
+		</ion-list>
+
+		<!-- Botones de Acción -->
+		<div class="ion-padding">
+			<ion-button expand="block" (click)="closeMobileSettings()" color="theme" size="large">
+				<ion-icon name="checkmark-outline" slot="start"></ion-icon>
+				{{ 'THEME.APPLY' | translate }}
+			</ion-button>
+
+			<ion-button expand="block" (click)="resetLocalStorage()" color="medium" size="large" fill="outline">
+				<ion-icon name="refresh-outline" slot="start"></ion-icon>
+				{{ 'THEME.RESTORE' | translate }}
+			</ion-button>
+		</div>
+	</ion-content>
+</ion-menu>

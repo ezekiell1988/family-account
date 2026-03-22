@@ -1,0 +1,41 @@
+<ion-header [translucent]="translucent">
+  <!-- Toolbar principal - Siempre se muestra -->
+  <ion-toolbar [color]="color">
+    @if (showBackButton) {
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="backButtonHref" (click)="handleBackClick()"></ion-back-button>
+    </ion-buttons>
+    } @else if (isAuthenticated()) {
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    }
+
+    <ion-title>{{ pageTitle }}</ion-title>
+
+    @if (isAuthenticated() && showNotifications) {
+    <ion-buttons slot="end">
+      <ion-button (click)="markAllAsRead()" aria-label="Notificaciones">
+        <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
+        @if (unreadCount() > 0) {
+        <ion-badge color="danger" slot="end">{{ unreadCount() }}</ion-badge>
+        }
+      </ion-button>
+      <!-- Selector de idioma -->
+      <ion-button
+        id="lang-popover-trigger"
+        (click)="toggleLanguage()"
+        [title]="languageService.currentLanguage().name"
+        [attr.aria-label]="languageService.currentLanguage().name">
+        <span class="fi fi-{{ languageService.currentLanguage().flagCode }} header-lang-flag"></span>
+      </ion-button>
+    </ion-buttons>
+    }
+
+    <!-- Botones adicionales personalizados -->
+    <ng-content select="[headerButtons]"></ng-content>
+  </ion-toolbar>
+
+  <!-- Contenido adicional personalizado debajo del toolbar principal -->
+  <ng-content select="[headerContent]"></ng-content>
+</ion-header>

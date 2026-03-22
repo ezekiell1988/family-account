@@ -1,0 +1,17 @@
+.panel-mobile-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-mobile-btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.panel-mobile-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+

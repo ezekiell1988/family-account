@@ -1,0 +1,384 @@
+<!-- BEGIN #header -->
+<div id="header" class="app-header" [attr.data-bs-theme]="appSettings.appHeaderInverse ? 'dark' : ''">
+
+  <!-- BEGIN navbar-header -->
+  <div class="navbar-header">
+    @if (appSidebarTwo) {
+    <button type="button" class="navbar-mobile-toggler" (click)="toggleAppSidebarEndMobile()" aria-label="Abrir panel lateral derecho">
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+    </button>
+    }
+
+    <a href="/" class="navbar-brand">
+      <span class="navbar-logo"></span>
+      <b>{{ appSettings.nameCompany }}</b>&nbsp;BackOffice
+    </a>
+
+    @if (appSettings.appTopMenu && !appSettings.appSidebarNone) {
+    <button type="button" class="navbar-mobile-toggler" (click)="toggleAppTopMenuMobile()" aria-label="Abrir menú superior">
+      <span class="fa-stack fa-lg text-inverse" aria-hidden="true">
+        <i class="far fa-square fa-stack-2x"></i>
+        <i class="fa fa-cog fa-stack-1x"></i>
+      </span>
+    </button>
+    }
+
+    @if (appSettings.appHeaderMegaMenu) {
+    <button type="button" class="navbar-mobile-toggler" (click)="toggleAppHeaderMegaMenuMobile()" aria-label="Abrir mega menú">
+      <span class="fa-stack fa-lg text-inverse" aria-hidden="true">
+        <i class="far fa-square fa-stack-2x"></i>
+        <i class="fa fa-cog fa-stack-1x"></i>
+      </span>
+    </button>
+    }
+
+    @if (!appSettings.appSidebarNone) {
+    <button type="button" class="navbar-mobile-toggler" (click)="toggleAppSidebarMobile()" aria-label="Abrir menú lateral">
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+    </button>
+    }
+
+    @if (appSettings.appTopMenu && appSettings.appSidebarNone) {
+    <button type="button" class="navbar-mobile-toggler" (click)="toggleAppTopMenuMobile()" aria-label="Abrir menú superior">
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+      <span class="icon-bar"></span>
+    </button>
+    }
+  </div>
+  <!-- END navbar-header -->
+
+  <!-- BEGIN mega-menu -->
+  @if (appSettings.appHeaderMegaMenu) {
+  <div class="collapse d-md-block me-auto"
+    [ngClass]="{ 'd-block': (appSettings.appHeaderMegaMenu && appSettings.appHeaderMegaMenuMobileToggled) }">
+    <div class="navbar-nav">
+      <div class="navbar-item dropdown dropdown-lg">
+        <a href="javascript:;" class="navbar-link dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
+          <i class="fa fa-th-large fa-fw me-1" aria-hidden="true"></i>
+          <span class="d-lg-inline d-md-none">Menú</span>
+          <b class="caret ms-1"></b>
+        </a>
+        <div class="dropdown-menu dropdown-menu-lg">
+          Contenido aquí
+        </div>
+      </div>
+      <div class="navbar-item">
+        <a href="javascript:;" class="navbar-link d-flex align-items-center">
+          <i class="fa fa-gem fa-fw me-1" aria-hidden="true"></i>
+          <span class="d-lg-inline d-md-none">Cliente</span>
+        </a>
+      </div>
+      <div class="navbar-item dropdown">
+        <a href="javascript:;" class="navbar-link dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
+          <i class="fa fa-database fa-fw me-1" aria-hidden="true"></i>
+          <span class="d-lg-inline d-md-none">Nuevo</span>
+          <b class="caret ms-1"></b>
+        </a>
+        <div class="dropdown-menu">
+          <a href="javascript:;" class="dropdown-item">Acción</a>
+          <a href="javascript:;" class="dropdown-item">Otra acción</a>
+          <a href="javascript:;" class="dropdown-item">Algo más aquí</a>
+          <div class="dropdown-divider"></div>
+          <a href="javascript:;" class="dropdown-item">Enlace separado</a>
+          <div class="dropdown-divider"></div>
+          <a href="javascript:;" class="dropdown-item">Un enlace más separado</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+  <!-- END mega-menu -->
+
+  <!-- BEGIN nav -->
+  <div class="navbar-nav">
+
+    <!-- Búsqueda -->
+    <div class="navbar-item navbar-form">
+      <form action="" method="POST" name="search">
+        <div class="form-group">
+          <label for="header-search" class="visually-hidden">{{ 'HEADER.SEARCH_PLACEHOLDER' | translate }}</label>
+          <input
+            id="header-search"
+            type="text"
+            class="form-control"
+            [title]="'HEADER.SEARCH_PLACEHOLDER' | translate"
+            [placeholder]="'HEADER.SEARCH_PLACEHOLDER' | translate"
+            [attr.aria-label]="'HEADER.SEARCH_PLACEHOLDER' | translate" />
+          <button
+            type="submit"
+            class="btn btn-search"
+            [title]="'HEADER.SEARCH' | translate"
+            [attr.aria-label]="'HEADER.SEARCH' | translate">
+            <i class="fa fa-search" aria-hidden="true"></i>
+            <span class="visually-hidden">{{ 'HEADER.SEARCH' | translate }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Botón invalidar caché de compañía (solo DEV, rol 1) -->
+    @if (currentUser()?.roles?.includes(1)) {
+    <div class="navbar-item">
+      <button type="button"
+         class="navbar-link icon"
+         [class.disabled]="invalidatingCache()"
+         [disabled]="invalidatingCache()"
+         [title]="invalidatingCache() ? 'Recargando caché...' : 'Recargar configuración de compañía'"
+         (click)="invalidateCache()">
+        @if (invalidatingCache()) {
+          <span class="spinner-border spinner-border-sm header-cache-spinner" role="status"></span>
+        } @else {
+          <i class="fa fa-rotate" aria-hidden="true"></i>
+        }
+      </button>
+    </div>
+    }
+
+    <!-- Notificaciones -->
+    <div class="navbar-item dropdown">
+      <button type="button"
+         data-bs-toggle="dropdown"
+         class="navbar-link dropdown-toggle icon"
+         [attr.aria-label]="unreadCount() > 0 ? ('HEADER.NOTIFICATIONS' | translate) + ' (' + unreadCount() + ' sin leer)' : ('HEADER.NOTIFICATIONS' | translate)"
+         (click)="markAllAsRead()">
+        <i class="fa fa-bell" aria-hidden="true"></i>
+        @if (unreadCount() > 0) {
+        <span class="badge">{{ unreadCount() }}</span>
+        }
+      </button>
+      <div class="dropdown-menu media-list dropdown-menu-end header-notifications-dropdown">
+        <div class="dropdown-header d-flex justify-content-between align-items-center">
+          <span>{{ 'HEADER.NOTIFICATIONS' | translate }} ({{ notifications().length }})</span>
+          @if (notifications().length > 0) {
+          <button type="button" class="btn btn-link text-danger small text-decoration-none p-0" (click)="clearNotifications()">
+            <i class="fa fa-trash-alt me-1" aria-hidden="true"></i>Limpiar
+          </button>
+          }
+        </div>
+
+        @if (notifications().length === 0) {
+        <div class="text-center w-300px py-3 text-muted">
+          <i class="fa fa-bell-slash fa-2x mb-2 d-block" aria-hidden="true"></i>
+          {{ 'HEADER.NO_NOTIFICATIONS' | translate }}
+        </div>
+        } @else {
+          @for (notif of notifications(); track notif.id) {
+          <div class="media py-2 px-3 border-bottom w-100 header-notif-item"
+               [class.bg-light]="!notif.read">
+            <div class="d-flex align-items-start gap-2">
+              <div class="mt-1">
+                @switch (notif.type) {
+                  @case ('success') { <i class="fa fa-check-circle text-success" aria-hidden="true"></i> }
+                  @case ('error')   { <i class="fa fa-times-circle text-danger" aria-hidden="true"></i> }
+                  @case ('warning') { <i class="fa fa-exclamation-triangle text-warning" aria-hidden="true"></i> }
+                  @default          { <i class="fa fa-info-circle text-primary" aria-hidden="true"></i> }
+                }
+              </div>
+              <div class="flex-grow-1">
+                <div class="fw-semibold small">{{ notif.title }}</div>
+                <div class="text-muted header-notif-message">{{ notif.message }}</div>
+                <div class="text-muted header-notif-time">{{ notif.createdAt | date:'HH:mm:ss' }}</div>
+                @if (notif.progress !== undefined) {
+                <div class="mt-1">
+                  <div class="progress header-notif-progress">
+                    <div class="progress-bar progress-bar-striped"
+                         [class.progress-bar-animated]="notif.progress < 100"
+                         [class.bg-success]="notif.progress === 100"
+                         [style.width.%]="notif.progress === 0 ? 100 : notif.progress">
+                    </div>
+                  </div>
+                  @if (notif.progress > 0) {
+                    <div class="text-muted header-notif-progress-text">{{ notif.progress.toFixed(0) }}%</div>
+                  }
+                </div>
+                }
+                @if (notif.actionLabel && notif.actionData) {
+                <button type="button"
+                        class="btn btn-outline-primary btn-sm mt-1 py-0 px-2 header-notif-action-btn"
+                        (click)="onNotificationAction(notif); $event.stopPropagation()">
+                  <i class="fa fa-eye me-1" aria-hidden="true"></i>{{ notif.actionLabel }}
+                </button>
+                }
+              </div>
+              <div class="d-flex flex-column align-items-end gap-1">
+                @if (!notif.read) {
+                <span class="badge bg-primary rounded-pill header-notif-badge-new">Nuevo</span>
+                }
+                <button type="button"
+                        class="btn-close header-notif-close"
+                        (click)="removeNotification(notif.id); $event.stopPropagation()"
+                        aria-label="Cerrar"></button>
+              </div>
+            </div>
+          </div>
+          }
+        }
+
+        <div class="dropdown-footer text-center">
+          <button type="button" class="btn btn-link text-decoration-none p-0" (click)="markAllAsRead()">
+            {{ 'HEADER.VIEW_MORE' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selector de idioma -->
+    @if (appSettings.appHeaderLanguageBar) {
+    <div class="navbar-item dropdown">
+      <button type="button" class="navbar-link dropdown-toggle" data-bs-toggle="dropdown" [attr.aria-label]="languageService.currentLang()">
+        <span class="fi fi-{{ languageService.currentLanguage().flagCode }}" [title]="languageService.currentLang()"></span>
+        <span class="d-none d-sm-inline ms-1">{{ languageService.currentLang().toUpperCase() }}</span>
+        <b class="caret"></b>
+      </button>
+      <div class="dropdown-menu">
+        @for (lang of languageService.languages; track lang.code) {
+          <button type="button"
+             class="dropdown-item d-flex align-items-center"
+             [class.fw-bold]="languageService.currentLang() === lang.code"
+             (click)="languageService.setLanguage(lang.code)">
+            <span class="fi fi-{{ lang.flagCode }} me-2" [title]="lang.code"></span>
+            {{ lang.name }}
+            @if (languageService.currentLang() === lang.code) {
+              <i class="fa fa-check ms-auto text-theme" aria-hidden="true"></i>
+            }
+          </button>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Usuario -->
+    <div class="navbar-item navbar-user dropdown">
+      <button type="button" class="navbar-link dropdown-toggle d-flex align-items-center header-user-toggle"
+              data-bs-toggle="dropdown" [attr.aria-label]="currentUser()?.nameLogin || 'Usuario'">
+        @if (perfilLoading()) {
+          <div class="image bg-gray-800 text-gray-600 d-flex align-items-center justify-content-center">
+            <span class="spinner-border spinner-border-sm text-light" role="status"></span>
+          </div>
+        } @else if (perfilObjectUrl) {
+          <div class="image bg-gray-800 text-gray-600 header-perfil-zoom"
+               [style.background-image]="'url(' + perfilUrl() + ')'"
+               (click)="showPerfilModal.set(true); $event.stopPropagation()"
+               title="Ver imagen de perfil">
+          </div>
+        } @else {
+          <div class="image bg-gray-800 text-gray-600 header-perfil-cover"
+               [style.background-image]="'url(' + perfilUrl() + ')'">
+          </div>
+        }
+        <span class="d-flex align-items-center header-user-name">
+          <span>
+            <span class="d-none d-md-inline fw-bold">{{ currentUser()?.nameLogin || 'Usuario' }}</span>
+            <b class="caret"></b>
+          </span>
+        </span>
+      </button>
+
+      <div class="dropdown-menu dropdown-menu-end me-1">
+        @if (currentUser()) {
+        <div class="dropdown-header">
+          <div class="fw-bold">{{ currentUser()!.nameLogin }}</div>
+          <div class="text-muted small">{{ currentUser()!.codeLogin }}</div>
+          @if (currentUser()!.emailLogin) {
+          <div class="text-muted small">{{ currentUser()!.emailLogin }}</div>
+          }
+          @if (currentUser()!.phoneLogin) {
+          <div class="text-muted small">{{ currentUser()!.phoneLogin }}</div>
+          }
+        </div>
+        <div class="dropdown-divider"></div>
+        }
+        <a href="javascript:;" class="dropdown-item">
+          <i class="fa fa-user fa-fw me-2" aria-hidden="true"></i>{{ 'HEADER.USER.EDIT_PROFILE' | translate }}
+        </a>
+        <a href="javascript:;" class="dropdown-item d-flex align-items-center">
+          <i class="fa fa-envelope fa-fw me-2" aria-hidden="true"></i>
+          {{ 'HEADER.USER.INBOX' | translate }}
+          <span class="badge bg-danger rounded-pill ms-auto pb-4px">2</span>
+        </a>
+        <a href="javascript:;" class="dropdown-item">
+          <i class="fa fa-calendar fa-fw me-2" aria-hidden="true"></i>{{ 'HEADER.USER.CALENDAR' | translate }}
+        </a>
+        <a href="javascript:;" class="dropdown-item">
+          <i class="fa fa-cog fa-fw me-2" aria-hidden="true"></i>{{ 'HEADER.USER.SETTINGS' | translate }}
+        </a>
+        <div class="dropdown-divider"></div>
+        <button type="button" class="dropdown-item" (click)="logout()">
+          <i class="fa fa-sign-out-alt fa-fw me-2" aria-hidden="true"></i>{{ 'HEADER.USER.LOGOUT' | translate }}
+        </button>
+      </div>
+    </div>
+
+    @if (appSidebarTwo) {
+    <div class="navbar-divider d-none d-md-block"></div>
+    }
+    @if (appSidebarTwo) {
+    <div class="navbar-item d-none d-md-block">
+      <button type="button" (click)="toggleAppSidebarEnd()" class="navbar-link icon" aria-label="Abrir panel lateral derecho">
+        <i class="fa fa-th" aria-hidden="true"></i>
+      </button>
+    </div>
+    }
+
+  </div>
+  <!-- END nav -->
+</div>
+<!-- END #header -->
+
+<!-- Modal de resultado de campaña -->
+@if (showCampaignResultModal() && campaignResult()) {
+<div class="modal d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.5);" (click)="showCampaignResultModal.set(false)">
+  <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="campaignResultModalTitle">Resultado de campaña</h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="showCampaignResultModal.set(false)"></button>
+      </div>
+      <div class="modal-body">
+        <pre class="mb-0 small">{{ campaignResult() | json }}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+<!-- Modal de resultado de exportación -->
+@if (showExportResultModal() && exportResult()) {
+<div class="modal d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.5);" (click)="showExportResultModal.set(false)">
+  <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exportResultModalTitle">Resultado de exportación</h5>
+        <button type="button" class="btn-close" aria-label="Cerrar" (click)="showExportResultModal.set(false)"></button>
+      </div>
+      <div class="modal-body">
+        <pre class="mb-0 small">{{ exportResult() | json }}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+}
+
+<!-- Modal de imagen de perfil -->
+@if (showPerfilModal()) {
+<div class="modal d-block header-perfil-overlay" tabindex="-1" (click)="showPerfilModal.set(false)">
+  <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content bg-dark border-0">
+      <div class="modal-header border-0 pb-0">
+        <span class="text-white fw-semibold">{{ currentUser()?.nameLogin || 'Perfil' }}</span>
+        <button type="button" class="btn-close btn-close-white ms-auto"
+                (click)="showPerfilModal.set(false)"
+                aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body text-center p-3">
+        <img [src]="perfilUrl()" alt="Foto de perfil" class="img-fluid rounded header-perfil-photo" />
+      </div>
+    </div>
+  </div>
+</div>
+}

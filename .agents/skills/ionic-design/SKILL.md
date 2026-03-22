@@ -757,3 +757,22 @@ Cada página/módulo tiene su propia sección raíz. Seguir la convención:
 - Ionic Components: https://ionicframework.com/docs/components
 - Ionicons: https://ionic.io/ionicons
 - Color Generator: https://ionicframework.com/docs/theming/color-generator
+
+---
+
+## Anti-patrones a evitar
+
+| ❌ Incorrecto | ✅ Correcto |
+|---|---|
+| `event.target.value` en `(ionInput)` / `(ionChange)` | Usar `event.detail?.value` — Ionic usa `CustomEvent` con `.detail`, no eventos DOM nativos |
+| `handleRefresh` síncrono sin `.complete()` garantizado | Usar `async/await` + `setTimeout(800)` antes de `event.target.complete()` para que la animación sea visible |
+| `@ViewChild` para expandir tarjetas mobile | Signal puro: `expandedId.update(v => v === id ? null : id)` — sin referencias imperativas al DOM |
+| `CUSTOM_ELEMENTS_SCHEMA` omitido en componentes Ionic | Siempre incluir en el array `schemas` del componente standalone para que Angular no rechace los web components de Ionic |
+| `<ion-refresher>` sin `slot="fixed"` | `<ion-refresher slot="fixed">` — sin el slot el refresher no se ancla correctamente al tope del scroll |
+| `<ion-input>` / `<ion-select>` sin `label` o `aria-label` | Siempre proporcionar `label` visible o `aria-label` — los componentes Ionic no heredan accesibilidad automáticamente |
+| Mezclar `<input>` HTML nativo con `<ion-item>` | Usar `<ion-input>` dentro de `<ion-item>` — el nativo rompe el padding/estilo de la tarjeta en iOS/Android |
+| Estilos CSS directos sobre `:host` sin variables de Ionic | Usar variables CSS de Ionic (`--background`, `--color`, `--padding-start`, etc.) para respetar el theming |
+| `<ion-icon name="...">` sin `aria-hidden` en botones con texto | Marcar `aria-hidden="true"` en el icono si el botón ya tiene texto visible o `aria-label` |
+| `ion-card` con click handler sin `button` prop | Usar `<ion-card button>` para que Ionic añada el ripple y el cursor pointer nativos |
+| `(click)` en `<ion-item>` para navegación | Usar `[routerLink]` o `router.navigate()` — Ionic gestiona el historial de navegación con su propio router outlet |
+| Dark mode con override de colores Bootstrap | Usar variables CSS de Ionic para dark mode — mezclar Bootstrap y Ionic rompe el theming en modo oscuro |

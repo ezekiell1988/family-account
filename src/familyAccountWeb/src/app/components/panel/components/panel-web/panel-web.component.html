@@ -1,0 +1,73 @@
+<!-- =====================================================
+     PANEL-WEB COMPONENT - Color Admin (Desktop)
+     ===================================================== -->
+
+@if (!remove) {
+  <div class="panel"
+    [ngClass]="[
+      (expand)    ? 'panel-expand'           : '',
+      (reload)    ? 'panel-loading'          : '',
+      (panelClass) ? panelClass              : '',
+      (variant)   ? 'panel-' + variant       : 'panel-inverse'
+    ]">
+
+    <!-- BEGIN panel-heading -->
+    <div class="panel-heading" [ngClass]="[ (headerClass) ? headerClass : '' ]">
+      @if (title) {
+        <h4 class="panel-title">{{ title }}</h4>
+      }
+      <ng-content select="[header]"></ng-content>
+      @if (!noButton) {
+        <div class="panel-heading-btn">
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-circle btn-default" (click)="panelExpand()">
+            <i class="fa fa-expand"></i>
+          </a>
+          @if (showReloadButton) {
+            <a href="javascript:;" class="btn btn-xs btn-icon btn-circle btn-success" (click)="panelReload()">
+              <i class="fa fa-redo"></i>
+            </a>
+          }
+          <a href="javascript:;" class="btn btn-xs btn-icon btn-circle btn-warning" (click)="panelCollapse()">
+            <i class="fa fa-minus"></i>
+          </a>
+        </div>
+      }
+    </div>
+    <!-- END panel-heading -->
+
+    <!-- BEGIN before-body -->
+    <ng-content select="[beforeBody]"></ng-content>
+    <!-- END before-body -->
+
+    <!-- BEGIN panel-body -->
+    @if (!noBody) {
+      <div class="panel-body" [ngClass]="[ (collapse) ? 'd-none' : '', (bodyClass) ? bodyClass : '' ]">
+        <ng-content></ng-content>
+        @if (reload) {
+          <div class="panel-loader"><span class="spinner spinner-sm"></span></div>
+        }
+      </div>
+    }
+    <!-- END panel-body -->
+
+    <!-- BEGIN no-body -->
+    <ng-content select="[noBody]"></ng-content>
+    <!-- END no-body -->
+
+    <!-- BEGIN outside-body -->
+    <ng-content select="[outsideBody]"></ng-content>
+    <!-- END outside-body -->
+
+    <!-- BEGIN panel-footer -->
+    <div class="panel-footer" #panelFooter [hidden]="!showFooter"
+      [ngClass]="[ (footerClass) ? footerClass : '' ]">
+      <ng-content select="[footer]"></ng-content>
+    </div>
+    <!-- END panel-footer -->
+
+    <!-- BEGIN after-footer -->
+    <ng-content select="[afterFooter]"></ng-content>
+    <!-- END after-footer -->
+
+  </div>
+}

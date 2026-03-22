@@ -1,0 +1,90 @@
+@if (isAuthenticated()) {
+<ion-menu contentId="main-content" menuId="main-menu" type="overlay">
+    <ion-header>
+        <ion-toolbar color="theme">
+            <ion-title>{{ appSettings.nameCompany }}</ion-title>
+            <ion-buttons slot="end">
+                <ion-button (click)="closeMenu()" aria-label="Cerrar menú">
+                    <ion-icon name="close-outline"></ion-icon>
+                </ion-button>
+            </ion-buttons>
+        </ion-toolbar>
+    </ion-header>
+    <ion-content>
+        <!-- Perfil de Usuario -->
+        @if (currentUser) {
+        <div class="user-profile-mobile">
+            <div class="profile-avatar">
+                <img src="assets/img/user.png" alt="Usuario" />
+            </div>
+            <div class="profile-info">
+                <h3>{{ currentUser.nameLogin }}</h3>
+                <p class="user-code">{{ currentUser.codeLogin }}</p>
+                @if (currentUser.emailLogin) {
+                <p class="user-email">{{ currentUser.emailLogin }}</p>
+                }
+                @if (currentUser.phoneLogin) {
+                <p class="user-phone">{{ currentUser.phoneLogin }}</p>
+                }
+            </div>
+        </div>
+        }
+
+        <ion-list lines="full" class="ion-no-padding">
+            <!-- Template recursivo para menús -->
+            <ng-template #mobileMenuTemplate let-items="items" let-level="level">
+                @for (item of items; track item.title) {
+                    @if (item.submenu) {
+                        <!-- Item con submenú - expandible -->
+                        <ion-item button (click)="toggleMobileSubmenu(item)" lines="none" [detail]="false"
+                            [class]="'menu-level-' + level"
+                            [style.padding-left.px]="level > 0 ? level * 16 : null">
+                            @if (item.iconMobile) {
+                            <ion-icon [name]="item.iconMobile" slot="start"></ion-icon>
+                            }
+                            <ion-label>{{ item.title }}</ion-label>
+                            <ion-icon [name]="item.expanded ? 'chevron-down-outline' : 'chevron-forward-outline'"
+                                slot="end"></ion-icon>
+                        </ion-item>
+
+                        <!-- Submenú colapsable -->
+                        @if (item.expanded) {
+                            <div class="submenu-container">
+                                <ng-container *ngTemplateOutlet="mobileMenuTemplate; context: {items: item.submenu, level: level + 1}">
+                                </ng-container>
+                            </div>
+                        }
+                    } @else {
+                        <!-- Item sin submenú - navegable -->
+                        <ion-menu-toggle auto-hide="true">
+                            <ion-item
+                                [routerLink]="item.url"
+                                routerLinkActive="selected"
+                                [detail]="false"
+                                lines="none"
+                                [class]="'menu-level-' + level"
+                                [style.padding-left.px]="level > 0 ? level * 16 : null"
+                                #rla="routerLinkActive">
+                                @if (item.iconMobile) {
+                                <ion-icon [name]="item.iconMobile" slot="start"></ion-icon>
+                                }
+                                <ion-label>{{ item.title }}</ion-label>
+                            </ion-item>
+                        </ion-menu-toggle>
+                    }
+                }
+            </ng-template>
+
+            <!-- Renderizar el menú principal -->
+            <ng-container *ngTemplateOutlet="mobileMenuTemplate; context: {items: menus, level: 0}"></ng-container>
+        </ion-list>
+    </ion-content>
+
+    <ion-footer>
+        <ion-item lines="none" button (click)="logout()" [detail]="false">
+            <ion-icon name="log-out-outline" slot="start"></ion-icon>
+            <ion-label>{{ 'SIDEBAR.LOGOUT' | translate }}</ion-label>
+        </ion-item>
+    </ion-footer>
+</ion-menu>
+}

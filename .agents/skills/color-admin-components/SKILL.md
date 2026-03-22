@@ -438,6 +438,26 @@ For detailed implementation guides and advanced patterns, refer to:
 
 ---
 
+## Anti-patrones a evitar
+
+| ❌ Incorrecto | ✅ Correcto |
+|---|---|
+| `@ViewChild('rowDetail')` | `@ViewChild(DatatableRowDetailDirective)` — `DatatableRowDetailDirective` no tiene `exportAs`, Angular no resuelve la instancia por nombre |
+| Olvidar `cdr.markForCheck()` tras toggle | Siempre llamar después de `toggleExpandRow()` con `ChangeDetectionStrategy.OnPush` |
+| Botón "Nuevo" dentro del body del panel | Usar slot `<ng-container panel-header>` — el slot `panel-header` proyecta botones junto al título |
+| Panel sin `variant="inverse"` | Siempre `variant="inverse"` en este proyecto |
+| `class="material"` en ngx-datatable | Usar `class="bootstrap"` — tema consistente con Bootstrap del proyecto |
+| `[rowHeight]="50"` con badges o row-detail | Usar `[rowHeight]="'auto'"` — altura fija rompe el layout con contenido variable |
+| Badges inline sin contenedor | `<div class="d-flex flex-wrap gap-1 py-1">` — evita overflow en celdas angostas |
+| `ngx-datatable` en `outsideBody` sin `@if` ni `#` | Si no hay `@if`, usar `#outsideBody` (template ref) para que la tabla mida anchos correctamente |
+| `[attr.aria-label]` solo, sin `<label>` | Usar `<label class="visually-hidden" for="id">` + `id` en el input — axe detecta el binding antes de que Angular lo resuelva |
+| Botón de solo icono sin texto accesible | Agregar `<span class="visually-hidden">texto</span>` dentro del botón + `aria-hidden="true"` en el `<i>` |
+| `<button class="btn-close">` sin `aria-label` | Siempre `aria-label="Cerrar"` — Bootstrap `btn-close` no tiene texto interno |
+| `<img [alt]="expr">` sin fallback estático | Siempre `alt=""` estático + `[alt]` dinámico — evita que axe encuentre `<img>` sin `alt` en el instante de creación |
+| `.subscribe()` sin callbacks ni `finalize` | Usar `{ next, error }` + `finalize()` siempre |
+| `[limit]` sin paginador visible | Configurar `[footerHeight]="50"` + `<ngx-datatable-footer>` o usar paginación externa |
+| `ColumnMode.standard` | Usar `ColumnMode.force` con `[flexGrow]` — reparte el ancho disponible uniformemente |
+
 **Note**: This skill focuses on Color Admin specific implementations. For general Angular patterns, refer to the Angular-specific skills.
 
 ---

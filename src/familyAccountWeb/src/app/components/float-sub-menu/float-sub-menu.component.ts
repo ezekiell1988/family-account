@@ -1,49 +1,28 @@
-import { Component, Input, Output, EventEmitter } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { RouterModule } from "@angular/router";
-import { AppSettings } from "../../service/app-settings.service";
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ResponsiveComponent } from '../../shared/responsive-component.base';
-
-declare var slideToggle: any;
+import { FloatSubMenuWebComponent } from './components/float-sub-menu-web/float-sub-menu-web.component';
+import { FloatSubMenuMobileComponent } from './components/float-sub-menu-mobile/float-sub-menu-mobile.component';
 
 @Component({
-  selector: "float-sub-menu",
-  templateUrl: "./float-sub-menu.component.html",
+  selector: 'float-sub-menu',
+  templateUrl: './float-sub-menu.component.html',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CommonModule, FloatSubMenuWebComponent, FloatSubMenuMobileComponent],
 })
 export class FloatSubMenuComponent extends ResponsiveComponent {
-  @Input() menus;
-  @Input() top;
-  @Input() left;
-  @Input() right;
-  @Input() bottom;
-  @Input() lineTop;
-  @Input() lineBottom;
-  @Input() arrowTop;
-  @Input() arrowBottom;
+  @Input() menus: any;
+  @Input() top: any;
+  @Input() left: any;
+  @Input() right: any;
+  @Input() bottom: any;
+  @Input() lineTop: any;
+  @Input() lineBottom: any;
+  @Input() arrowTop: any;
+  @Input() arrowBottom: any;
 
-  @Output() remainAppSidebarFloatSubMenu = new EventEmitter();
-  @Output() hideAppSidebarFloatSubMenu = new EventEmitter();
-  @Output() calculateFloatSubMenuPosition = new EventEmitter();
-
-  constructor(public appSettings: AppSettings) {
-    super();
-  }
-
-  expandCollapseSubmenu(e, currentMenu, allMenu, active) {
-    e.preventDefault();
-    var targetItem = e.target.closest(".menu-item");
-    var target = <HTMLElement>targetItem.querySelector(".menu-submenu");
-    slideToggle(target);
-    this.calculateFloatSubMenuPosition.emit();
-  }
-
-  remainMenu() {
-    this.remainAppSidebarFloatSubMenu.emit(true);
-  }
-
-  hideMenu() {
-    this.hideAppSidebarFloatSubMenu.emit(true);
-  }
+  @Output() remainAppSidebarFloatSubMenu = new EventEmitter<boolean>();
+  @Output() hideAppSidebarFloatSubMenu = new EventEmitter<boolean>();
+  @Output() calculateFloatSubMenuPosition = new EventEmitter<void>();
 }

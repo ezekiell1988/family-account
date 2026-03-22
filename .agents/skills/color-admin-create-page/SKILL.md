@@ -882,6 +882,84 @@ Todo botón sin contenido de texto legible debe llevar `aria-label`. Esto incluy
 
 > Bootstrap `.btn-close` **nunca** tiene texto interno — `aria-label` es obligatorio siempre.
 
+### 12.5. Enlaces deben tener texto discernible
+
+Todo `<a>` debe tener un texto accesible. axe lo verifica con la regla `link-name`. Un enlace falla si:
+- Solo contiene un `<i>` / icono sin texto visible.
+- Está completamente vacío (p.ej., backdrop de cierre).
+- Tiene contenido dinámico que puede resultar en cadena vacía.
+
+```html
+<!-- ❌ Incorrecto: solo icono, sin texto ni aria-label -->
+<a href="javascript:;" class="app-sidebar-minify-btn" (click)="toggle()">
+  <i class="fa fa-angle-double-left"></i>
+</a>
+
+<!-- ❌ Incorrecto: enlace vacío -->
+<a href="javascript:;" class="stretched-link"></a>
+
+<!-- ✅ Correcto: aria-label dinámico según estado -->
+<a href="javascript:;"
+   [attr.aria-label]="isMinified ? 'Expandir menú lateral' : 'Contraer menú lateral'"
+   (click)="toggle()">
+  <i [class]="isMinified ? 'fa fa-angle-double-right' : 'fa fa-angle-double-left'"></i>
+</a>
+
+<!-- ✅ Correcto: enlace vacío (backdrop) con aria-label descriptivo -->
+<a href="javascript:;" class="stretched-link" aria-label="Cerrar menú lateral"></a>
+```
+
+> Usar `[attr.aria-label]` (binding) cuando el texto varía según el estado del componente; usar `aria-label` (estático) cuando el texto es fijo.
+
+#### Caso especial: `<a>` cuyo texto proviene de `ngTemplateOutlet`
+
+axe **no puede** computar el nombre accesible de un enlace cuando su contenido visible proviene de un `ng-template` renderizado dinámicamente con `ngTemplateOutlet`. Aunque el DOM renderizado tenga texto, el motor de accesibilidad puede reportar el enlace como vacío.
+
+**Solución**: agregar siempre `[attr.aria-label]` directamente en el `<a>`, con el título del ítem:
+
+```html
+<!-- ❌ Incorrecto: axe no computa el nombre desde la plantilla dinámica -->
+<a class="menu-link" [routerLink]="menu.url">
+  <ng-container *ngTemplateOutlet="sidebarMenuNav; context: {menu: menu}"></ng-container>
+</a>
+
+<!-- ✅ Correcto: nombre accesible explícito en el propio enlace -->
+<a class="menu-link" [attr.aria-label]="menu.title" [routerLink]="menu.url">
+  <ng-container *ngTemplateOutlet="sidebarMenuNav; context: {menu: menu}"></ng-container>
+</a>
+
+<!-- ✅ Lo mismo para submenús con click handler -->
+<a class="menu-link" [attr.aria-label]="menu1.title"
+   (click)="expandCollapseSubmenu(menu1, menu.submenu, rla1)">
+  <ng-template *ngTemplateOutlet="sidebarSubMenuNav; context: {menu: menu1}"></ng-template>
+</a>
+```
+
+> Esta regla aplica a todos los niveles de submenú (lvl 1, lvl 2, lvl 3).
+
+---
+
+### 12.5. Imágenes deben tener texto alternativo
+
+Todo `<img>` debe incluir el atributo `alt`. Omitirlo es una violación WCAG 2.1 AA y la regla axe `image-alt`.
+
+```html
+<!-- ❌ Incorrecto: sin alt -->
+<img src="{{ menu.img }}" />
+<img src="assets/img/user.png" />
+
+<!-- ✅ Correcto: alt descriptivo cuando la imagen aporta significado -->
+<img src="{{ menu.img }}" alt="{{ menu.title || '' }}" />
+<img src="assets/img/user.png" alt="Foto de perfil" />
+
+<!-- ✅ Correcto: alt vacío cuando la imagen es puramente decorativa -->
+<img src="assets/img/decorative-bg.png" alt="" />
+```
+
+> `alt=""` (vacío) es válido para imágenes decorativas — indica a los lectores de pantalla que deben ignorarla. Sin embargo, **omitir el atributo por completo** es siempre un error.
+
+---
+
 ### 12.3. Estilos inline prohibidos
 
 Nunca usar `style="…"` directamente en el template. Mover siempre a la hoja SCSS del componente:
@@ -929,3 +1007,7 @@ Nunca usar `style="…"` directamente en el template. Mover siempre a la hoja SC
 | Botón de icono sin texto accesible | Agregar `aria-label` o `title` al botón |
 | `<button class="btn-close">` sin `aria-label` | Siempre `aria-label="Cerrar"` — Bootstrap `btn-close` no tiene texto interno |
 | Estilos `style="…"` inline en el template | CSS class en el template + regla en el `.component.scss` |
+| `<a>` con solo icono sin `aria-label` | `[attr.aria-label]` dinámico o `aria-label` estático descriptivo |
+| `<a>` vacío (backdrop/stretched-link) | `aria-label="Cerrar menú lateral"` u otro texto descriptivo |
+| `<a>` con contenido de `ngTemplateOutlet` sin `aria-label` | axe no computa el nombre desde plantillas dinámicas — agregar `[attr.aria-label]="menu.title"` en el propio `<a>` |
+| `<img>` sin `alt` | Siempre `alt="{{ menu.title \|\| '' }}"` (o texto descriptivo); `alt=""` para imágenes decorativas |

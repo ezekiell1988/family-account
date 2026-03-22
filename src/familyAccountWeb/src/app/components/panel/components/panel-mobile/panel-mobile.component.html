@@ -1,0 +1,67 @@
+<!-- =====================================================
+     PANEL-MOBILE COMPONENT - Ionic (Mobile)
+     ===================================================== -->
+
+@if (!remove) {
+  <ion-card [class]="panelClass">
+
+    <!-- Card Header -->
+    @if (title || !noButton) {
+      <ion-card-header>
+        <div class="panel-mobile-header-row">
+          @if (title) {
+            <ion-card-title>{{ title }}</ion-card-title>
+          }
+          <ng-content select="[header]"></ng-content>
+
+          @if (!noButton) {
+            <div class="panel-mobile-btn-group">
+              @if (showReloadButton) {
+                <ion-button fill="clear" size="small" (click)="panelReload()">
+                  <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+                </ion-button>
+              }
+              <ion-button fill="clear" size="small" (click)="panelCollapse()">
+                <ion-icon slot="icon-only"
+                  [name]="collapse ? 'chevron-down-outline' : 'chevron-up-outline'">
+                </ion-icon>
+              </ion-button>
+            </div>
+          }
+        </div>
+      </ion-card-header>
+    }
+
+    <!-- Before Body -->
+    <ng-content select="[beforeBody]"></ng-content>
+
+    <!-- Card Content -->
+    @if (!noBody && !collapse) {
+      <ion-card-content [class]="bodyClass">
+        <ng-content></ng-content>
+        @if (reload) {
+          <div class="panel-mobile-spinner">
+            <ion-spinner></ion-spinner>
+          </div>
+        }
+      </ion-card-content>
+    }
+
+    <!-- No Body -->
+    <ng-content select="[noBody]"></ng-content>
+
+    <!-- Outside Body -->
+    <ng-content select="[outsideBody]"></ng-content>
+
+    <!-- Footer -->
+    @if (showFooter) {
+      <div class="ion-padding" #panelFooter [class]="footerClass">
+        <ng-content select="[footer]"></ng-content>
+      </div>
+    }
+
+    <!-- After Footer -->
+    <ng-content select="[afterFooter]"></ng-content>
+
+  </ion-card>
+}
