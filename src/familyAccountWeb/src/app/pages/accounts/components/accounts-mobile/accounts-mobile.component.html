@@ -1,0 +1,180 @@
+<!-- Pull-to-refresh -->
+<ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+  <ion-refresher-content></ion-refresher-content>
+</ion-refresher>
+
+<!-- Spinner de carga -->
+@if (isLoading()) {
+  <div class="p-3 text-center text-muted">
+    <i class="fa fa-spinner fa-spin me-2"></i>{{ 'ACCOUNTS.LOADING' | translate }}
+  </div>
+}
+
+<!-- Formulario crear/editar -->
+@if (showForm()) {
+  <div class="card mx-2 mb-3">
+    <div class="card-header fw-bold">
+      <i class="fa fa-calculator me-2"></i>{{ isEditing() ? ('ACCOUNTS.FORM.EDIT_TITLE' | translate) : ('ACCOUNTS.FORM.NEW_TITLE' | translate) }}
+    </div>
+    <div class="card-body">
+
+      <div class="mb-3">
+        <label class="form-label" for="mCode">{{ 'ACCOUNTS.FORM.CODE_LABEL' | translate }} <span class="text-danger">*</span></label>
+        <input id="mCode" type="text" class="form-control"
+          [placeholder]="'ACCOUNTS.FORM.CODE_PLACEHOLDER' | translate"
+          [value]="formCode()"
+          (input)="formCode.set($any($event.target).value)" />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="mName">{{ 'ACCOUNTS.FORM.NAME_LABEL' | translate }} <span class="text-danger">*</span></label>
+        <input id="mName" type="text" class="form-control"
+          [placeholder]="'ACCOUNTS.FORM.NAME_PLACEHOLDER' | translate"
+          [value]="formName()"
+          (input)="formName.set($any($event.target).value)" />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="mType">{{ 'ACCOUNTS.FORM.TYPE_LABEL' | translate }}</label>
+        <select id="mType" class="form-select" [value]="formType()"
+          (change)="formType.set($any($event.target).value)">
+          @for (t of accountTypes; track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="mLevel">{{ 'ACCOUNTS.FORM.LEVEL_LABEL' | translate }}</label>
+        <input id="mLevel" type="number" class="form-control" min="1" max="20"
+          [value]="formLevel()"
+          (input)="formLevel.set(+$any($event.target).value)" />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="mParent">{{ 'ACCOUNTS.FORM.PARENT_LABEL' | translate }}</label>
+        <select id="mParent" class="form-select"
+          [value]="formParentId() ?? ''"
+          (change)="formParentId.set($any($event.target).value ? +$any($event.target).value : null)">
+          <option value="">{{ 'ACCOUNTS.FORM.NO_PARENT' | translate }}</option>
+          @for (a of parentOptions(); track a.idAccount) {
+            <option [value]="a.idAccount">{{ a.codeAccount }} – {{ a.nameAccount }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="mb-2 form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="mAllowsMov"
+          [checked]="formAllowsMov()"
+          (change)="formAllowsMov.set($any($event.target).checked)" />
+        <label class="form-check-label" for="mAllowsMov">{{ 'ACCOUNTS.FORM.ALLOWS_MOV' | translate }}</label>
+      </div>
+
+      <div class="mb-3 form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="mIsActive"
+          [checked]="formIsActive()"
+          (change)="formIsActive.set($any($event.target).checked)" />
+        <label class="form-check-label" for="mIsActive">{{ 'ACCOUNTS.FORM.IS_ACTIVE' | translate }}</label>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm" (click)="submitForm()" [disabled]="!isFormValid()">
+          <i class="fa fa-save me-1"></i>{{ isEditing() ? ('COMMON.SAVE' | translate) : ('ACCOUNTS.FORM.CREATE_BTN' | translate) }}
+        </button>
+        <button class="btn btn-secondary btn-sm" (click)="cancelForm()">
+          <i class="fa fa-times me-1"></i>{{ 'COMMON.CANCEL' | translate }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- Confirmación eliminar -->
+@if (confirmDeleteId() !== null) {
+  <div class="alert alert-warning mx-2 mb-3">
+    <p class="mb-2"><i class="fa fa-exclamation-triangle me-1"></i>{{ 'ACCOUNTS.CONFIRM_DELETE' | translate }}</p>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-danger" (click)="confirmDelete()">
+        <i class="fa fa-trash me-1"></i>{{ 'COMMON.DELETE' | translate }}
+      </button>
+      <button class="btn btn-sm btn-secondary" (click)="cancelDelete()">{{ 'COMMON.CANCEL' | translate }}</button>
+    </div>
+  </div>
+}
+
+<!-- Botón nueva cuenta -->
+<div class="d-flex justify-content-end px-2 mb-2">
+  <button class="btn btn-success btn-sm" (click)="openCreate()" [disabled]="showForm()">
+    <i class="fa fa-plus me-1"></i>{{ 'ACCOUNTS.NEW_ACCOUNT' | translate }}
+  </button>
+</div>
+
+<!-- Lista de cuentas -->
+@for (account of accounts(); track account.idAccount) {
+  <ion-card class="mx-2 mb-2">
+    <ion-card-header class="pb-1 card-header-clickable" (click)="toggleExpand(account.idAccount)">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="font-monospace fw-bold me-2">{{ account.codeAccount }}</span>
+          <ion-badge [color]="getTypeBadgeClass(account.typeAccount)">
+            {{ account.typeAccount }}
+          </ion-badge>
+        </div>
+        <i [class]="expandedId() === account.idAccount
+          ? 'fa fa-chevron-down text-primary'
+          : 'fa fa-chevron-right text-muted'"></i>
+      </div>
+      <ion-card-title class="fs-6 mt-1">{{ account.nameAccount }}</ion-card-title>
+    </ion-card-header>
+
+    @if (expandedId() === account.idAccount) {
+      <ion-card-content>
+        <div class="small text-muted mb-2">
+          <div><strong>{{ 'ACCOUNTS.DETAIL.PARENT' | translate }}</strong> {{ account.nameAccountParent ?? ('ACCOUNTS.DETAIL.ROOT' | translate) }}</div>
+          <div><strong>{{ 'ACCOUNTS.DETAIL.LEVEL' | translate }}</strong> {{ account.levelAccount }}</div>
+          <div>
+            <strong>{{ 'ACCOUNTS.DETAIL.MOVEMENTS' | translate }}</strong>
+            @if (account.allowsMovements) {
+              <span class="badge bg-success ms-1">{{ 'COMMON.YES' | translate }}</span>
+            } @else {
+              <span class="badge bg-secondary ms-1">{{ 'COMMON.NO' | translate }}</span>
+            }
+          </div>
+          <div>
+            <strong>{{ 'ACCOUNTS.DETAIL.STATUS' | translate }}</strong>
+            @if (account.isActive) {
+              <span class="badge bg-success ms-1">{{ 'ACCOUNTS.DETAIL.ACTIVE' | translate }}</span>
+            } @else {
+              <span class="badge bg-danger ms-1">{{ 'ACCOUNTS.DETAIL.INACTIVE' | translate }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-xs btn-info"
+            (click)="openEdit(account)"
+            [disabled]="showForm() || deletingId() === account.idAccount">
+            <i class="fa fa-edit me-1"></i>{{ 'COMMON.EDIT' | translate }}
+          </button>
+          <button class="btn btn-xs btn-danger"
+            (click)="askDelete(account.idAccount)"
+            [disabled]="showForm() || deletingId() === account.idAccount">
+            @if (deletingId() === account.idAccount) {
+              <i class="fa fa-spinner fa-spin"></i>
+            } @else {
+              <i class="fa fa-trash me-1"></i>{{ 'COMMON.DELETE' | translate }}
+            }
+          </button>
+        </div>
+      </ion-card-content>
+    }
+  </ion-card>
+}
+
+@if (accounts().length === 0 && !isLoading()) {
+  <div class="text-center py-4 text-muted">
+    <i class="fa fa-inbox fa-2x mb-2 d-block"></i>
+    {{ 'ACCOUNTS.EMPTY' | translate }}
+  </div>
+}

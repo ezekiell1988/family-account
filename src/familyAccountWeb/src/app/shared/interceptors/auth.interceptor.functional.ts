@@ -66,17 +66,16 @@ function isPublicRoute(url: string): boolean {
 }
 
 /**
- * Verificar si es un endpoint de autenticación que usa cookies httpOnly
- * Estos endpoints NO deben tener el header Authorization Bearer
+ * Verificar si es un endpoint anónimo de autenticación
+ * Solo estos endpoints NO necesitan el header Authorization Bearer
  */
 function isAuthEndpoint(url: string): boolean {
-  const authEndpoints = [
-    '/auth/check',
-    '/auth/refresh',
-    '/auth/logout'
+  const publicAuthEndpoints = [
+    '/auth/request-pin',
+    '/auth/refresh'
   ];
   
-  return authEndpoints.some(route => url.includes(route));
+  return publicAuthEndpoints.some(route => url.includes(route));
 }
 
 /**

@@ -22,14 +22,14 @@
       <ion-title>{{ pageTitle }}</ion-title>
       @if (isAuthenticated() && showNotifications) {
       <ion-buttons slot="end">
-        <ion-button (click)="markAllAsRead()">
-          <ion-icon name="notifications-outline"></ion-icon>
+        <ion-button (click)="markAllAsRead()" aria-label="Notificaciones">
+          <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
           @if (unreadCount() > 0) {
           <ion-badge color="danger" slot="end">{{ unreadCount() }}</ion-badge>
           }
         </ion-button>
         <!-- Selector de idioma móvil -->
-        <ion-button id="lang-popover-trigger" (click)="toggleLanguage()" [title]="languageService.currentLanguage().name">
+        <ion-button id="lang-popover-trigger" (click)="toggleLanguage()" [title]="languageService.currentLanguage().name" [attr.aria-label]="languageService.currentLanguage().name">
           <span class="fi fi-{{ languageService.currentLanguage().flagCode }}" style="font-size:1.1rem;"></span>
         </ion-button>
       </ion-buttons>
@@ -50,7 +50,7 @@
     <!-- BEGIN navbar-header -->
     <div class="navbar-header">
       @if (this.appSidebarTwo) {
-      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppSidebarEndMobile()">
+      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppSidebarEndMobile()" aria-label="Abrir panel lateral derecho">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -58,30 +58,30 @@
       }
       <a href="/" class="navbar-brand"><span class="navbar-logo"></span> <b>{{ appSettings.nameCompany }}</b>&nbsp;BackOffice</a>
       @if (this.appSettings.appTopMenu && !this.appSettings.appSidebarNone) {
-      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppTopMenuMobile()">
-        <span class="fa-stack fa-lg text-inverse">
+      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppTopMenuMobile()" aria-label="Abrir menú superior">
+        <span class="fa-stack fa-lg text-inverse" aria-hidden="true">
           <i class="far fa-square fa-stack-2x"></i>
           <i class="fa fa-cog fa-stack-1x"></i>
         </span>
       </button>
       }
       @if (this.appSettings.appHeaderMegaMenu) {
-      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppHeaderMegaMenuMobile()">
-        <span class="fa-stack fa-lg text-inverse">
+      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppHeaderMegaMenuMobile()" aria-label="Abrir mega menú">
+        <span class="fa-stack fa-lg text-inverse" aria-hidden="true">
           <i class="far fa-square fa-stack-2x"></i>
           <i class="fa fa-cog fa-stack-1x"></i>
         </span>
       </button>
       }
       @if (!this.appSettings.appSidebarNone) {
-      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppSidebarMobile()">
+      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppSidebarMobile()" aria-label="Abrir menú lateral">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
       }
       @if (this.appSettings.appTopMenu && this.appSettings.appSidebarNone) {
-      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppTopMenuMobile()">
+      <button type="button" class="navbar-mobile-toggler" (click)="toggleAppTopMenuMobile()" aria-label="Abrir menú superior">
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
@@ -137,8 +137,8 @@
       <div class="navbar-item navbar-form">
         <form action="" method="POST" name="search">
           <div class="form-group">
-            <input type="text" class="form-control" [placeholder]="'HEADER.SEARCH_PLACEHOLDER' | translate" />
-            <button type="submit" class="btn btn-search"><i class="fa fa-search"></i></button>
+            <input type="text" class="form-control" [placeholder]="'HEADER.SEARCH_PLACEHOLDER' | translate" [attr.aria-label]="'HEADER.SEARCH_PLACEHOLDER' | translate" />
+            <button type="submit" class="btn btn-search" [attr.aria-label]="'HEADER.SEARCH' | translate"><i class="fa fa-search" aria-hidden="true"></i></button>
           </div>
         </form>
       </div>
@@ -341,7 +341,7 @@
       <div class="modal-content bg-dark border-0">
         <div class="modal-header border-0 pb-0">
           <span class="text-white fw-semibold">{{ currentUser?.nameLogin || 'Perfil' }}</span>
-          <button type="button" class="btn-close btn-close-white ms-auto" (click)="showPerfilModal.set(false)"></button>
+          <button type="button" class="btn-close btn-close-white ms-auto" (click)="showPerfilModal.set(false)" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body text-center p-3">
           <img [src]="perfilUrl()" alt="Foto de perfil" class="img-fluid rounded" style="max-height:70vh;object-fit:contain;" />

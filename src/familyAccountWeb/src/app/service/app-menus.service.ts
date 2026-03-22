@@ -38,6 +38,23 @@ export class AppMenuService {
       title: "Inicio",
       url: "/home",
     },
+    {
+      icon: "fa fa-wrench",
+      iconMobile: "settings-outline",
+      title: "Mantenimiento",
+      url: "/maintenance",
+      caret: "true",
+      roles: [1, 2],
+      submenu: [
+        {
+          icon: "fa fa-calculator",
+          iconMobile: "calculator-outline",
+          title: "Cuentas Contables",
+          url: "/maintenance/accounts",
+          roles: [1, 2],
+        },
+      ],
+    },
   ];
 
   /**

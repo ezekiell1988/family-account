@@ -42,6 +42,7 @@
   },
   "HEADER": {
     "SEARCH_PLACEHOLDER": "Buscar...",
+    "SEARCH": "Buscar",
     "NOTIFICATIONS": "NOTIFICACIONES",
     "NO_NOTIFICATIONS": "No hay notificaciones",
     "VIEW_MORE": "Ver más",
@@ -554,5 +555,35 @@
     "CAT_PDF": "PDF",
     "CAT_DOCUMENT": "Documentos",
     "CAT_OTHER": "Otros"
+  },
+  "ACCOUNTS": {
+    "LOADING": "Cargando cuentas...",
+    "NEW_ACCOUNT": "Nueva Cuenta",
+    "EMPTY": "No hay cuentas contables.",
+    "CONFIRM_DELETE": "¿Eliminar esta cuenta? No se puede deshacer.",
+    "FORM": {
+      "EDIT_TITLE": "Editar Cuenta",
+      "NEW_TITLE": "Nueva Cuenta",
+      "CODE_LABEL": "Código",
+      "CODE_PLACEHOLDER": "ej: 1.1.01",
+      "NAME_LABEL": "Nombre",
+      "NAME_PLACEHOLDER": "Nombre de la cuenta",
+      "TYPE_LABEL": "Tipo",
+      "LEVEL_LABEL": "Nivel",
+      "PARENT_LABEL": "Cuenta Padre",
+      "NO_PARENT": "— Sin cuenta padre (raíz) —",
+      "ALLOWS_MOV": "Permite movimientos",
+      "IS_ACTIVE": "Activa",
+      "CREATE_BTN": "Crear"
+    },
+    "DETAIL": {
+      "PARENT": "Cuenta padre:",
+      "ROOT": "— (raíz)",
+      "LEVEL": "Nivel:",
+      "MOVEMENTS": "Movimientos:",
+      "STATUS": "Estado:",
+      "ACTIVE": "Activa",
+      "INACTIVE": "Inactiva"
+    }
   }
 }

@@ -1,0 +1,277 @@
+<!-- ── FORMULARIO CREAR / EDITAR ────────────────────────────────── -->
+@if (showForm()) {
+  <div class="card mb-3">
+    <div class="card-header fw-bold">
+      <i class="fa fa-calculator me-2"></i>{{ formTitle() }}
+    </div>
+    <div class="card-body">
+
+      <div class="row g-3">
+
+        <!-- Código -->
+        <div class="col-md-3">
+          <label class="form-label" for="fCode">Código <span class="text-danger">*</span></label>
+          <input id="fCode" type="text" class="form-control" placeholder="ej: 1.1.01"
+            [value]="formCode()"
+            (input)="formCode.set($any($event.target).value)" />
+        </div>
+
+        <!-- Nombre -->
+        <div class="col-md-5">
+          <label class="form-label" for="fName">Nombre <span class="text-danger">*</span></label>
+          <input id="fName" type="text" class="form-control" placeholder="Nombre de la cuenta"
+            [value]="formName()"
+            (input)="formName.set($any($event.target).value)" />
+        </div>
+
+        <!-- Tipo -->
+        <div class="col-md-2">
+          <label class="form-label" for="fType">Tipo <span class="text-danger">*</span></label>
+          <select id="fType" class="form-select" [value]="formType()"
+            (change)="formType.set($any($event.target).value)">
+            @for (t of accountTypes; track t) {
+              <option [value]="t">{{ t }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Nivel -->
+        <div class="col-md-2">
+          <label class="form-label" for="fLevel">Nivel</label>
+          <input id="fLevel" type="number" class="form-control" min="1" max="20"
+            [value]="formLevel()"
+            (input)="formLevel.set(+$any($event.target).value)" />
+        </div>
+
+        <!-- Cuenta padre -->
+        <div class="col-md-6">
+          <label class="form-label" for="fParent">Cuenta Padre</label>
+          <select id="fParent" class="form-select"
+            [value]="formParentId() ?? ''"
+            (change)="formParentId.set($any($event.target).value ? +$any($event.target).value : null)">
+            <option value="">— Sin cuenta padre (raíz) —</option>
+            @for (a of parentOptions(); track a.idAccount) {
+              <option [value]="a.idAccount">{{ a.codeAccount }} – {{ a.nameAccount }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Switches -->
+        <div class="col-md-3 d-flex align-items-center gap-4 pt-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="fAllowsMov"
+              [checked]="formAllowsMov()"
+              (change)="formAllowsMov.set($any($event.target).checked)" />
+            <label class="form-check-label" for="fAllowsMov">Permite movimientos</label>
+          </div>
+        </div>
+
+        <div class="col-md-3 d-flex align-items-center gap-4 pt-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="fIsActive"
+              [checked]="formIsActive()"
+              (change)="formIsActive.set($any($event.target).checked)" />
+            <label class="form-check-label" for="fIsActive">Activa</label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" (click)="submitForm()" [disabled]="!isFormValid()">
+          <i class="fa fa-save me-1"></i>{{ isEditing() ? 'Guardar cambios' : 'Crear cuenta' }}
+        </button>
+        <button class="btn btn-secondary" (click)="cancelForm()">
+          <i class="fa fa-times me-1"></i>Cancelar
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- ── CONFIRMACIÓN ELIMINAR ──────────────────────────────────── -->
+@if (confirmDeleteId() !== null) {
+  <div class="alert alert-warning d-flex align-items-center gap-3 mb-3">
+    <i class="fa fa-exclamation-triangle fa-lg"></i>
+    <span>¿Eliminar la cuenta seleccionada? Esta acción no se puede deshacer.</span>
+    <div class="ms-auto d-flex gap-2">
+      <button class="btn btn-sm btn-danger" (click)="confirmDelete()">
+        <i class="fa fa-trash me-1"></i>Eliminar
+      </button>
+      <button class="btn btn-sm btn-secondary" (click)="cancelDelete()">Cancelar</button>
+    </div>
+  </div>
+}
+
+<!-- ── PANEL CON TABLA ────────────────────────────────────────── -->
+<panel title="Plan de Cuentas"
+  variant="inverse"
+  [showReloadButton]="true"
+  [reload]="isLoading()"
+  (onReload)="refresh.emit()">
+
+  <!-- Header: botón Nuevo + filtros -->
+  <ng-container panel-header>
+    <div class="d-flex align-items-center gap-2 ms-3">
+      <button class="btn btn-success btn-sm" (click)="openCreate()" [disabled]="showForm()">
+        <i class="fa fa-plus me-1"></i>Nueva Cuenta
+      </button>
+
+      <select class="form-select form-select-sm filter-type-select"
+        aria-label="Filtrar por tipo de cuenta"
+        [value]="filterType()"
+        (change)="filterType.set($any($event.target).value)">
+        <option value="">Todos los tipos</option>
+        @for (t of accountTypes; track t) {
+          <option [value]="t">{{ t }}</option>
+        }
+      </select>
+
+      <input type="text" class="form-control form-control-sm filter-search-input"
+        placeholder="Buscar código o nombre…"
+        aria-label="Buscar código o nombre"
+        [value]="filterSearch()"
+        (input)="filterSearch.set($any($event.target).value)" />
+    </div>
+  </ng-container>
+
+  <ngx-datatable
+    class="bootstrap"
+    [rows]="filteredItems()"
+    [columnMode]="ColumnMode.force"
+    [headerHeight]="40"
+    [footerHeight]="50"
+    [rowHeight]="'auto'"
+    [limit]="25"
+    [count]="filteredItems().length"
+    [loadingIndicator]="isLoading()">
+
+    <!-- ⚠️ Row detail DEBE ir antes de las columnas -->
+    <ngx-datatable-row-detail rowHeight="auto">
+      <ng-template let-row="row" ngx-datatable-row-detail-template>
+        <div class="p-3 border-start border-4 border-primary bg-light">
+          <div class="row g-2 small">
+            <div class="col-sm-4">
+              <span class="fw-semibold text-muted">Código:</span>
+              <span class="ms-1 font-monospace">{{ row.codeAccount }}</span>
+            </div>
+            <div class="col-sm-4">
+              <span class="fw-semibold text-muted">Nivel:</span>
+              <span class="ms-1 badge bg-light text-dark border">{{ row.levelAccount }}</span>
+            </div>
+            <div class="col-sm-4">
+              <span class="fw-semibold text-muted">Cuenta padre:</span>
+              <span class="ms-1">{{ row.nameAccountParent ?? '— (raíz)' }}</span>
+            </div>
+            <div class="col-sm-4">
+              <span class="fw-semibold text-muted">Permite movimientos:</span>
+              @if (row.allowsMovements) {
+                <span class="ms-1 badge bg-success">Sí</span>
+              } @else {
+                <span class="ms-1 badge bg-secondary">No</span>
+              }
+            </div>
+            <div class="col-sm-4">
+              <span class="fw-semibold text-muted">Estado:</span>
+              @if (row.isActive) {
+                <span class="ms-1 badge bg-success">Activa</span>
+              } @else {
+                <span class="ms-1 badge bg-danger">Inactiva</span>
+              }
+            </div>
+            <div class="col-sm-4">
+              <span class="fw-semibold text-muted">ID:</span>
+              <span class="ms-1 text-muted">#{{ row.idAccount }}</span>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </ngx-datatable-row-detail>
+
+    <!-- Código con chevron de expansión -->
+    <ngx-datatable-column name="Código" prop="codeAccount" [flexGrow]="2">
+      <ng-template ngx-datatable-cell-template let-row="row">
+        <button class="btn btn-link p-0 me-1 text-decoration-none"
+          (click)="toggleExpand(row)" title="Ver detalle">
+          <i [class]="expandedId() === row.idAccount
+            ? 'fa fa-chevron-down text-primary'
+            : 'fa fa-chevron-right text-muted'"></i>
+        </button>
+        <span class="font-monospace fw-semibold"
+          [style]="getIndentStyle(row.levelAccount)">
+          {{ row.codeAccount }}
+        </span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Nombre -->
+    <ngx-datatable-column name="Nombre" prop="nameAccount" [flexGrow]="4">
+      <ng-template ngx-datatable-cell-template let-row="row">
+        <span [style]="getIndentStyle(row.levelAccount)">{{ row.nameAccount }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Tipo -->
+    <ngx-datatable-column name="Tipo" prop="typeAccount" [flexGrow]="2">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        <span class="badge" [class]="getTypeBadgeClass(value)">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Permi mov. -->
+    <ngx-datatable-column name="Mov." prop="allowsMovements" [flexGrow]="1" [sortable]="true">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        @if (value) {
+          <i class="fa fa-check text-success" title="Permite movimientos"></i>
+        } @else {
+          <i class="fa fa-minus text-muted" title="No permite movimientos directos"></i>
+        }
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Activo -->
+    <ngx-datatable-column name="Activo" prop="isActive" [flexGrow]="1" [sortable]="true">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        @if (value) {
+          <span class="badge bg-success"><i class="fa fa-check me-1"></i>Sí</span>
+        } @else {
+          <span class="badge bg-danger"><i class="fa fa-times me-1"></i>No</span>
+        }
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Acciones -->
+    <ngx-datatable-column name="Acciones" [flexGrow]="2" [sortable]="false">
+      <ng-template ngx-datatable-cell-template let-row="row">
+        <div class="d-flex gap-1">
+          <button class="btn btn-xs btn-info"
+            (click)="openEdit(row)"
+            [disabled]="showForm() || deletingId() === row.idAccount"
+            title="Editar">
+            <i class="fa fa-edit"></i>
+          </button>
+          <button class="btn btn-xs btn-danger"
+            (click)="askDelete(row.idAccount)"
+            [disabled]="showForm() || deletingId() === row.idAccount"
+            title="Eliminar">
+            @if (deletingId() === row.idAccount) {
+              <i class="fa fa-spinner fa-spin"></i>
+            } @else {
+              <i class="fa fa-trash"></i>
+            }
+          </button>
+        </div>
+      </ng-template>
+    </ngx-datatable-column>
+
+  </ngx-datatable>
+
+  @if (filteredItems().length === 0 && !isLoading()) {
+    <div class="text-center py-4 text-muted">
+      <i class="fa fa-inbox fa-2x mb-2 d-block"></i>
+      No hay cuentas contables. Crea una con el botón <strong>Nueva Cuenta</strong>.
+    </div>
+  }
+
+</panel>

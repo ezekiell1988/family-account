@@ -18,6 +18,10 @@ public static class SecurityExtensions
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                // Mantener los claim names originales del JWT (sub, email, jti...)
+                // sin remapearlos a los URIs largos de .NET (System.Security.Claims)
+                options.MapInboundClaims = false;
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer           = true,

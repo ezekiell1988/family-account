@@ -42,6 +42,7 @@
   },
   "HEADER": {
     "SEARCH_PLACEHOLDER": "Search...",
+    "SEARCH": "Search",
     "NOTIFICATIONS": "NOTIFICATIONS",
     "NO_NOTIFICATIONS": "No notifications",
     "VIEW_MORE": "View more",
@@ -554,5 +555,35 @@
     "CAT_PDF": "PDF",
     "CAT_DOCUMENT": "Documents",
     "CAT_OTHER": "Other"
+  },
+  "ACCOUNTS": {
+    "LOADING": "Loading accounts...",
+    "NEW_ACCOUNT": "New Account",
+    "EMPTY": "No accounting accounts found.",
+    "CONFIRM_DELETE": "Delete this account? This action cannot be undone.",
+    "FORM": {
+      "EDIT_TITLE": "Edit Account",
+      "NEW_TITLE": "New Account",
+      "CODE_LABEL": "Code",
+      "CODE_PLACEHOLDER": "e.g. 1.1.01",
+      "NAME_LABEL": "Name",
+      "NAME_PLACEHOLDER": "Account name",
+      "TYPE_LABEL": "Type",
+      "LEVEL_LABEL": "Level",
+      "PARENT_LABEL": "Parent Account",
+      "NO_PARENT": "— No parent account (root) —",
+      "ALLOWS_MOV": "Allows movements",
+      "IS_ACTIVE": "Active",
+      "CREATE_BTN": "Create"
+    },
+    "DETAIL": {
+      "PARENT": "Parent account:",
+      "ROOT": "— (root)",
+      "LEVEL": "Level:",
+      "MOVEMENTS": "Movements:",
+      "STATUS": "Status:",
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive"
+    }
   }
 }

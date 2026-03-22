@@ -819,7 +819,92 @@ Agregar dentro del submenu de la sección correspondiente:
 
 ---
 
-## 12. Anti-patrones a evitar
+## 12. Accesibilidad (a11y)
+
+Todo formulario y control interactivo debe cumplir WCAG 2.1 AA y pasar auditorías axe (Microsoft Edge Tools / Lighthouse).
+
+### 12.1. Controles de formulario con `<label>` visible
+
+Cuando el control tiene un `<label>` visible, **siempre** enlazarlos mediante `for`/`id` emparejados. Sin este enlace, los lectores de pantalla no asocian la etiqueta al campo:
+
+```html
+<!-- ❌ Incorrecto: label y control sueltos -->
+<label class="form-label">Código</label>
+<input type="text" class="form-control" />
+
+<!-- ✅ Correcto: for/id emparejados -->
+<label class="form-label" for="fCode">Código <span class="text-danger">*</span></label>
+<input id="fCode" type="text" class="form-control" />
+
+<!-- ✅ Lo mismo para select -->
+<label class="form-label" for="fType">Tipo</label>
+<select id="fType" class="form-select">...</select>
+```
+
+> Los checkboxes ya usan este patrón correctamente con `id="fAllowsMov"` / `for="fAllowsMov"`. Aplicar **siempre** a todos los controles del formulario.
+
+### 12.2. Controles de formulario sin `<label>` visible
+
+Cuando un `<select>` o `<input>` no tiene etiqueta visible asociada (p.ej., filtros dentro del header de un panel), **siempre** agregar `aria-label`:
+
+```html
+<!-- ✅ Select de filtro sin label visible -->
+<select class="form-select form-select-sm filter-type-select"
+  aria-label="Filtrar por tipo"
+  [value]="filterType()"
+  (change)="filterType.set($any($event.target).value)">
+  ...
+</select>
+
+<!-- ✅ Input de búsqueda sin label visible -->
+<input type="text" class="form-control form-control-sm filter-search-input"
+  placeholder="Buscar…"
+  aria-label="Buscar por código o nombre"
+  [value]="filterSearch()"
+  (input)="filterSearch.set($any($event.target).value)" />
+```
+
+> `placeholder` **no** cuenta como nombre accesible — siempre añadir `aria-label` además del placeholder.
+
+### 12.2. Botones de icono sin texto visible
+
+Todo botón sin contenido de texto legible debe llevar `aria-label`. Esto incluye:
+
+```html
+<!-- ✅ Botón de acción con solo icono FA -->
+<button class="btn btn-xs btn-info" aria-label="Editar" title="Editar">
+  <i class="fa fa-edit"></i>
+</button>
+
+<!-- ✅ Botón de cierre Bootstrap (.btn-close) — siempre vacío por diseño -->
+<button type="button" class="btn-close" aria-label="Cerrar" (click)="clearError()"></button>
+```
+
+> Bootstrap `.btn-close` **nunca** tiene texto interno — `aria-label` es obligatorio siempre.
+
+### 12.3. Estilos inline prohibidos
+
+Nunca usar `style="…"` directamente en el template. Mover siempre a la hoja SCSS del componente:
+
+```html
+<!-- ❌ Incorrecto -->
+<select style="width: auto">...</select>
+<input style="width: 220px" />
+
+<!-- ✅ Correcto: clase en el template, regla en el .scss -->
+<select class="filter-type-select">...</select>
+<input class="filter-search-input" />
+```
+
+```scss
+// en el .component.scss
+.filter-type-select  { width: auto; }
+.filter-search-input { width: 220px; }
+```
+
+---
+
+## 13. Anti-patrones a evitar
 
 | ❌ Incorrecto | ✅ Correcto |
 |---|---|
@@ -838,3 +923,9 @@ Agregar dentro del submenu de la sección correspondiente:
 | `handleRefresh` síncrono | Usar `async/await` con `setTimeout(800)` antes de `.complete()` |
 | Helpers de display en el coordinador page | Los helpers (`formatDate`, `getStatusBadgeClass`) van en los **sub-components** |
 | `.subscribe()` sin callbacks ni finalize | Usar `{ next, error }` + `finalize()` siempre |
+| `<select>` / `<input>` de filtro sin `aria-label` | Siempre `aria-label` cuando no hay `<label>` visible |
+| `<label>` sin `for` / control sin `id` | Emparejar siempre: `<label for="fCode">` + `<input id="fCode">` |
+| `placeholder` como único nombre accesible | `aria-label` **además** del placeholder |
+| Botón de icono sin texto accesible | Agregar `aria-label` o `title` al botón |
+| `<button class="btn-close">` sin `aria-label` | Siempre `aria-label="Cerrar"` — Bootstrap `btn-close` no tiene texto interno |
+| Estilos `style="…"` inline en el template | CSS class en el template + regla en el `.component.scss` |

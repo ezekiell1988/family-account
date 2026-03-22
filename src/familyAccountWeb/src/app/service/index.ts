@@ -8,3 +8,4 @@ export { MenuStateService } from './menu-state.service';
 export { LanguageService, AVAILABLE_LANGUAGES, type Language } from './language.service';
 export { NotificationService, type AppNotification, type CampaignResult, type ExportResult } from './notification.service';
 export { LoginService } from './login.service';
+export { AccountService } from './account.service';

@@ -618,6 +618,125 @@ import { IonVirtualScroll } from '@ionic/react';
 </IonItem>
 ```
 
+### Reglas axe / accesibilidad en formularios mixtos (Bootstrap + Ionic)
+
+Cuando el componente mobile mezcla elementos HTML nativos (`<input>`, `<select>`) con componentes Ionic (`ion-card`, `ion-badge`, etc.), aplica SIEMPRE estas reglas para evitar errores axe:
+
+**1. Todo `<input>` y `<select>` nativo debe tener nombre accesible**
+
+La forma **más robusta** (reconocida por axe en análisis estático) es asociar la `<label>` mediante `for`/`id`. El atributo `title` solo es un fallback.
+
+```html
+<!-- ✅ Correcto: label explícito enlazado por for/id — axe lo reconoce estáticamente -->
+<label class="form-label" for="mCodigo">Código</label>
+<input id="mCodigo" type="text" class="form-control" />
+
+<label class="form-label" for="mTipo">Tipo</label>
+<select id="mTipo" class="form-select">
+  ...
+</select>
+
+<!-- ⚠️ Funciona en runtime pero axe no lo detecta en análisis estático -->
+<input [title]="'KEY' | translate" />
+
+<!-- ❌ Incorrecto: sin label, sin title, solo placeholder -->
+<input type="text" class="form-control" placeholder="ej: 1.1.01" />
+<select class="form-select">...</select>
+```
+
+**2. No usar estilos inline — moverlos siempre al archivo `.scss` del componente**
+
+```html
+<!-- ❌ Incorrecto -->
+<ion-card-header style="cursor: pointer">
+
+<!-- ✅ Correcto: clase en el template -->
+<ion-card-header class="card-header-clickable">
+```
+
+```scss
+// En el .component.scss
+.card-header-clickable {
+  cursor: pointer;
+}
+```
+
+**3. Checkboxes y toggles nativos requieren `for`/`id` enlazados**
+
+```html
+<!-- ✅ Correcto -->
+<input class="form-check-input" type="checkbox" id="mAllowsMov" />
+<label class="form-check-label" for="mAllowsMov">Permite movimientos</label>
+```
+
+### i18n con ngx-translate en componentes mobile
+
+Este proyecto usa `@ngx-translate/core`. **Todos los textos visibles al usuario deben usar el pipe `translate`**, nunca strings hardcodeados en el HTML.
+
+**Setup del componente:**
+
+```typescript
+// Importar TranslatePipe en el componente standalone
+import { TranslatePipe } from '@ngx-translate/core';
+
+@Component({
+  standalone: true,
+  imports: [CommonModule, FormsModule, TranslatePipe],
+  // ...
+})
+export class MiMobileComponent { }
+```
+
+**Uso en el template:**
+
+```html
+<!-- Texto interpolado -->
+<div>{{ 'MI_PAGINA.TITULO' | translate }}</div>
+
+<!-- Atributo title (accesibilidad) -->
+<input [title]="'MI_PAGINA.CAMPO_LABEL' | translate" />
+
+<!-- Atributo placeholder -->
+<input [placeholder]="'MI_PAGINA.CAMPO_PLACEHOLDER' | translate" />
+
+<!-- Condicional ternario -->
+{{ isEditing() ? ('MI_PAGINA.EDITAR' | translate) : ('MI_PAGINA.CREAR' | translate) }}
+
+<!-- Valor nulo con fallback traducido -->
+{{ account.nameParent ?? ('MI_PAGINA.SIN_PADRE' | translate) }}
+```
+
+**Estructura de claves en `assets/i18n/es.json` y `en.json`:**
+
+Cada página/módulo tiene su propia sección raíz. Seguir la convención:
+
+```json
+"MI_MODULO": {
+  "LOADING": "Cargando...",
+  "NEW_ITEM": "Nuevo ítem",
+  "EMPTY": "No hay registros.",
+  "CONFIRM_DELETE": "¿Eliminar este registro? No se puede deshacer.",
+  "FORM": {
+    "EDIT_TITLE": "Editar",
+    "NEW_TITLE": "Nuevo",
+    "CAMPO_LABEL": "Nombre del campo",
+    "CAMPO_PLACEHOLDER": "ej: valor ejemplo"
+  },
+  "DETAIL": {
+    "CAMPO": "Campo:",
+    "ACTIVE": "Activo",
+    "INACTIVE": "Inactivo"
+  }
+}
+```
+
+**Reglas:**
+- Los keys `COMMON.*` (SAVE, CANCEL, DELETE, EDIT, YES, NO...) ya existen — reutilizarlos.
+- Agregar siempre la clave en **ambos** archivos (`es.json` y `en.json`).
+- Los atributos de accesibilidad (`placeholder`) también deben usar el pipe: `[placeholder]="'KEY' | translate"`.
+- Para el nombre accesible de inputs/selects, usar **`for`/`id`** — no `[title]` dinámico, ya que axe no lo resuelve en análisis estático.
+- El aviso del language server "TranslatePipe is not used within the template" puede aparecer como falso positivo cuando el pipe se usa solo en bindings de atributos `[attr]="... | translate"`. Es seguro ignorarlo — la importación es necesaria.
+
 ### Safe Area
 
 ```tsx

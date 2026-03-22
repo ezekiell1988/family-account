@@ -1,5 +1,6 @@
 import { Routes } from "@angular/router";
 import {
+  AccountsPage,
   HomePage,
   ErrorPage,
   LoginPage,
@@ -16,6 +17,12 @@ export const routes: Routes = [
     path: "login",
     component: LoginPage,
     data: { title: "Iniciar Sesión" },
+  },
+  {
+    path: "maintenance/accounts",
+    component: AccountsPage,
+    data: { title: "Cuentas Contables" },
+    canActivate: [AuthGuard],
   },
   {
     path: "home",
