@@ -51,6 +51,16 @@ export class HeaderWebComponent implements OnDestroy {
   // ── Usuario autenticado ──────────────────────────────────────────
   readonly currentUser = computed<UserData | null>(() => this.authService.currentUser());
 
+  /** Iniciales del usuario para el avatar (ej: "EB" de "Ezequiel Baltodano") */
+  readonly initials = computed<string>(() => {
+    const name = this.currentUser()?.nameLogin?.trim() ?? '';
+    if (!name) return '?';
+    const parts = name.split(/\s+/);
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : name.slice(0, 2).toUpperCase();
+  });
+
   // ── Notificaciones ───────────────────────────────────────────────
   readonly notifications = this.notificationService.notifications;
   readonly unreadCount   = this.notificationService.unreadCount;

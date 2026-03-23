@@ -53,6 +53,17 @@
   color: inherit;
 }
 
+// ── Avatar de iniciales ─────────────────────────────────────────────
+.header-avatar-initials {
+  background: var(--bs-app-theme, #348fe2);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 // ── Imagen de perfil ─────────────────────────────────────────────────
 .header-perfil-cover {
   background-size: cover;

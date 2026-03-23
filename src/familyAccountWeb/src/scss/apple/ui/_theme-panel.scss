@@ -76,6 +76,10 @@ $theme-panel-width: rem(260px);
 		color: var(--#{$prefix}component-color);
 		background: var(--#{$prefix}component-bg);
 		text-align: center;
+		border: none;
+		outline: none;
+		padding: 0;
+		cursor: pointer;
 		border-radius: $border-radius 0 0 $border-radius;
 		box-shadow: 0 0 15px 0 rgba($black, .15);
 		

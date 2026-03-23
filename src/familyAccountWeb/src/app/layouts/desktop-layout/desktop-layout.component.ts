@@ -34,9 +34,12 @@ export class DesktopLayoutComponent implements OnInit {
     public appSettings: AppSettings,
     private appVariablesService: AppVariablesService
   ) {
-    // Manejar toggle de sidebar en navegación (mobile)
+    // Manejar toggle de sidebar en navegación (mobile) y limpiar estado de scroll
     this.router.events.subscribe((e) => {
       if (e instanceof NavigationStart) {
+        // Resetear scroll state: la señal no se limpia sola si el usuario no re-scrollea
+        this.appHasScroll.set(false);
+        this.hasScrolled.set(false);
         if (window.innerWidth < 768) {
           this.appSettings.appSidebarMobileToggled = false;
           this.appSettings.appSidebarEndMobileToggled = false;

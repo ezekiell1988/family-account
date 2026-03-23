@@ -549,7 +549,7 @@ $app-header-bg:                     $white !default;
 $app-header-height:                 rem(50px) !default;
 $app-header-height-sm:              rem(50px) !default;
 $app-header-box-shadow:             none !default;
-$app-header-box-shadow-scroll:      0 0 16px rgba($black, .15) !default;
+$app-header-box-shadow-scroll:      0 4px 8px rgba($black, .1) !default;
 $app-header-color:                  $gray-900 !default;
 $app-header-hover-bg:               $light !default;
 $app-header-mobile-divider-bg:      $gray-200 !default;

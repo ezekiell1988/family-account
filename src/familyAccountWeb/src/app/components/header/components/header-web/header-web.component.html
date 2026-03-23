@@ -257,18 +257,18 @@
       <button type="button" class="navbar-link dropdown-toggle d-flex align-items-center header-user-toggle"
               data-bs-toggle="dropdown" [attr.aria-label]="currentUser()?.nameLogin || 'Usuario'">
         @if (perfilLoading()) {
-          <div class="image bg-gray-800 text-gray-600 d-flex align-items-center justify-content-center">
-            <span class="spinner-border spinner-border-sm text-light" role="status"></span>
+          <div class="image header-avatar-initials d-flex align-items-center justify-content-center">
+            <span class="spinner-border spinner-border-sm text-white" role="status"></span>
           </div>
         } @else if (perfilObjectUrl) {
-          <div class="image bg-gray-800 text-gray-600 header-perfil-zoom"
+          <div class="image header-perfil-zoom"
                [style.background-image]="'url(' + perfilUrl() + ')'"
                (click)="showPerfilModal.set(true); $event.stopPropagation()"
                title="Ver imagen de perfil">
           </div>
         } @else {
-          <div class="image bg-gray-800 text-gray-600 header-perfil-cover"
-               [style.background-image]="'url(' + perfilUrl() + ')'">
+          <div class="image header-avatar-initials d-flex align-items-center justify-content-center">
+            {{ initials() }}
           </div>
         }
         <span class="d-flex align-items-center header-user-name">
