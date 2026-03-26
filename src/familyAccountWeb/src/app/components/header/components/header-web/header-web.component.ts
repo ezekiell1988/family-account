@@ -32,7 +32,6 @@ declare var slideToggle: any;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, TranslatePipe],
   templateUrl: './header-web.component.html',
-  styleUrls: ['./header-web.component.scss'],
 })
 export class HeaderWebComponent implements OnDestroy {
   private readonly http                = inject(HttpClient);

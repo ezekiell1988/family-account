@@ -41,7 +41,6 @@ import { AuthService, LanguageService, NotificationService } from '../../../../s
     IonBadge,
   ],
   templateUrl: './header-mobile.component.html',
-  styleUrls: ['./header-mobile.component.scss'],
 })
 export class HeaderMobileComponent implements OnInit {
   private readonly authService      = inject(AuthService);
