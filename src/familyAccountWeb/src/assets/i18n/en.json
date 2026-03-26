@@ -45,6 +45,9 @@
     "SEARCH": "Search",
     "NOTIFICATIONS": "NOTIFICATIONS",
     "NO_NOTIFICATIONS": "No notifications",
+    "MARK_ALL_READ": "Mark all as read",
+    "CLEAR_ALL": "Clear all",
+    "INVALIDATE_CACHE": "Refresh cache",
     "VIEW_MORE": "View more",
     "LANGUAGE": {
       "TITLE": "Language",
