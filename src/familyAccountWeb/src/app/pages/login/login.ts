@@ -1,14 +1,11 @@
 import { Component, OnDestroy, OnInit, Renderer2, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppSettings, AuthService, LoggerService } from '../../service';
 import { ResponsiveComponent } from '../../shared';
 import { LoginWebComponent } from './components/login-web/login-web.component';
 import { LoginMobileComponent } from './components/login-mobile/login-mobile.component';
-
-interface LoginPayload {
-  emailUser: string;
-  token: string;
-}
+import { LoginPayload } from './login.types';
 
 @Component({
   selector: 'app-login',
@@ -20,10 +17,13 @@ interface LoginPayload {
 })
 
 export class LoginPage extends ResponsiveComponent implements OnInit, OnDestroy {
-  // Inyección moderna con inject()
-  private readonly authService = inject(AuthService);
-  private readonly logger      = inject(LoggerService).getLogger('LoginPage');
-  private readonly route       = inject(ActivatedRoute);
+  // Inyección con inject()
+  private readonly authService  = inject(AuthService);
+  private readonly logger       = inject(LoggerService).getLogger('LoginPage');
+  private readonly route        = inject(ActivatedRoute);
+  private readonly router       = inject(Router);
+  private readonly renderer     = inject(Renderer2);
+  private readonly appSettings  = inject(AppSettings);
 
   // Estado reactivo del componente
   loading       = signal(false);
@@ -41,31 +41,27 @@ export class LoginPage extends ResponsiveComponent implements OnInit, OnDestroy 
   // URL de retorno después del login
   private returnUrl: string = '/';
 
-  constructor(
-    private router: Router,
-    private renderer: Renderer2,
-    public appSettings: AppSettings
-  ) {
+  constructor() {
     super();
 
     this.appSettings.appEmpty = true;
     this.renderer.addClass(document.body, 'bg-white');
 
     // Obtener returnUrl de los query params si existe
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.pipe(takeUntilDestroyed()).subscribe(params => {
       this.returnUrl = params['returnUrl'] || '/home';
       this.logger.debug('Return URL:', this.returnUrl);
     });
 
     // Verificar autenticación con el backend
-    this.authService.checkAuthentication().subscribe({
+    this.authService.checkAuthentication().pipe(takeUntilDestroyed()).subscribe({
       next: (isAuth) => {
         if (isAuth) {
           this.logger.info('Usuario ya autenticado, redirigiendo a:', this.returnUrl);
           this.router.navigate([this.returnUrl]);
         }
       },
-      error: (err) => {
+      error: () => {
         // Si hay error en la verificación, simplemente mostrar el formulario
         this.logger.debug('No autenticado, mostrar formulario');
       }

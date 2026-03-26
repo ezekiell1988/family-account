@@ -5,9 +5,11 @@ description: >
   page-options (configurar layout/sidebar/menú con AppSettings en TypeScript),
   ui-elements (botones, iconos, tabs, modales, badges, tablas y cualquier elemento HTML visual),
   form (inputs, selects, checkboxes, validación, wizards y plugins de formulario en HTML),
-  helper (utility classes CSS de Color Admin: colores, espaciado en px, tamaños, tipografía).
+  helper (utility classes CSS de Color Admin: colores, espaciado en px, tamaños, tipografía),
+  desktop-enhancements (z-index extendido, ViewEncapsulation.None, estilos exclusivos de desktop).
   Usar SIEMPRE que se construya o modifique cualquier componente Angular que use el template
-  Color Admin: layout de página, elementos de UI, formularios o clases CSS de utilidad.
+  Color Admin: layout de página, elementos de UI, formularios, clases CSS de utilidad o
+  cuando se necesite un overlay, control de z-index o estilos web-only en desktop.
 applyTo: "**/*.{html,ts}"
 ---
 
@@ -69,6 +71,18 @@ flex, borders, display, position y shadows.
 
 ---
 
+### 5. Desktop Enhancements — extensiones de z-index, dark mode y estilos desktop (`.html`, `.ts`, `.scss`)
+
+Utility classes de z-index extendidas (`.z-10`, `.z-20`, `.z-30`, `.z-100`), patrón
+`ViewEncapsulation.None`, dark mode correcto para `ng-select` y `ngx-datatable` (selector
+`[data-bs-theme="dark"] &`), y reglas sobre dónde colocar estilos exclusivos de desktop.
+
+[reference: desktop-enhancements/desktop-enhancements.md]
+> Clases .z-*, ViewEncapsulation.None, dark mode ng-select/ngx-datatable con
+> [data-bs-theme="dark"] &, y reglas de ubicación de estilos web-only.
+
+---
+
 ## Reglas globales
 
 1. **Nunca escribir CSS personalizado** si ya existe una clase en `vendor.min.css`.
@@ -76,3 +90,5 @@ flex, borders, display, position y shadows.
 3. **UI Elements y Form** aplican a archivos `.html`; **Page Options** aplica a archivos `.ts`.
 4. **Helper** aplica a `.html` para cualquier clase de utilidad que no sea un componente concreto.
 5. Para iconos: Bootstrap Icons (`bi bi-*`), FontAwesome 6 (`fas fa-*`), Solar Duotone (`solar:*-bold-duotone`), Simple Line (`icon-*`), Flags (`fi fi-*`).
+6. **Estilos exclusivos de desktop** van en `desktop-layout.component.scss` (con `ViewEncapsulation.None`) — nunca en `styles.css` ni en el SCSS del sub-componente.
+7. **Bootstrap `.z-*` solo llega a `.z-3`** — para overlays sobre elementos Color Admin usar `.z-10/.z-20/.z-30/.z-100` (ver sección 5).

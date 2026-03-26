@@ -9,28 +9,35 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { addIcons } from 'ionicons';
-import { logInOutline, keyOutline, personOutline, alertCircleOutline, checkmarkCircleOutline } from 'ionicons/icons';
+import {
+  logInOutline,
+  keyOutline,
+  personOutline,
+  alertCircleOutline,
+  checkmarkCircleOutline,
+  paperPlaneOutline,
+} from 'ionicons/icons';
 import {
   IonContent,
+  IonGrid,
+  IonRow,
+  IonCol,
   IonCard,
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonItem,
-  IonLabel,
   IonInput,
   IonButton,
   IonIcon,
   IonSpinner,
+  IonText,
+  IonNote,
 } from '@ionic/angular/standalone';
-
-interface LoginPayload {
-  emailUser: string;
-  token: string;
-}
+import { LoginPayload } from '../../login.types';
 
 @Component({
   selector: 'app-login-mobile',
+  host: { class: 'ion-page' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
@@ -38,19 +45,21 @@ interface LoginPayload {
     FormsModule,
     TranslatePipe,
     IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
     IonCard,
     IonCardHeader,
     IonCardTitle,
     IonCardContent,
-    IonItem,
-    IonLabel,
     IonInput,
     IonButton,
     IonIcon,
     IonSpinner,
+    IonText,
+    IonNote,
   ],
   templateUrl: './login-mobile.component.html',
-  styleUrls: ['./login-mobile.component.scss'],
 })
 export class LoginMobileComponent implements OnInit {
   loading        = input(false);
@@ -73,6 +82,7 @@ export class LoginMobileComponent implements OnInit {
       personOutline,
       alertCircleOutline,
       checkmarkCircleOutline,
+      paperPlaneOutline,
     });
   }
 

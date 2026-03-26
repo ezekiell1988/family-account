@@ -7,11 +7,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-
-interface LoginPayload {
-  emailUser: string;
-  token: string;
-}
+import { LoginPayload } from '../../login.types';
 
 @Component({
   selector: 'app-login-web',
@@ -19,7 +15,6 @@ interface LoginPayload {
   standalone: true,
   imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './login-web.component.html',
-  styleUrls: ['./login-web.component.scss'],
 })
 export class LoginWebComponent {
   loading        = input(false);

@@ -1,5 +1,16 @@
 // Desktop Layout Component Styles
 // Aquí se pueden agregar estilos específicos para el layout de escritorio
+// ViewEncapsulation.None — estilos aplican globalmente dentro del contexto desktop.
+
+// =====================================================
+// Z-INDEX UTILITIES (desktop)
+// Bootstrap 5 solo trae z-0/1/2/3; aquí extendemos para
+// casos de overlay dentro de páginas Color Admin.
+// =====================================================
+.z-10  { z-index: 10  !important; }
+.z-20  { z-index: 20  !important; }
+.z-30  { z-index: 30  !important; }
+.z-100 { z-index: 100 !important; }
 
 :host {
   display: block;

@@ -19,6 +19,28 @@ applyTo: "src/familyAccountWeb/**"
 
 ---
 
+## Arquitectura dual: Web vs Mobile
+
+Cada página tiene **dos sub-componentes** con tecnologías completamente distintas:
+
+| Aspecto | Versión Web | Versión Mobile |
+|---|---|---|
+| Tecnología | Color Admin (Bootstrap 5 + Font Awesome) | Ionic Framework (skill `ionic`) |
+| Skill de referencia | `color-admin` | `ionic` |
+| Imports | `CommonModule`, `FormsModule`, `NgxDatatableModule`, `PanelComponent` | Solo componentes individuales de `@ionic/angular/standalone` |
+| CSS | **CSS propio = 0**. Solo utility classes Bootstrap/Color Admin | **CSS propio = 0**. Solo utility classes Ionic (`ion-padding`, `ion-margin`, etc.) |
+| Alertas/errores | `<div class="alert alert-danger" role="alert">` | `<ion-text color="danger">` |
+| Formularios | `ngModel` + clases Bootstrap (`form-floating`, `form-control`) | `ion-input fill="outline"` standalone |
+| Layout | Bootstrap grid (`row`/`col-*`) o `PanelComponent` | `ion-grid / ion-row / ion-col` |
+| Iconos | Font Awesome (`<i class="fa fa-...">`) | ionicons (`addIcons()` + `<ion-icon name="...">`) |
+
+> **Regla de oro:** nunca mezclar tecnologías entre versiones. Nada de Ionic en el componente web y nada de Bootstrap en el componente mobile.
+> **Regla sobre CSS:** los sub-componentes **no deben tener archivo `.scss`** ni `styleUrls`. Color Admin e Ionic proveen todos los estilos necesarios.
+> - Si se necesita un estilo **exclusivo de web/desktop** (overlays, z-index extendido), consultar el skill `color-admin` sección **Desktop Enhancements** — ahí están las clases `.z-*` y el patrón `ViewEncapsulation.None`.
+> - Si se necesita algo **compartido entre plataformas** (variables Ionic, body.ionic-mode), va en `src/styles.css`.
+
+---
+
 ## 0. Modelos TypeScript (`src/app/shared/models/<nombre>.models.ts`)
 
 Antes de crear el service o el page, definir los DTOs que corresponden a los DTOs del API (.NET).
@@ -170,18 +192,15 @@ src/app/pages/
   <nombre-kebab>/
     <nombre-kebab>.ts                       ← Page coordinador
     <nombre-kebab>.html                     ← Template coordinador
-    <nombre-kebab>.scss                     ← Vacío (estilos en sub-componentes)
     index.ts                                ← Barrel del page (actualizar)
     components/
       index.ts                              ← Barrel de componentes internos
       <nombre-kebab>-web/
         <nombre-kebab>-web.component.ts
         <nombre-kebab>-web.component.html
-        <nombre-kebab>-web.component.scss
       <nombre-kebab>-mobile/
         <nombre-kebab>-mobile.component.ts
         <nombre-kebab>-mobile.component.html
-        <nombre-kebab>-mobile.component.scss
 ```
 
 ---
@@ -210,7 +229,6 @@ import { MiPaginaWebComponent, MiPaginaMobileComponent } from './components';
   standalone: true,
   imports: [MiPaginaWebComponent, MiPaginaMobileComponent],
   templateUrl: './mi-pagina.html',
-  styleUrls: ['./mi-pagina.scss'],
 })
 export class MiPaginaPage extends ResponsiveComponent implements OnInit, OnDestroy {
   private readonly logger = inject(LoggerService).getLogger('MiPaginaPage');
@@ -278,6 +296,7 @@ export class MiPaginaPage extends ResponsiveComponent implements OnInit, OnDestr
 ## 5. Sub-componente Web (`<nombre-kebab>-web.component.ts`)
 
 > **Referencia detallada:** ver `references/web-component.md` — incluye patrón sin/con row-detail, formulario inline, confirmación de borrado y checklist de `PanelComponent` + `ngx-datatable`.
+> **Skill:** consultar skill `color-admin` para cualquier elemento UI, formulario o clase CSS.
 
 Color Admin (Bootstrap 5 + Font Awesome) con `PanelComponent` y `ngx-datatable`.
 
@@ -301,7 +320,6 @@ import { PanelComponent } from '../../../../../components';
   standalone: true,
   imports: [CommonModule, FormsModule, NgxDatatableModule, PanelComponent],
   templateUrl: './mi-pagina-web.component.html',
-  styleUrls: ['./mi-pagina-web.component.scss'],
 })
 export class MiPaginaWebComponent {
   // Inputs del coordinador
@@ -368,9 +386,19 @@ export class MiPaginaWebComponent {
 
 ## 6. Sub-componente Mobile (`<nombre-kebab>-mobile.component.ts`)
 
-> **Referencia detallada:** ver `references/mobile-component.md` — incluye TypeScript completo con `CUSTOM_ELEMENTS_SCHEMA`, `handleRefresh async`, infinite scroll, búsqueda Ionic y HTML de tarjetas colapsables.
+> **Referencia detallada:** ver `references/mobile-component.md`.
+> **Skill:** consultar skill `ionic` para cualquier componente, layout, formulario u overlay Ionic.
 
-Ionic con `IonContent`, `IonCard`, etc. Importar solo los componentes Ionic que se usen.
+### Reglas críticas del componente mobile
+
+1. **`host: { class: 'ion-page' }` es OBLIGATORIO** cuando el componente usa `<ion-content>`. Sin esta clase el componente no tiene contexto de altura y `ion-content` renderiza en blanco.
+2. **CSS propio = 0.** Usar exclusivamente utility classes Ionic (`ion-padding`, `ion-margin`, `ion-text-center`, `ion-padding-vertical`, etc.). El SCSS debe quedar vacío.
+3. **Errores y mensajes:** usar `<ion-text color="danger/success">` — nunca clases CSS custom.
+4. **Formularios:** usar `<ion-input fill="outline" labelPlacement="floating">` standalone (sin `<ion-item>` envolvente cuando se usa `fill`). Ver skill `ionic` sección forms.
+5. **Layout:** usar `ion-grid / ion-row / ion-col` para centr y distribuir. No usar `display:flex` ni clases Bootstrap.
+6. **Todos los imports** de `@ionic/angular/standalone` — nunca `IonicModule`.
+7. **Iconos:** registrar con `addIcons()` en el constructor. Agregar solo los íconos que se usen.
+8. **`ion-label position="floating"` está deprecado en Ionic 7+.** Usar `labelPlacement="floating"` directamente en `<ion-input>`.
 
 ```typescript
 import {
@@ -386,6 +414,9 @@ import { addIcons } from 'ionicons';
 import { refreshOutline } from 'ionicons/icons';
 import {
   IonContent,
+  IonGrid,
+  IonRow,
+  IonCol,
   IonCard,
   IonCardHeader,
   IonCardTitle,
@@ -394,16 +425,21 @@ import {
   IonRefresherContent,
   IonIcon,
   IonSpinner,
+  IonText,
 } from '@ionic/angular/standalone';
 
 @Component({
   selector: 'app-mi-pagina-mobile',
+  host: { class: 'ion-page' },        // ← OBLIGATORIO para que ion-content funcione
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     CommonModule,
     FormsModule,
     IonContent,
+    IonGrid,
+    IonRow,
+    IonCol,
     IonCard,
     IonCardHeader,
     IonCardTitle,
@@ -412,9 +448,9 @@ import {
     IonRefresherContent,
     IonIcon,
     IonSpinner,
+    IonText,
   ],
   templateUrl: './mi-pagina-mobile.component.html',
-  styleUrls: ['./mi-pagina-mobile.component.scss'],
 })
 export class MiPaginaMobileComponent implements OnInit {
   // Inputs del coordinador
@@ -430,8 +466,6 @@ export class MiPaginaMobileComponent implements OnInit {
 
   doRefresh(event: CustomEvent): void {
     this.refresh.emit();
-    // Detener el refresher después de que el coordinador cargue:
-    // event.detail.complete() se llama cuando loading() vuelve a false
     setTimeout(() => (event.target as HTMLIonRefresherElement).complete(), 1500);
   }
 }
@@ -440,41 +474,46 @@ export class MiPaginaMobileComponent implements OnInit {
 ### Template mobile (`<nombre-kebab>-mobile.component.html`)
 
 ```html
-<ion-content>
+<ion-content class="ion-padding">
+  <ion-grid>
+    <ion-row class="ion-justify-content-center">
+      <ion-col size="12" size-sm="10" size-md="8">
 
-  <!-- Pull-to-refresh -->
-  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($any($event))">
-    <ion-refresher-content></ion-refresher-content>
-  </ion-refresher>
+        <!-- Pull-to-refresh -->
+        <ion-refresher slot="fixed" (ionRefresh)="doRefresh($any($event))">
+          <ion-refresher-content></ion-refresher-content>
+        </ion-refresher>
 
-  <!-- Error -->
-  @if (errorMessage()) {
-    <div class="ion-padding">
-      <div class="alert-error">
-        {{ errorMessage() }}
-      </div>
-    </div>
-  }
+        <!-- Error -->
+        @if (errorMessage()) {
+          <ion-text color="danger">
+            <p>
+              <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
+              {{ errorMessage() }}
+            </p>
+          </ion-text>
+        }
 
-  <!-- Loading -->
-  @if (loading()) {
-    <div class="ion-padding ion-text-center">
-      <ion-spinner name="crescent"></ion-spinner>
-    </div>
-  }
+        <!-- Loading -->
+        @if (loading()) {
+          <div class="ion-text-center ion-padding">
+            <ion-spinner name="crescent"></ion-spinner>
+          </div>
+        }
 
-  <!-- Contenido -->
-  <div class="ion-padding">
-    <ion-card>
-      <ion-card-header>
-        <ion-card-title>Mi Página</ion-card-title>
-      </ion-card-header>
-      <ion-card-content>
-        <!-- contenido aquí -->
-      </ion-card-content>
-    </ion-card>
-  </div>
+        <!-- Contenido -->
+        <ion-card>
+          <ion-card-header>
+            <ion-card-title>Mi Página</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <!-- contenido aquí -->
+          </ion-card-content>
+        </ion-card>
 
+      </ion-col>
+    </ion-row>
+  </ion-grid>
 </ion-content>
 ```
 
@@ -606,16 +645,38 @@ Si el item **no** lleva `roles` (o el array está vacío), es visible para **tod
 [ ] Crear carpeta src/app/pages/<nombre-kebab>/
 [ ] Crear <nombre-kebab>.ts       (coordinador)
 [ ] Crear <nombre-kebab>.html     (template coordinador)
-[ ] Crear <nombre-kebab>.scss     (vacío)
 [ ] Crear index.ts                (barrel del page)
 [ ] Crear components/index.ts     (barrel de sub-componentes)
-[ ] Crear components/<nombre>-web/   (3 archivos: .ts, .html, .scss)
-[ ] Crear components/<nombre>-mobile/  (3 archivos: .ts, .html, .scss)
+[ ] Crear components/<nombre>-web/   (2 archivos: .ts, .html)  → Color Admin, sin scss
+[ ] Crear components/<nombre>-mobile/  (2 archivos: .ts, .html)  → Ionic, sin scss
 [ ] Actualizar src/app/pages/index.ts            (agregar export)
 [ ] Actualizar app.routes.ts                     (agregar ruta maintenance/<nombre>)
 [ ] Actualizar app-menus.service.ts              (agregar al submenu Mantenimiento)
 [ ] Ejecutar build para verificar errores
 ```
+
+### Anti-patrones críticos — Web (Color Admin)
+
+Consultar la sección **Desktop Enhancements** del skill `color-admin` para la lista completa
+de anti-patrones (z-index inline, estilos web-only en `styles.css`, clases CSS en el SCSS
+del sub-componente).
+
+| Anti-patrón | Consecuencia | Corrección |
+|---|---|---|
+| Clase CSS custom en SCSS del componente | No mantenible, viola la regla sin-scss | Usar utility classes Bootstrap/Color Admin |
+| `style="z-index: N"` inline en el HTML | Valor hardcodeado, no reutilizable | Usar `.z-10/.z-20/.z-30/.z-100` (ver skill `color-admin`) |
+
+### Anti-patrones críticos — Mobile (Ionic)
+
+| Anti-patrón | Consecuencia | Corrección |
+|---|---|---|
+| Falta `host: { class: 'ion-page' }` | `ion-content` renderiza en blanco (altura 0) | Agregar `host: { class: 'ion-page' }` al `@Component` |
+| CSS propio (clases custom) en SCSS | Rompe dark mode, override difícil | Eliminar CSS, usar utility classes Ionic |
+| `ion-item` + `ion-label position="floating"` | Deprecado en Ionic 7+ | Usar `<ion-input fill="outline" labelPlacement="floating">` standalone |
+| `IonicModule` en imports | Bundle innecesariamente grande | Importar solo los componentes individuales de `@ionic/angular/standalone` |
+| Clases Bootstrap (`d-flex`, `col-6`, `alert`) en mobile | Conflicto de estilos y layouts | Usar `ion-grid/ion-row/ion-col` e `ion-text color=""` |
+| Mensajes de error con `<div class="alert alert-danger">` | No respeta dark/light mode Ionic | Usar `<ion-text color="danger">` |
+| `<i class="fa fa-...">` para iconos | Sin soporte en Ionic | Usar `<ion-icon name="...">` con `addIcons()` |
 
 ---
 
@@ -630,8 +691,9 @@ Si el item **no** lleva `roles` (o el array está vacío), es visible para **tod
 > Variante sin y con row-detail (columna expandible). Checklist Panel y ngx-datatable.
 
 [reference: references/mobile-component.md]
-> Sub-componente móvil: tarjetas Ionic colapsables, pull-to-refresh, infinite scroll,
-> búsqueda con ion-searchbar. CUSTOM_ELEMENTS_SCHEMA. handleRefresh async.
+> Sub-componente móvil con Ionic: `host: { class: 'ion-page' }` obligatorio, ion-grid layout,
+> ion-text para mensajes, ion-input fill="outline" standalone, cero CSS propio.
+> Consultar siempre el skill `ionic` para cualquier elemento UI o formulario.
 
 [reference: references/registration-i18n.md]
 > Registro en app.routes.ts con AuthGuard, registro en menú (app-menus.service.ts),

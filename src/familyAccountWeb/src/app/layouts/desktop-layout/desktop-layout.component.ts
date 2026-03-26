@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, signal } from '@angular/core';
+import { Component, HostListener, OnInit, ViewEncapsulation, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationStart } from '@angular/router';
 import { AppSettings } from '../../service/app-settings.service';
@@ -22,7 +22,8 @@ import { ThemePanelComponent } from '../../components/theme-panel/theme-panel.co
     ThemePanelComponent
   ],
   templateUrl: './desktop-layout.component.html',
-  styleUrls: ['./desktop-layout.component.scss']
+  styleUrls: ['./desktop-layout.component.scss'],
+  encapsulation: ViewEncapsulation.None,
 })
 export class DesktopLayoutComponent implements OnInit {
   appHasScroll = signal(false);
