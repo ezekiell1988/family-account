@@ -1,108 +1,15 @@
 @if (isMobile()) {
-  <header pageTitle="Inicio"></header>
-
-  <ion-content class="home-page mobile-home">
-    <ion-card class="hero-card">
-      <ion-card-content>
-        <div class="eyebrow">Panel principal</div>
-        <h1>{{ appSettings.nameCompany }}</h1>
-        <p class="lead-text">
-          La aplicación web quedó alineada con los módulos que existen actualmente en el frontend.
-        </p>
-        <div class="status-row">
-          <ion-badge color="success">
-            <ion-icon name="shield-checkmark-outline"></ion-icon>
-            Sesión activa
-          </ion-badge>
-          <ion-badge color="medium">
-            <ion-icon name="home-outline"></ion-icon>
-            Inicio disponible
-          </ion-badge>
-        </div>
-      </ion-card-content>
-    </ion-card>
-
-    <ion-card>
-      <ion-card-content>
-        <div class="section-title">Usuario actual</div>
-        @if (currentUser(); as user) {
-          <div class="info-row">
-            <ion-icon name="person-circle-outline"></ion-icon>
-            <div>
-              <strong>{{ user.nameLogin }}</strong>
-              <div class="muted-text">{{ user.codeLogin }}</div>
-            </div>
-          </div>
-          <div class="detail-block">
-            <div><strong>Email:</strong> {{ user.emailLogin || 'No disponible' }}</div>
-            <div><strong>Teléfono:</strong> {{ user.phoneLogin || 'No disponible' }}</div>
-            <div><strong>Roles:</strong> {{ rolesLabel() }}</div>
-          </div>
-        } @else {
-          <p class="muted-text">No hay un usuario cargado en memoria local.</p>
-        }
-
-        <ion-button expand="block" fill="outline" color="danger" (click)="logout()">
-          <ion-icon slot="start" name="log-out-outline"></ion-icon>
-          Cerrar sesión
-        </ion-button>
-      </ion-card-content>
-    </ion-card>
-
-  </ion-content>
-  <app-footer></app-footer>
+  <app-home-mobile
+    [currentUser]="currentUser()"
+    [rolesLabel]="rolesLabel()"
+    [nameCompany]="appSettings.nameCompany"
+    (logoutRequested)="logout()"
+  />
 } @else {
-  <div class="flex-grow-1 overflow-auto home-page desktop-home">
-    <section class="home-hero">
-      <div>
-        <div class="eyebrow">Family Account</div>
-        <h1>{{ appSettings.nameCompany }}</h1>
-        <p>
-          Se retiraron dependencias del template que no existen en este repositorio y se dejó una portada estable para continuar el desarrollo.
-        </p>
-      </div>
-      <div class="hero-badges">
-        <span class="badge text-bg-success">Build consistente</span>
-        <span class="badge text-bg-secondary">Angular standalone</span>
-      </div>
-    </section>
-
-    <div class="row g-3">
-      <div class="col-xl-8">
-        <panel title="Estado de la aplicación" [noButton]="true">
-          <div class="desktop-card-body">
-            <p>
-              El Home anterior dependía de servicios, modelos y componentes que no existen en el árbol actual del proyecto. Esta versión mantiene la ruta operativa sin agregar dependencias ficticias.
-            </p>
-            <p class="muted-text mb-0">
-              Puedes volver a extender esta pantalla cuando los módulos reales estén implementados en el frontend.
-            </p>
-          </div>
-        </panel>
-      </div>
-
-      <div class="col-xl-4">
-        <panel title="Usuario actual" [noButton]="true">
-          <div class="desktop-card-body">
-            @if (currentUser(); as user) {
-              <div class="user-name">{{ user.nameLogin }}</div>
-              <div class="muted-text mb-2">{{ user.codeLogin }}</div>
-              <div><strong>Email:</strong> {{ user.emailLogin || 'No disponible' }}</div>
-              <div><strong>Teléfono:</strong> {{ user.phoneLogin || 'No disponible' }}</div>
-              <div><strong>Roles:</strong> {{ rolesLabel() }}</div>
-            } @else {
-              <p class="muted-text">No hay un usuario autenticado cargado en cliente.</p>
-            }
-
-            <div class="mt-3">
-              <button class="btn btn-outline-danger" type="button" (click)="logout()">
-                Cerrar sesión
-              </button>
-            </div>
-          </div>
-        </panel>
-      </div>
-    </div>
-  </div>
-  <app-footer></app-footer>
+  <app-home-web
+    [currentUser]="currentUser()"
+    [rolesLabel]="rolesLabel()"
+    [nameCompany]="appSettings.nameCompany"
+    (logoutRequested)="logout()"
+  />
 }

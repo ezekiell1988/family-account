@@ -1,44 +1,18 @@
-import { Component, computed, inject } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { addIcons } from "ionicons";
-import { AppSettings, AuthService } from "../../service";
-import { HeaderComponent, FooterComponent, PanelComponent } from "../../components";
-import {
-  homeOutline,
-  personCircleOutline,
-  logOutOutline,
-  shieldCheckmarkOutline,
-} from "ionicons/icons";
-import {
-  IonContent,
-  IonCard,
-  IonCardContent,
-  IonIcon,
-  IonBadge,
-  IonButton,
-} from "@ionic/angular/standalone";
+import { Component, computed, inject, ChangeDetectionStrategy } from "@angular/core";
+import { AppSettings, AuthService, LoggerService } from "../../service";
 import { ResponsiveComponent } from "../../shared";
+import { HomeWebComponent, HomeMobileComponent } from "./components";
 
 @Component({
   selector: "home",
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: "./home.html",
-  styleUrls: ["./home.scss"],
   standalone: true,
-  imports: [
-    CommonModule,
-    HeaderComponent,
-    FooterComponent,
-    PanelComponent,
-    IonContent,
-    IonCard,
-    IonCardContent,
-    IonIcon,
-    IonBadge,
-    IonButton,
-  ],
+  imports: [HomeWebComponent, HomeMobileComponent]
 })
 export class HomePage extends ResponsiveComponent {
   private readonly authService = inject(AuthService);
+  private readonly logger = inject(LoggerService).getLogger("HomePage");
 
   readonly currentUser = this.authService.currentUser;
   readonly rolesLabel = computed(() => {
@@ -48,13 +22,7 @@ export class HomePage extends ResponsiveComponent {
 
   constructor(public appSettings: AppSettings) {
     super();
-
-    addIcons({
-      homeOutline,
-      personCircleOutline,
-      logOutOutline,
-      shieldCheckmarkOutline,
-    });
+    this.logger.info("🏠 HomePage cargado");
   }
 
   logout(): void {

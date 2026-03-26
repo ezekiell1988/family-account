@@ -3,15 +3,13 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppSettings, AuthService, LoggerService } from '../../service';
 import { ResponsiveComponent } from '../../shared';
-import { LoginWebComponent } from './components/login-web/login-web.component';
-import { LoginMobileComponent } from './components/login-mobile/login-mobile.component';
+import { LoginWebComponent, LoginMobileComponent } from './components';
 import { LoginPayload } from './login.types';
 
 @Component({
   selector: 'app-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.html',
-  styleUrls: ['./login.scss'],
   standalone: true,
   imports: [LoginWebComponent, LoginMobileComponent],
 })

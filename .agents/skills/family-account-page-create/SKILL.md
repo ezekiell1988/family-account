@@ -221,7 +221,7 @@ import {
 } from '@angular/core';
 import { AppSettings, LoggerService } from '../../../service';
 import { ResponsiveComponent } from '../../../shared';
-import { MiPaginaWebComponent, MiPaginaMobileComponent } from './components';
+import { MiPaginaWebComponent, MiPaginaMobileComponent } from './components'; // ← import corto desde barrel
 
 @Component({
   selector: 'app-mi-pagina',
@@ -267,6 +267,7 @@ export class MiPaginaPage extends ResponsiveComponent implements OnInit, OnDestr
 - Estado como `signal()`, nunca propiedades planas mutables para estado reactivo.
 - `ngOnDestroy()` **SIEMPRE** llama `super.ngOnDestroy()` y restaura `AppSettings` si se modificó en el constructor.
 - Importa únicamente `MiPaginaWebComponent` y `MiPaginaMobileComponent` (ni Ionic ni Bootstrap directamente).
+- **Siempre usar el import corto desde el barrel:** `import { MiPaginaWebComponent, MiPaginaMobileComponent } from './components';` — nunca rutas largas hasta los archivos internos.
 - Los helpers de display (`formatDate`, `getBadgeClass`) van en los sub-componentes, NO aquí.
 
 ---
