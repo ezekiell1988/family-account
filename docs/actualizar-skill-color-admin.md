@@ -2,7 +2,10 @@
 
 Este documento explica cómo ampliar el skill **`color-admin`** agregando una nueva sección
 (sub-carpeta) con su entry point y sus references, siguiendo la misma estructura que ya tienen
-`page-options`, `ui-elements` y `form`.
+`page-options`, `ui-elements`, `form` y `helper`.
+
+Además, cubre cómo mantener el **`SKILL.md` raíz** que actúa como índice maestro del skill
+y apunta a todas las secciones activas.
 
 ---
 
@@ -13,6 +16,7 @@ cada una con su propio entry point y sus propios references:
 
 ```
 .agents/skills/color-admin/
+├── SKILL.md                       ← índice maestro (apunta a todas las secciones)
 ├── page-options/                  ← sección existente
 │   ├── page-options.md            ← entry point de la sección
 │   └── references/
@@ -28,6 +32,10 @@ cada una con su propio entry point y sus propios references:
 │   ├── form.md
 │   └── references/
 │       └── ...
+├── helper/                        ← sección existente
+│   ├── helper.md
+│   └── references/
+│       └── helper-css.md
 └── {nueva-seccion}/               ← sección nueva a agregar
     ├── {nueva-seccion}.md         ← entry point de la sección
     └── references/
@@ -190,6 +198,53 @@ Checklist:
 - [ ] Cada reference tiene estructura: título + uso básico + component TS (si aplica) + notas
 - [ ] El entry point lista todos sus references con `[reference: references/{nombre}.md]`
 - [ ] La `description` en el frontmatter menciona los casos de uso clave
+- [ ] Se actualizó el `SKILL.md` raíz (ver Paso 7)
+
+---
+
+## Paso 7 — Actualizar el SKILL.md raíz
+
+El `SKILL.md` en la raíz del skill (`color-admin/SKILL.md`) es el **índice maestro** que el agente
+carga primero. Cada vez que se agrega una sección nueva hay que registrarla ahí.
+
+### Qué es el SKILL.md raíz
+
+- Tiene frontmatter `name: color-admin` con `applyTo: "**/*.{html,ts}"`
+- Lista todas las secciones activas con una referencia al entry point de cada una
+- Incluye las reglas globales del skill (nunca CSS personalizado, resetear AppSettings, etc.)
+
+### Cómo agregar la nueva sección
+
+1. Abre `color-admin/SKILL.md`.
+2. Agrega un bloque nuevo bajo `## Secciones disponibles` con el número siguiente:
+
+```markdown
+### N. {Nombre legible} — {qué cubre} (`.{ext}`)
+
+Breve descripción de qué elementos cubre esta sección.
+
+[reference: {nueva-seccion}/{nueva-seccion}.md]
+> Descripción de una línea igual a la del frontmatter de esa sección.
+```
+
+3. Si la sección tiene reglas globales propias, agrégalas en `## Reglas globales`.
+
+### Estructura del frontmatter raíz
+
+```markdown
+---
+name: color-admin
+description: >
+  Skill maestro del template Color Admin para Angular. Enruta a cuatro secciones especializadas:
+  {nueva-seccion} (descripción corta), ...
+  Usar SIEMPRE que se construya o modifique cualquier componente Angular que use el template
+  Color Admin: layout de página, elementos de UI, formularios o clases CSS de utilidad.
+applyTo: "**/*.{html,ts}"
+---
+```
+
+> **Regla:** `applyTo` del raíz siempre es `"**/*.{html,ts}"` para cubrir ambos tipos de archivo.
+> Los entry points de cada sección usan el `applyTo` más específico que corresponda.
 
 ---
 
@@ -243,13 +298,14 @@ color-admin/template_angularjs20/src/pages/page-options/
 
 ## Secciones activas y candidatas
 
-| Sección                  | Estado      | Carpeta fuente del template          |
-|--------------------------|-------------|--------------------------------------|
-| `page-options`           | ✅ Activa   | `pages/page-options/`                |
-| `ui-elements`            | ✅ Activa   | `pages/ui-elements/`                 |
-| `form`                   | ✅ Activa   | `pages/form-elements/`               |
-| `extra-components`       | Pendiente   | `pages/extra-component/`             |
-| `charts`                 | Pendiente   | `pages/charts/`                      |
-| `data-management`        | Pendiente   | `pages/data-management/`             |
-| `email-templates`        | Pendiente   | `pages/email-template/`              |
+| Sección                  | Estado      | Carpeta fuente del template          | applyTo          |
+|--------------------------|-------------|--------------------------------------|------------------|
+| `page-options`           | ✅ Activa   | `pages/page-options/`                | `**/*.ts`        |
+| `ui-elements`            | ✅ Activa   | `pages/ui-elements/`                 | `**/*.html`      |
+| `form`                   | ✅ Activa   | `pages/form-elements/`               | `**/*.html`      |
+| `helper`                 | ✅ Activa   | *(utility classes — sin fuente)*     | `**/*.html`      |
+| `extra-components`       | Pendiente   | `pages/extra-component/`             | `**/*.html`      |
+| `charts`                 | Pendiente   | `pages/charts/`                      | `**/*.html`      |
+| `data-management`        | Pendiente   | `pages/data-management/`             | `**/*.html`      |
+| `email-templates`        | Pendiente   | `pages/email-template/`              | `**/*.html`      |
 
