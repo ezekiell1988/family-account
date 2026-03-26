@@ -11,7 +11,7 @@ applyTo: "src/familyAccountWeb/**"
 # Crear una Página Nueva en family-account
 
 > **Skills de referencia obligatoria**
-> - Versión **web** (Color Admin): leer el skill `color-admin-create-page` antes de implementar el sub-componente web.
+> - Versión **web** (Color Admin): leer el skill `color-admin` (sección `create-page`) antes de implementar el sub-componente web.
 > - Versión **mobile** (Ionic): leer el skill `ionic-design` antes de implementar el sub-componente mobile.
 
 ---
@@ -274,7 +274,7 @@ export class MiPaginaPage extends ResponsiveComponent implements OnInit, OnDestr
 
 ## 5. Sub-componente Web (`<nombre-kebab>-web.component.ts`)
 
-> **Referencia:** consultar el skill `color-admin-create-page` para patrones detallados de `PanelComponent`, `ngx-datatable`, row-detail, formularios de creación/edición y confirmación de borrado.
+> **Referencia:** consultar el skill `color-admin` (sección `create-page`) para patrones detallados de `PanelComponent`, `ngx-datatable`, row-detail, formularios de creación/edición y confirmación de borrado.
 
 Color Admin (Bootstrap 5 + Font Awesome) con `PanelComponent` y `ngx-datatable`.
 
