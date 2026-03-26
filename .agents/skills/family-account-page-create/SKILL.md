@@ -2,17 +2,20 @@
 name: family-account-page-create
 description: >
   Guía completa para crear una página nueva en family-account: modelos TypeScript,
-  service, estructura de carpetas, page coordinador, sub-componentes web (Color Admin)
-  y mobile (Ionic), barrel de exports, registro en rutas (app.routes.ts) y registro en
-  menú (AppMenuService). Usar SIEMPRE que se cree una página nueva en este proyecto.
+  service, estructura de carpetas, page coordinador (ResponsiveComponent + AppSettings),
+  sub-componente web (Color Admin + Panel + ngx-datatable con row-detail opcional) y
+  mobile (Ionic cards colapsables), barrels, registro en rutas (app.routes.ts), registro en
+  menú (AppMenuService), i18n con ngx-translate, accesibilidad WCAG 2.1 AA, sistema CSS
+  híbrido desktop/mobile, dark mode unificado y tabla de anti-patrones.
+  Usar SIEMPRE que se cree una página nueva en este proyecto.
 applyTo: "src/familyAccountWeb/**"
 ---
 
 # Crear una Página Nueva en family-account
 
-> **Skills de referencia obligatoria**
-> - Versión **web** (Color Admin): leer el skill `color-admin` (sección `create-page`) antes de implementar el sub-componente web.
-> - Versión **mobile** (Ionic): leer el skill `ionic-design` antes de implementar el sub-componente mobile.
+> **Referencias detalladas disponibles** — ver sección al final de este skill:
+> `page-coordinator`, `web-component`, `mobile-component`, `registration-i18n`,
+> `accessibility-antipatterns` y `css-mix`.
 
 ---
 
@@ -274,7 +277,7 @@ export class MiPaginaPage extends ResponsiveComponent implements OnInit, OnDestr
 
 ## 5. Sub-componente Web (`<nombre-kebab>-web.component.ts`)
 
-> **Referencia:** consultar el skill `color-admin` (sección `create-page`) para patrones detallados de `PanelComponent`, `ngx-datatable`, row-detail, formularios de creación/edición y confirmación de borrado.
+> **Referencia detallada:** ver `references/web-component.md` — incluye patrón sin/con row-detail, formulario inline, confirmación de borrado y checklist de `PanelComponent` + `ngx-datatable`.
 
 Color Admin (Bootstrap 5 + Font Awesome) con `PanelComponent` y `ngx-datatable`.
 
@@ -365,7 +368,7 @@ export class MiPaginaWebComponent {
 
 ## 6. Sub-componente Mobile (`<nombre-kebab>-mobile.component.ts`)
 
-> **Referencia:** consultar el skill `ionic-design` para el catálogo completo de componentes Ionic, patrones de listas, theming, dark mode y UX nativa iOS/Android.
+> **Referencia detallada:** ver `references/mobile-component.md` — incluye TypeScript completo con `CUSTOM_ELEMENTS_SCHEMA`, `handleRefresh async`, infinite scroll, búsqueda Ionic y HTML de tarjetas colapsables.
 
 Ionic con `IonContent`, `IonCard`, etc. Importar solo los componentes Ionic que se usen.
 
@@ -613,3 +616,32 @@ Si el item **no** lleva `roles` (o el array está vacío), es visible para **tod
 [ ] Actualizar app-menus.service.ts              (agregar al submenu Mantenimiento)
 [ ] Ejecutar build para verificar errores
 ```
+
+---
+
+## Referencias detalladas
+
+[reference: references/page-coordinator.md]
+> Estructura de carpetas, Page component (.ts + .html), archivos index.ts (barrels).
+> Patrón completo: ResponsiveComponent + AppSettings + LoggerService. HTML del coordinador.
+
+[reference: references/web-component.md]
+> Sub-componente de escritorio: Panel + ngx-datatable + formulario inline crear/editar.
+> Variante sin y con row-detail (columna expandible). Checklist Panel y ngx-datatable.
+
+[reference: references/mobile-component.md]
+> Sub-componente móvil: tarjetas Ionic colapsables, pull-to-refresh, infinite scroll,
+> búsqueda con ion-searchbar. CUSTOM_ELEMENTS_SCHEMA. handleRefresh async.
+
+[reference: references/registration-i18n.md]
+> Registro en app.routes.ts con AuthGuard, registro en menú (app-menus.service.ts),
+> claves @ngx-translate (es.json / en.json) y claves COMMON.* reutilizables.
+
+[reference: references/accessibility-antipatterns.md]
+> Reglas WCAG 2.1 AA: for/id, aria-label, btn-close, links con ngTemplateOutlet, alt en imágenes,
+> estilos inline prohibidos. Tabla completa de anti-patrones a evitar.
+
+[reference: references/css-mix.md]
+> Sistema CSS híbrido para apps desktop+mobile: utility classes Bootstrap vs Ionic,
+> detección de plataforma (desktop-mode / ionic-mode), carga dinámica de CSS, dark mode
+> unificado con data-bs-theme, breakpoints, patrones comunes y troubleshooting.

@@ -1,17 +1,13 @@
 ---
 name: color-admin
 description: >
-  Skill maestro del template Color Admin para Angular. Enruta a cinco secciones especializadas:
+  Skill maestro del template Color Admin para Angular. Enruta a cuatro secciones especializadas:
   page-options (configurar layout/sidebar/menú con AppSettings en TypeScript),
   ui-elements (botones, iconos, tabs, modales, badges, tablas y cualquier elemento HTML visual),
   form (inputs, selects, checkboxes, validación, wizards y plugins de formulario en HTML),
-  helper (utility classes CSS de Color Admin: colores, espaciado en px, tamaños, tipografía),
-  create-page (crear página nueva de mantenimiento/listado con web+mobile, rutas, menú, i18n
-  y sistema CSS híbrido desktop/mobile con utility classes Bootstrap vs Ionic, detección de
-  plataforma, dark mode unificado y troubleshooting).
+  helper (utility classes CSS de Color Admin: colores, espaciado en px, tamaños, tipografía).
   Usar SIEMPRE que se construya o modifique cualquier componente Angular que use el template
-  Color Admin: layout de página, elementos de UI, formularios, clases CSS de utilidad o cuando
-  se cree una página nueva de mantenimiento/listado.
+  Color Admin: layout de página, elementos de UI, formularios o clases CSS de utilidad.
 applyTo: "**/*.{html,ts}"
 ---
 
@@ -73,21 +69,6 @@ flex, borders, display, position y shadows.
 
 ---
 
-### 5. Create Page — página nueva de mantenimiento/listado (`.html` + `.ts`)
-
-Estructura completa para una página nueva: carpetas, page coordinador con `ResponsiveComponent`,
-sub-componente web (Panel + ngx-datatable, con o sin row-detail), sub-componente mobile
-(Ionic cards colapsables), barrels, rutas, menú, i18n y accesibilidad WCAG 2.1 AA.
-Incluye además el sistema CSS híbrido desktop/mobile: utility classes Bootstrap vs Ionic,
-detección de plataforma (`desktop-mode` / `ionic-mode`), carga dinámica de CSS,
-dark mode unificado (`data-bs-theme`), patrones comunes y troubleshooting.
-
-[reference: create-page/create-page.md]
-> Guía paso a paso para crear una página nueva de mantenimiento/listado con arquitectura
-> coordinador + sub-componentes web/mobile. Incluye CSS híbrido, anti-patrones y accesibilidad.
-
----
-
 ## Reglas globales
 
 1. **Nunca escribir CSS personalizado** si ya existe una clase en `vendor.min.css`.
@@ -95,4 +76,3 @@ dark mode unificado (`data-bs-theme`), patrones comunes y troubleshooting.
 3. **UI Elements y Form** aplican a archivos `.html`; **Page Options** aplica a archivos `.ts`.
 4. **Helper** aplica a `.html` para cualquier clase de utilidad que no sea un componente concreto.
 5. Para iconos: Bootstrap Icons (`bi bi-*`), FontAwesome 6 (`fas fa-*`), Solar Duotone (`solar:*-bold-duotone`), Simple Line (`icon-*`), Flags (`fi fi-*`).
-6. **Create Page** aplica cuando se crea una página nueva de mantenimiento/listado — cubre tanto `.ts` como `.html`.
