@@ -5,14 +5,14 @@ import {
   output,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { PanelComponent, FooterComponent } from '../../../../components';
+import { PanelComponent } from '../../../../components';
 import { UserData } from '../../../../shared/models';
 
 @Component({
   selector: 'app-home-web',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, PanelComponent, FooterComponent],
+  imports: [CommonModule, PanelComponent],
   templateUrl: './home-web.component.html',
 })
 export class HomeWebComponent {

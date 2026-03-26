@@ -40,8 +40,7 @@ export class AppComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.appSettings.appSidebarNone = true;
-    this.appSettings.appTopMenu = true;
+    this.appSettings.appSidebarSearch = true;
 
     // NO verificar autenticación aquí - el AuthGuard se encarga de eso
     // Esto evita llamadas duplicadas y errores 401 innecesarios
