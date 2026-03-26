@@ -5,8 +5,11 @@ description: >
   estructura de carpetas, page coordinador con ResponsiveComponent, sub-componente web
   (Color Admin + Panel + ngx-datatable con row-detail opcional) y sub-componente mobile
   (Ionic cards colapsables con pull-to-refresh e infinite scroll). Cubre también barrels,
-  registro en rutas, registro en menú, i18n con ngx-translate, accesibilidad WCAG 2.1 AA
-  y tabla de anti-patrones. Usar SIEMPRE que se cree una página nueva de mantenimiento/listado.
+  registro en rutas, registro en menú, i18n con ngx-translate, accesibilidad WCAG 2.1 AA,
+  tabla de anti-patrones y sistema de CSS híbrido desktop/mobile (utility classes Bootstrap
+  vs Ionic, detección de plataforma, carga dinámica, dark mode unificado y troubleshooting).
+  Usar SIEMPRE que se cree una página nueva de mantenimiento/listado o se trabajen clases
+  CSS en componentes híbridos desktop+mobile.
 applyTo: "**/*.{html,ts}"
 ---
 
@@ -44,6 +47,11 @@ coordinador + sub-componentes web/mobile.
 [reference: references/accessibility-antipatterns.md]
 > Reglas WCAG 2.1 AA: for/id, aria-label, btn-close, links con ngTemplateOutlet, alt en imágenes,
 > estilos inline prohibidos. Tabla completa de anti-patrones a evitar.
+
+[reference: references/css-mix.md]
+> Sistema CSS híbrido para apps desktop+mobile: utility classes Bootstrap vs Ionic,
+> detección de plataforma (desktop-mode / ionic-mode), carga dinámica de CSS, dark mode
+> unificado con data-bs-theme, breakpoints, patrones comunes y troubleshooting.
 
 ## Flujo de creación recomendado
 

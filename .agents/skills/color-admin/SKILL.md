@@ -6,7 +6,9 @@ description: >
   ui-elements (botones, iconos, tabs, modales, badges, tablas y cualquier elemento HTML visual),
   form (inputs, selects, checkboxes, validación, wizards y plugins de formulario en HTML),
   helper (utility classes CSS de Color Admin: colores, espaciado en px, tamaños, tipografía),
-  create-page (crear página nueva de mantenimiento/listado con web+mobile, rutas, menú e i18n).
+  create-page (crear página nueva de mantenimiento/listado con web+mobile, rutas, menú, i18n
+  y sistema CSS híbrido desktop/mobile con utility classes Bootstrap vs Ionic, detección de
+  plataforma, dark mode unificado y troubleshooting).
   Usar SIEMPRE que se construya o modifique cualquier componente Angular que use el template
   Color Admin: layout de página, elementos de UI, formularios, clases CSS de utilidad o cuando
   se cree una página nueva de mantenimiento/listado.
@@ -76,10 +78,13 @@ flex, borders, display, position y shadows.
 Estructura completa para una página nueva: carpetas, page coordinador con `ResponsiveComponent`,
 sub-componente web (Panel + ngx-datatable, con o sin row-detail), sub-componente mobile
 (Ionic cards colapsables), barrels, rutas, menú, i18n y accesibilidad WCAG 2.1 AA.
+Incluye además el sistema CSS híbrido desktop/mobile: utility classes Bootstrap vs Ionic,
+detección de plataforma (`desktop-mode` / `ionic-mode`), carga dinámica de CSS,
+dark mode unificado (`data-bs-theme`), patrones comunes y troubleshooting.
 
 [reference: create-page/create-page.md]
 > Guía paso a paso para crear una página nueva de mantenimiento/listado con arquitectura
-> coordinador + sub-componentes web/mobile. Incluye anti-patrones a evitar.
+> coordinador + sub-componentes web/mobile. Incluye CSS híbrido, anti-patrones y accesibilidad.
 
 ---
 
