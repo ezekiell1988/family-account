@@ -1,3 +1,25 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Home</a></li>
+  <li class="breadcrumb-item">Mantenimiento</li>
+  <li class="breadcrumb-item active">Cuentas Contables</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Cuentas Contables
+  <small>Plan de cuentas con jerarquía</small>
+</h1>
+
+<!-- Error global -->
+@if (errorMessage()) {
+  <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2"></i>
+    <strong>Error:</strong> {{ errorMessage() }}
+    <button type="button" class="btn-close" aria-label="Cerrar" (click)="clearError.emit()"></button>
+  </div>
+}
+
 <!-- ── FORMULARIO CREAR / EDITAR ────────────────────────────────── -->
 @if (showForm()) {
   <div class="card mb-3">
@@ -118,7 +140,7 @@
         <i class="fa fa-plus me-1"></i>Nueva Cuenta
       </button>
 
-      <select class="form-select form-select-sm filter-type-select"
+      <select class="form-select form-select-sm w-auto"
         aria-label="Filtrar por tipo de cuenta"
         [value]="filterType()"
         (change)="filterType.set($any($event.target).value)">
@@ -128,7 +150,7 @@
         }
       </select>
 
-      <input type="text" class="form-control form-control-sm filter-search-input"
+      <input type="text" class="form-control form-control-sm" style="width: 220px"
         placeholder="Buscar código o nombre…"
         aria-label="Buscar código o nombre"
         [value]="filterSearch()"

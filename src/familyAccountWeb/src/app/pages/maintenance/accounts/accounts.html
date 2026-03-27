@@ -1,0 +1,26 @@
+@if (isMobile()) {
+  <app-accounts-mobile
+    [accounts]="accounts()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    (refresh)="load()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (clearError)="clearError()">
+  </app-accounts-mobile>
+} @else {
+  <app-accounts-web
+    [accounts]="accounts()"
+    [totalCount]="totalCount()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    (refresh)="load()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (clearError)="clearError()">
+  </app-accounts-web>
+}

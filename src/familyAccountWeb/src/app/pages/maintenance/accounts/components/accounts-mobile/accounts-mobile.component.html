@@ -1,0 +1,274 @@
+<ion-content class="ion-padding">
+  <!-- Pull-to-refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Error -->
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="clearError.emit()">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
+
+  <!-- Spinner de carga -->
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  <!-- Formulario crear/editar -->
+  @if (showForm()) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon [name]="isEditing() ? 'pencil-outline' : 'calculator-outline'"></ion-icon>
+          {{ isEditing() ? ('ACCOUNTS.FORM.EDIT_TITLE' | translate) : ('ACCOUNTS.FORM.NEW_TITLE' | translate) }}
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-grid>
+          <ion-row>
+            <ion-col size="12">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                [label]="'ACCOUNTS.FORM.CODE_LABEL' | translate"
+                [placeholder]="'ACCOUNTS.FORM.CODE_PLACEHOLDER' | translate"
+                [value]="formCode()"
+                (ionInput)="formCode.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="12">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                [label]="'ACCOUNTS.FORM.NAME_LABEL' | translate"
+                [placeholder]="'ACCOUNTS.FORM.NAME_PLACEHOLDER' | translate"
+                [value]="formName()"
+                (ionInput)="formName.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="12">
+              <ion-select
+                fill="outline"
+                labelPlacement="floating"
+                [label]="'ACCOUNTS.FORM.TYPE_LABEL' | translate"
+                [value]="formType()"
+                (ionChange)="formType.set($event.detail.value)">
+                @for (t of accountTypes; track t) {
+                  <ion-select-option [value]="t">{{ t }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="6">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                type="number"
+                [label]="'ACCOUNTS.FORM.LEVEL_LABEL' | translate"
+                min="1"
+                max="20"
+                [value]="formLevel()"
+                (ionInput)="formLevel.set(+$any($event.target).value)">
+              </ion-input>
+            </ion-col>
+            <ion-col size="6">
+              <ion-select
+                fill="outline"
+                labelPlacement="floating"
+                [label]="'ACCOUNTS.FORM.PARENT_LABEL' | translate"
+                [value]="formParentId() ?? ''"
+                (ionChange)="formParentId.set($event.detail.value || null)">
+                <ion-select-option value="">{{ 'ACCOUNTS.FORM.NO_PARENT' | translate }}</ion-select-option>
+                @for (a of parentOptions(); track a.idAccount) {
+                  <ion-select-option [value]="a.idAccount">{{ a.codeAccount }} - {{ a.nameAccount }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="6">
+              <ion-toggle
+                [checked]="formAllowsMov()"
+                (ionChange)="formAllowsMov.set($event.detail.checked)">
+                {{ 'ACCOUNTS.FORM.ALLOWS_MOV' | translate }}
+              </ion-toggle>
+            </ion-col>
+            <ion-col size="6">
+              <ion-toggle
+                [checked]="formIsActive()"
+                (ionChange)="formIsActive.set($event.detail.checked)">
+                {{ 'ACCOUNTS.FORM.IS_ACTIVE' | translate }}
+              </ion-toggle>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-margin-top">
+            <ion-col>
+              <ion-button expand="block" (click)="submitForm()" [disabled]="!isFormValid()">
+                <ion-icon slot="start" name="save-outline"></ion-icon>
+                {{ isEditing() ? ('COMMON.SAVE' | translate) : ('ACCOUNTS.FORM.CREATE_BTN' | translate) }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelForm()">
+                <ion-icon slot="start" name="close-outline"></ion-icon>
+                {{ 'COMMON.CANCEL' | translate }}
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Confirmacion eliminar -->
+  @if (confirmDeleteId() !== null) {
+    <ion-card color="warning">
+      <ion-card-content>
+        <ion-text>
+          <p>
+            <ion-icon name="warning-outline"></ion-icon>
+            {{ 'ACCOUNTS.CONFIRM_DELETE' | translate }}
+          </p>
+        </ion-text>
+        <ion-grid>
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" color="danger" (click)="confirmDelete()">
+                <ion-icon slot="start" name="trash-outline"></ion-icon>
+                {{ 'COMMON.DELETE' | translate }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelDelete()">
+                {{ 'COMMON.CANCEL' | translate }}
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Boton nueva cuenta -->
+  <ion-grid>
+    <ion-row class="ion-justify-content-end ion-margin-bottom">
+      <ion-col size="auto">
+        <ion-button size="small" color="success" (click)="openCreate()" [disabled]="showForm()">
+          <ion-icon slot="start" name="add-outline"></ion-icon>
+          {{ 'ACCOUNTS.NEW_ACCOUNT' | translate }}
+        </ion-button>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Lista de cuentas -->
+  @for (account of accounts(); track account.idAccount) {
+    <ion-card>
+      <ion-card-header (click)="toggleExpand(account.idAccount)">
+        <ion-grid>
+          <ion-row class="ion-align-items-center">
+            <ion-col>
+              <span class="font-monospace fw-bold">{{ account.codeAccount }}</span>
+              <ion-badge [color]="getTypeBadgeClass(account.typeAccount)" class="ion-margin-start">
+                {{ account.typeAccount }}
+              </ion-badge>
+            </ion-col>
+            <ion-col size="auto">
+              <ion-icon
+                [name]="expandedId() === account.idAccount ? 'chevron-down-outline' : 'chevron-forward-outline'"
+                color="medium">
+              </ion-icon>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+        <ion-card-title class="ion-margin-top">{{ account.nameAccount }}</ion-card-title>
+      </ion-card-header>
+
+      @if (expandedId() === account.idAccount) {
+        <ion-card-content>
+          <ion-text color="medium">
+            <p class="ion-no-margin">
+              <strong>{{ 'ACCOUNTS.DETAIL.PARENT' | translate }}</strong>
+              {{ account.nameAccountParent ?? ('ACCOUNTS.DETAIL.ROOT' | translate) }}
+            </p>
+            <p>
+              <strong>{{ 'ACCOUNTS.DETAIL.LEVEL' | translate }}</strong>
+              {{ account.levelAccount }}
+            </p>
+          </ion-text>
+          <ion-grid>
+            <ion-row>
+              <ion-col size="auto">
+                <ion-badge [color]="account.allowsMovements ? 'success' : 'medium'">
+                  {{ account.allowsMovements ? ('COMMON.YES' | translate) : ('COMMON.NO' | translate) }}
+                  {{ 'ACCOUNTS.DETAIL.MOVEMENTS' | translate }}
+                </ion-badge>
+              </ion-col>
+              <ion-col size="auto">
+                <ion-badge [color]="account.isActive ? 'success' : 'danger'">
+                  {{ account.isActive ? ('ACCOUNTS.DETAIL.ACTIVE' | translate) : ('ACCOUNTS.DETAIL.INACTIVE' | translate) }}
+                </ion-badge>
+              </ion-col>
+            </ion-row>
+            <ion-row class="ion-margin-top">
+              <ion-col>
+                <ion-button
+                  size="small"
+                  color="primary"
+                  (click)="openEdit(account)"
+                  [disabled]="showForm() || deletingId() === account.idAccount">
+                  <ion-icon slot="start" name="pencil-outline"></ion-icon>
+                  {{ 'COMMON.EDIT' | translate }}
+                </ion-button>
+              </ion-col>
+              <ion-col>
+                <ion-button
+                  size="small"
+                  color="danger"
+                  (click)="askDelete(account.idAccount)"
+                  [disabled]="showForm() || deletingId() === account.idAccount">
+                  @if (deletingId() === account.idAccount) {
+                    <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                  } @else {
+                    <ion-icon slot="start" name="trash-outline"></ion-icon>
+                    {{ 'COMMON.DELETE' | translate }}
+                  }
+                </ion-button>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </ion-card-content>
+      }
+    </ion-card>
+  }
+
+  @if (accounts().length === 0 && !isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-icon name="albums-outline" size="large"></ion-icon>
+      <ion-text color="medium">
+        <p>{{ 'ACCOUNTS.EMPTY' | translate }}</p>
+      </ion-text>
+    </div>
+  }
+</ion-content>

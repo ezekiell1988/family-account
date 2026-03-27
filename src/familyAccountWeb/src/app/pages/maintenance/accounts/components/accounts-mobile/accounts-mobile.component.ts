@@ -1,7 +1,6 @@
 import {
   Component,
   ChangeDetectionStrategy,
-  CUSTOM_ELEMENTS_SCHEMA,
   input,
   output,
   signal,
@@ -10,30 +9,88 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AccountDto, CreateAccountRequest, UpdateAccountRequest } from '../../../../shared/models';
+import { addIcons } from 'ionicons';
+import {
+  warningOutline,
+  closeOutline,
+  calculatorOutline,
+  pencilOutline,
+  saveOutline,
+  addOutline,
+  trashOutline,
+  chevronDownOutline,
+  chevronForwardOutline,
+  albumsOutline,
+} from 'ionicons/icons';
+import {
+  IonContent,
+  IonRefresher,
+  IonRefresherContent,
+  IonSpinner,
+  IonText,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonBadge,
+  IonButton,
+  IonIcon,
+  IonInput,
+  IonSelect,
+  IonSelectOption,
+  IonToggle,
+  IonGrid,
+  IonRow,
+  IonCol,
+} from '@ionic/angular/standalone';
+import { AccountDto, CreateAccountRequest, UpdateAccountRequest } from '../../../../../shared/models';
 
 const ACCOUNT_TYPES = ['Activo', 'Pasivo', 'Capital', 'Ingreso', 'Gasto', 'Control'] as const;
 
 @Component({
   selector: 'app-accounts-mobile',
+  host: { class: 'ion-page' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslatePipe],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    IonContent,
+    IonRefresher,
+    IonRefresherContent,
+    IonSpinner,
+    IonText,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardContent,
+    IonBadge,
+    IonButton,
+    IonIcon,
+    IonInput,
+    IonSelect,
+    IonSelectOption,
+    IonToggle,
+    IonGrid,
+    IonRow,
+    IonCol,
+  ],
   templateUrl: './accounts-mobile.component.html',
-  styleUrls: ['./accounts-mobile.component.scss'],
 })
 export class AccountsMobileComponent {
   // ── Inputs ────────────────────────────────────────────────────────
-  accounts   = input<AccountDto[]>([]);
-  isLoading  = input(false);
-  deletingId = input<number | null>(null);
+  accounts     = input<AccountDto[]>([]);
+  isLoading    = input(false);
+  deletingId   = input<number | null>(null);
+  errorMessage = input('');
 
   // ── Outputs ───────────────────────────────────────────────────────
-  refresh  = output<void>();
-  create   = output<CreateAccountRequest>();
-  editSave = output<UpdateAccountRequest & { id: number }>();
-  remove   = output<number>();
+  refresh    = output<void>();
+  create     = output<CreateAccountRequest>();
+  editSave   = output<UpdateAccountRequest & { id: number }>();
+  remove     = output<number>();
+  clearError = output<void>();
 
   // ── Estado local ──────────────────────────────────────────────────
   expandedId      = signal<number | null>(null);
@@ -58,6 +115,21 @@ export class AccountsMobileComponent {
   parentOptions = computed(() =>
     this.accounts().filter(a => a.idAccount !== this.editingId()),
   );
+
+  constructor() {
+    addIcons({
+      warningOutline,
+      closeOutline,
+      calculatorOutline,
+      pencilOutline,
+      saveOutline,
+      addOutline,
+      trashOutline,
+      chevronDownOutline,
+      chevronForwardOutline,
+      albumsOutline,
+    });
+  }
 
   // ── Helpers de display ────────────────────────────────────────────
   getTypeBadgeClass(type: string): string {
@@ -148,3 +220,5 @@ export class AccountsMobileComponent {
     }
   }
 }
+
+

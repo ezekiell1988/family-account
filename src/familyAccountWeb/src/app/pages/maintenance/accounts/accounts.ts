@@ -1,15 +1,15 @@
 import {
   Component,
   OnInit,
+  OnDestroy,
   inject,
   signal,
-  computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { finalize } from 'rxjs/operators';
-import { AppSettings, AccountService, LoggerService } from '../../service';
-import { ResponsiveComponent } from '../../shared';
-import { AccountDto, CreateAccountRequest, UpdateAccountRequest } from '../../shared/models';
+import { AppSettings, AccountService, LoggerService } from '../../../service';
+import { ResponsiveComponent } from '../../../shared';
+import { AccountDto, CreateAccountRequest, UpdateAccountRequest } from '../../../shared/models';
 import { AccountsWebComponent, AccountsMobileComponent } from './components';
 
 @Component({
@@ -18,9 +18,8 @@ import { AccountsWebComponent, AccountsMobileComponent } from './components';
   standalone: true,
   imports: [AccountsWebComponent, AccountsMobileComponent],
   templateUrl: './accounts.html',
-  styleUrls: ['./accounts.scss'],
 })
-export class AccountsPage extends ResponsiveComponent implements OnInit {
+export class AccountsPage extends ResponsiveComponent implements OnInit, OnDestroy {
   private readonly svc    = inject(AccountService);
   private readonly logger = inject(LoggerService).getLogger('AccountsPage');
 
@@ -32,7 +31,6 @@ export class AccountsPage extends ResponsiveComponent implements OnInit {
 
   // ── Estado local ──────────────────────────────────────────────────
   deletingId = signal<number | null>(null);
-  hasError   = computed(() => this.error() !== null);
 
   constructor(public appSettings: AppSettings) {
     super();

@@ -16,8 +16,8 @@ import {
   ColumnMode,
   DatatableRowDetailDirective,
 } from '@swimlane/ngx-datatable';
-import { PanelComponent } from '../../../../components';
-import { AccountDto, CreateAccountRequest, UpdateAccountRequest } from '../../../../shared/models';
+import { PanelComponent } from '../../../../../components';
+import { AccountDto, CreateAccountRequest, UpdateAccountRequest } from '../../../../../shared/models';
 
 const ACCOUNT_TYPES = ['Activo', 'Pasivo', 'Capital', 'Ingreso', 'Gasto', 'Control'] as const;
 
@@ -27,20 +27,21 @@ const ACCOUNT_TYPES = ['Activo', 'Pasivo', 'Capital', 'Ingreso', 'Gasto', 'Contr
   standalone: true,
   imports: [CommonModule, FormsModule, NgxDatatableModule, PanelComponent],
   templateUrl: './accounts-web.component.html',
-  styleUrls: ['./accounts-web.component.scss'],
 })
 export class AccountsWebComponent {
   // ── Inputs ────────────────────────────────────────────────────────
-  accounts   = input<AccountDto[]>([]);
-  totalCount = input(0);
-  isLoading  = input(false);
-  deletingId = input<number | null>(null);
+  accounts     = input<AccountDto[]>([]);
+  totalCount   = input(0);
+  isLoading    = input(false);
+  deletingId   = input<number | null>(null);
+  errorMessage = input('');
 
-  // ── Outputs ───────────────────────────────────────────────────────
-  refresh  = output<void>();
-  create   = output<CreateAccountRequest>();
-  editSave = output<UpdateAccountRequest & { id: number }>();
-  remove   = output<number>();
+  // ── Outputs ───────────────────────────────────────────────
+  refresh    = output<void>();
+  create     = output<CreateAccountRequest>();
+  editSave   = output<UpdateAccountRequest & { id: number }>();
+  remove     = output<number>();
+  clearError = output<void>();
 
   // ── Row detail ────────────────────────────────────────────────────
   @ViewChild(DatatableRowDetailDirective) rowDetail!: DatatableRowDetailDirective;
