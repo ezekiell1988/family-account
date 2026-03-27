@@ -77,6 +77,13 @@ export class AppMenuService {
           url: "/maintenance/banks",
           roles: [1, 2],
         },
+        {
+          icon: "fa fa-credit-card",
+          iconMobile: "card-outline",
+          title: "Cuentas Bancarias",
+          url: "/maintenance/bank-accounts",
+          roles: [1, 2],
+        },
       ],
     },
   ];

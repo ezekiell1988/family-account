@@ -1,0 +1,280 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Home</a></li>
+  <li class="breadcrumb-item">Mantenimiento</li>
+  <li class="breadcrumb-item active">Cuentas Bancarias</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Cuentas Bancarias
+  <small>Cuentas asociadas a los bancos</small>
+</h1>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2"></i>
+    <strong>Error:</strong> {{ errorMessage() }}
+    <button type="button" class="btn-close" aria-label="Cerrar" (click)="clearError.emit()"></button>
+  </div>
+}
+
+<!-- Formulario crear/editar -->
+@if (showForm()) {
+  <div class="card mb-3">
+    <div class="card-header fw-bold">
+      <i class="fa fa-credit-card me-2"></i>{{ formTitle() }}
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+
+        <!-- Banco -->
+        <div class="col-md-4">
+          <label class="form-label" for="fBank">Banco <span class="text-danger">*</span></label>
+          <select id="fBank" class="form-select"
+            [value]="formBankId() ?? ''"
+            (change)="formBankId.set($any($event.target).value ? +$any($event.target).value : null)">
+            <option value="">— Seleccione banco —</option>
+            @for (bank of banks(); track bank.idBank) {
+              <option [value]="bank.idBank">{{ bank.codeBank }} – {{ bank.nameBank }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Cuenta Contable -->
+        <div class="col-md-4">
+          <label class="form-label" for="fAccount">Cuenta Contable <span class="text-danger">*</span></label>
+          <select id="fAccount" class="form-select"
+            [value]="formAccountId() ?? ''"
+            (change)="formAccountId.set($any($event.target).value ? +$any($event.target).value : null)">
+            <option value="">— Seleccione cuenta —</option>
+            @for (acc of accounts(); track acc.idAccount) {
+              @if (acc.allowsMovements && acc.isActive) {
+                <option [value]="acc.idAccount">{{ acc.codeAccount }} – {{ acc.nameAccount }}</option>
+              }
+            }
+          </select>
+        </div>
+
+        <!-- Moneda -->
+        <div class="col-md-4">
+          <label class="form-label" for="fCurrency">Moneda <span class="text-danger">*</span></label>
+          <select id="fCurrency" class="form-select"
+            [value]="formCurrencyId() ?? ''"
+            (change)="formCurrencyId.set($any($event.target).value ? +$any($event.target).value : null)">
+            <option value="">— Seleccione moneda —</option>
+            @for (cur of currencies(); track cur.idCurrency) {
+              <option [value]="cur.idCurrency">{{ cur.symbolCurrency }} {{ cur.codeCurrency }} – {{ cur.nameCurrency }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Código de cuenta bancaria -->
+        <div class="col-md-3">
+          <label class="form-label" for="fCode">Código <span class="text-danger">*</span></label>
+          <input id="fCode" type="text" class="form-control text-uppercase"
+            placeholder="ej: CTA-001"
+            maxlength="50"
+            [value]="formCode()"
+            (input)="formCode.set($any($event.target).value)" />
+        </div>
+
+        <!-- Número de cuenta -->
+        <div class="col-md-4">
+          <label class="form-label" for="fNumber">Número de Cuenta <span class="text-danger">*</span></label>
+          <input id="fNumber" type="text" class="form-control"
+            placeholder="ej: 001-123456-78"
+            maxlength="100"
+            [value]="formNumber()"
+            (input)="formNumber.set($any($event.target).value)" />
+        </div>
+
+        <!-- Titular -->
+        <div class="col-md-4">
+          <label class="form-label" for="fHolder">Titular <span class="text-danger">*</span></label>
+          <input id="fHolder" type="text" class="form-control"
+            placeholder="Nombre del titular"
+            maxlength="200"
+            [value]="formHolder()"
+            (input)="formHolder.set($any($event.target).value)" />
+        </div>
+
+        <!-- Activo -->
+        <div class="col-md-1 d-flex align-items-center pt-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="fIsActive"
+              [checked]="formIsActive()"
+              (change)="formIsActive.set($any($event.target).checked)" />
+            <label class="form-check-label" for="fIsActive">Activo</label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" (click)="submitForm()" [disabled]="!isFormValid()">
+          <i class="fa fa-save me-1"></i>{{ isEditing() ? 'Guardar cambios' : 'Crear cuenta' }}
+        </button>
+        <button class="btn btn-secondary" (click)="cancelForm()">
+          <i class="fa fa-times me-1"></i>Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Confirmación eliminar -->
+@if (confirmDeleteId() !== null) {
+  <div class="alert alert-warning d-flex align-items-center gap-3 mb-3">
+    <i class="fa fa-exclamation-triangle fa-lg"></i>
+    <span>¿Eliminar la cuenta bancaria seleccionada? Esta acción no se puede deshacer.</span>
+    <div class="ms-auto d-flex gap-2">
+      <button class="btn btn-sm btn-danger" (click)="confirmDelete()">
+        <i class="fa fa-trash me-1"></i>Eliminar
+      </button>
+      <button class="btn btn-sm btn-secondary" (click)="cancelDelete()">Cancelar</button>
+    </div>
+  </div>
+}
+
+<panel title="Cuentas Bancarias"
+  variant="inverse"
+  [showReloadButton]="true"
+  [reload]="isLoading()"
+  (onReload)="refresh.emit()">
+
+  <ng-container panel-header>
+    <div class="d-flex align-items-center gap-2 ms-3 flex-wrap">
+      <button class="btn btn-success btn-sm" (click)="openCreate()" [disabled]="showForm()">
+        <i class="fa fa-plus me-1"></i>Nueva Cuenta
+      </button>
+
+      <!-- Filtro banco -->
+      <select class="form-select form-select-sm w-auto"
+        aria-label="Filtrar por banco"
+        [value]="filterBankId() ?? ''"
+        (change)="onFilterBankChange($any($event.target).value)">
+        <option value="">Todos los bancos</option>
+        @for (bank of banks(); track bank.idBank) {
+          <option [value]="bank.idBank">{{ bank.codeBank }} – {{ bank.nameBank }}</option>
+        }
+      </select>
+
+      <!-- Filtro estado -->
+      <select class="form-select form-select-sm w-auto"
+        aria-label="Filtrar por estado"
+        [value]="filterActive()"
+        (change)="filterActive.set($any($event.target).value)">
+        <option value="">Todos</option>
+        <option value="true">Activos</option>
+        <option value="false">Inactivos</option>
+      </select>
+
+      <!-- Búsqueda libre -->
+      <input type="text" class="form-control form-control-sm flex-fill"
+        placeholder="Buscar código, número, titular o cuenta…"
+        aria-label="Buscar cuenta bancaria"
+        [value]="filterSearch()"
+        (input)="filterSearch.set($any($event.target).value)" />
+    </div>
+  </ng-container>
+
+  @if (selectedBankName()) {
+    <div class="px-3 pt-2">
+      <span class="badge bg-info text-dark">
+        <i class="fa fa-university me-1"></i>Banco: {{ selectedBankName() }}
+      </span>
+    </div>
+  }
+
+  <ngx-datatable
+    class="bootstrap"
+    [rows]="filteredItems()"
+    [columnMode]="ColumnMode.force"
+    [headerHeight]="40"
+    [footerHeight]="50"
+    [rowHeight]="'auto'"
+    [limit]="20"
+    [count]="filteredItems().length"
+    [loadingIndicator]="isLoading()">
+
+    <ngx-datatable-column name="Banco" prop="nameBank" [flexGrow]="3" [minWidth]="120">
+      <ng-template ngx-datatable-cell-template let-row="row">
+        <span class="badge bg-secondary me-1">{{ row.codeBank }}</span>{{ row.nameBank }}
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column name="Código" prop="codeBankAccount" [flexGrow]="2" [minWidth]="100" [maxWidth]="140">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        <span class="font-monospace fw-semibold">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column name="Número de Cuenta" prop="accountNumber" [flexGrow]="3" [minWidth]="140">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        <span class="font-monospace">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column name="Titular" prop="accountHolder" [flexGrow]="4" [minWidth]="150">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        {{ value }}
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column name="Cuenta Contable" prop="nameAccount" [flexGrow]="3" [minWidth]="140">
+      <ng-template ngx-datatable-cell-template let-row="row">
+        <span class="text-muted small">{{ row.codeAccount }}</span>
+        <span class="ms-1">{{ row.nameAccount }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column name="Moneda" prop="codeCurrency" [flexGrow]="2" [minWidth]="90" [maxWidth]="120">
+      <ng-template ngx-datatable-cell-template let-row="row">
+        <span class="badge bg-light text-dark border">{{ row.codeCurrency }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column name="Estado" prop="isActive" [flexGrow]="2" [minWidth]="80" [maxWidth]="100" [sortable]="true">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        @if (value) {
+          <span class="badge bg-success">Activo</span>
+        } @else {
+          <span class="badge bg-danger">Inactivo</span>
+        }
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column name="Acciones" [minWidth]="85" [maxWidth]="100" [sortable]="false">
+      <ng-template ngx-datatable-cell-template let-row="row">
+        <div class="d-flex gap-1">
+          <button class="btn btn-xs btn-info"
+            (click)="openEdit(row)"
+            [disabled]="showForm() || deletingId() === row.idBankAccount"
+            title="Editar">
+            <i class="fa fa-edit"></i>
+          </button>
+          <button class="btn btn-xs btn-danger"
+            (click)="askDelete(row.idBankAccount)"
+            [disabled]="showForm() || deletingId() === row.idBankAccount"
+            title="Eliminar">
+            @if (deletingId() === row.idBankAccount) {
+              <i class="fa fa-spinner fa-spin"></i>
+            } @else {
+              <i class="fa fa-trash"></i>
+            }
+          </button>
+        </div>
+      </ng-template>
+    </ngx-datatable-column>
+
+  </ngx-datatable>
+
+  @if (filteredItems().length === 0 && !isLoading()) {
+    <div class="text-center py-4 text-muted">
+      <i class="fa fa-credit-card fa-2x mb-2 d-block"></i>
+      No hay cuentas bancarias registradas. Crea una con el botón <strong>Nueva Cuenta</strong>.
+    </div>
+  }
+
+</panel>

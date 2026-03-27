@@ -4,3 +4,5 @@ export * from './login.models';
 export * from './account.models';
 export * from './accounting-entry.models';
 export * from './bank.models';
+export * from './bank-account.models';
+export * from './currency.models';

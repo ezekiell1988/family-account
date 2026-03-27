@@ -605,5 +605,31 @@
       "IS_ACTIVE": "Activo",
       "CREATE_BTN": "Crear banco"
     }
+  },
+  "BANK_ACCOUNTS": {
+    "TITLE": "Cuentas Bancarias",
+    "NEW_BANK_ACCOUNT": "Nueva Cuenta",
+    "EMPTY": "No hay cuentas bancarias registradas.",
+    "CONFIRM_DELETE": "¿Eliminar la cuenta bancaria seleccionada? Esta acción no se puede deshacer.",
+    "FILTER_BANK": "Filtrar por banco",
+    "ALL_BANKS": "Todos los bancos",
+    "FORM": {
+      "NEW_TITLE": "Nueva Cuenta Bancaria",
+      "EDIT_TITLE": "Editar Cuenta Bancaria",
+      "BANK_LABEL": "Banco",
+      "SELECT_BANK": "Seleccione banco",
+      "ACCOUNT_LABEL": "Cuenta Contable",
+      "SELECT_ACCOUNT": "Seleccione cuenta",
+      "CURRENCY_LABEL": "Moneda",
+      "SELECT_CURRENCY": "Seleccione moneda",
+      "CODE_LABEL": "Código",
+      "CODE_PLACEHOLDER": "ej: CTA-001",
+      "NUMBER_LABEL": "Número de Cuenta",
+      "NUMBER_PLACEHOLDER": "ej: 001-123456-78",
+      "HOLDER_LABEL": "Titular",
+      "HOLDER_PLACEHOLDER": "Nombre del titular",
+      "IS_ACTIVE": "Activo",
+      "CREATE_BTN": "Crear cuenta"
+    }
   }
 }

@@ -11,3 +11,5 @@ export { LoginService } from './login.service';
 export { AccountService } from './account.service';
 export { AccountingEntryService } from './accounting-entry.service';
 export { BankService } from './bank.service';
+export { BankAccountService } from './bank-account.service';
+export { CurrencyService } from './currency.service';
