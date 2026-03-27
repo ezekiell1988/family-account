@@ -606,6 +606,42 @@
       "CREATE_BTN": "Crear banco"
     }
   },
+  "BANK_MOVEMENT_TYPES": {
+    "TITLE": "Tipos de Movimiento Bancario",
+    "PAGE_SUBTITLE": "Catálogo de tipos de movimiento (Cargo / Abono)",
+    "NEW_ITEM": "Nuevo tipo de movimiento",
+    "EMPTY": "No hay tipos de movimiento registrados. Crea uno con el botón Nuevo Tipo.",
+    "CONFIRM_DELETE": "¿Eliminar el tipo de movimiento seleccionado? Esta acción no se puede deshacer.",
+    "FILTER_STATUS": "Filtrar por estado",
+    "FILTER_SIGN": "Filtrar por signo",
+    "FILTER_SEARCH_PLACEHOLDER": "Buscar código o nombre…",
+    "ALL_SIGNS": "Todos los signos",
+    "COL_CODE": "Código",
+    "COL_NAME": "Nombre",
+    "COL_SIGN": "Signo",
+    "COL_ACCOUNT": "Cuenta Contrapartida",
+    "COL_STATUS": "Estado",
+    "COL_ACTIONS": "Acciones",
+    "STATUS_ACTIVE": "Activo",
+    "STATUS_INACTIVE": "Inactivo",
+    "SIGN_CARGO": "Cargo",
+    "SIGN_ABONO": "Abono",
+    "NEW_BTN": "Nuevo Tipo",
+    "FORM": {
+      "NEW_TITLE": "Nuevo Tipo de Movimiento",
+      "EDIT_TITLE": "Editar Tipo de Movimiento",
+      "CODE_LABEL": "Código",
+      "CODE_PLACEHOLDER": "ej: DEP, RET, PAGO",
+      "NAME_LABEL": "Nombre",
+      "NAME_PLACEHOLDER": "Nombre descriptivo del tipo",
+      "ACCOUNT_LABEL": "Cuenta Contrapartida",
+      "SELECT_ACCOUNT": "-- Seleccionar cuenta --",
+      "SIGN_LABEL": "Signo",
+      "IS_ACTIVE": "Activo",
+      "SAVE_BTN": "Guardar cambios",
+      "CREATE_BTN": "Crear tipo"
+    }
+  },
   "BANK_ACCOUNTS": {
     "TITLE": "Cuentas Bancarias",
     "NEW_BANK_ACCOUNT": "Nueva Cuenta",

@@ -1,0 +1,238 @@
+<header
+  [pageTitle]="'BANK_MOVEMENT_TYPES.TITLE' | translate"
+  color="theme"
+  [translucent]="true">
+</header>
+
+<ion-content class="ion-padding">
+  <!-- Pull-to-refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Error -->
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="clearError.emit()">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
+
+  <!-- Spinner de carga -->
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  <!-- Formulario crear/editar -->
+  @if (showForm()) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon [name]="isEditing() ? 'pencil-outline' : 'swap-horizontal-outline'"></ion-icon>
+          {{ isEditing() ? ('BANK_MOVEMENT_TYPES.FORM.EDIT_TITLE' | translate) : ('BANK_MOVEMENT_TYPES.FORM.NEW_TITLE' | translate) }}
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-grid>
+          <ion-row>
+            <ion-col size="12">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                [label]="'BANK_MOVEMENT_TYPES.FORM.CODE_LABEL' | translate"
+                placeholder="ej: DEP, RET, PAGO"
+                [value]="formCode()"
+                (ionInput)="formCode.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="12">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                [label]="'BANK_MOVEMENT_TYPES.FORM.NAME_LABEL' | translate"
+                placeholder="Nombre descriptivo"
+                [value]="formName()"
+                (ionInput)="formName.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="12">
+              <ion-select
+                fill="outline"
+                labelPlacement="floating"
+                [label]="'BANK_MOVEMENT_TYPES.FORM.ACCOUNT_LABEL' | translate"
+                [value]="formAccountId()"
+                (ionChange)="formAccountId.set($event.detail.value)">
+                @for (acc of activeAccounts(); track acc.idAccount) {
+                  <ion-select-option [value]="acc.idAccount">
+                    {{ acc.codeAccount }} - {{ acc.nameAccount }}
+                  </ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="12">
+              <ion-select
+                fill="outline"
+                labelPlacement="floating"
+                [label]="'BANK_MOVEMENT_TYPES.FORM.SIGN_LABEL' | translate"
+                [value]="formSign()"
+                (ionChange)="formSign.set($event.detail.value)">
+                @for (s of movementSigns; track s) {
+                  <ion-select-option [value]="s">{{ s }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-align-items-center ion-margin-top">
+            <ion-col>
+              <ion-toggle
+                [checked]="formIsActive()"
+                (ionChange)="formIsActive.set($event.detail.checked)">
+                {{ 'BANK_MOVEMENT_TYPES.FORM.IS_ACTIVE' | translate }}
+              </ion-toggle>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-margin-top">
+            <ion-col>
+              <ion-button expand="block" (click)="submitForm()" [disabled]="!isFormValid()">
+                <ion-icon slot="start" name="save-outline"></ion-icon>
+                {{ isEditing() ? ('COMMON.SAVE' | translate) : ('BANK_MOVEMENT_TYPES.FORM.CREATE_BTN' | translate) }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelForm()">
+                <ion-icon slot="start" name="close-outline"></ion-icon>
+                {{ 'COMMON.CANCEL' | translate }}
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Confirmación eliminar -->
+  @if (confirmDeleteId() !== null) {
+    <ion-card color="warning">
+      <ion-card-content>
+        <ion-text>
+          <p>
+            <ion-icon name="warning-outline"></ion-icon>
+            {{ 'BANK_MOVEMENT_TYPES.CONFIRM_DELETE' | translate }}
+          </p>
+        </ion-text>
+        <ion-grid>
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" color="danger" (click)="confirmDelete()">
+                <ion-icon slot="start" name="trash-outline"></ion-icon>
+                {{ 'COMMON.DELETE' | translate }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelDelete()">
+                {{ 'COMMON.CANCEL' | translate }}
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Lista de ítems -->
+  @if (items().length === 0 && !isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-icon name="albums-outline" size="large"></ion-icon>
+      <ion-text color="medium">
+        <p>{{ 'BANK_MOVEMENT_TYPES.EMPTY' | translate }}</p>
+      </ion-text>
+    </div>
+  } @else {
+    <ion-list>
+      @for (item of items(); track item.idBankMovementType) {
+        <ion-item [button]="true" [detail]="false" (click)="toggleExpand(item.idBankMovementType)">
+          <ion-icon
+            slot="start"
+            [name]="expandedId() === item.idBankMovementType ? 'chevron-down-outline' : 'chevron-forward-outline'"
+            color="medium">
+          </ion-icon>
+          <ion-label>
+            <h2>
+              <span class="font-monospace">{{ item.codeBankMovementType }}</span>
+            </h2>
+            <p>{{ item.nameBankMovementType }}</p>
+          </ion-label>
+          <ion-badge slot="end" [color]="signColor(item.movementSign)">
+            {{ item.movementSign }}
+          </ion-badge>
+        </ion-item>
+
+        @if (expandedId() === item.idBankMovementType) {
+          <div class="ion-padding-horizontal ion-padding-bottom">
+            <ion-text color="medium">
+              <p>{{ item.codeAccountCounterpart }} — {{ item.nameAccountCounterpart }}</p>
+            </ion-text>
+            <ion-badge [color]="item.isActive ? 'success' : 'medium'" class="ion-margin-bottom">
+              {{ item.isActive ? ('COMMON.YES' | translate) : ('COMMON.NO' | translate) }}
+            </ion-badge>
+            <ion-grid>
+              <ion-row>
+                <ion-col>
+                  <ion-button size="small" color="primary" (click)="openEdit(item)"
+                    [disabled]="showForm() || deletingId() === item.idBankMovementType">
+                    <ion-icon slot="start" name="pencil-outline"></ion-icon>
+                    {{ 'COMMON.EDIT' | translate }}
+                  </ion-button>
+                </ion-col>
+                <ion-col>
+                  <ion-button size="small" color="danger" (click)="askDelete(item.idBankMovementType)"
+                    [disabled]="showForm() || deletingId() === item.idBankMovementType">
+                    @if (deletingId() === item.idBankMovementType) {
+                      <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                    } @else {
+                      <ion-icon slot="start" name="trash-outline"></ion-icon>
+                      {{ 'COMMON.DELETE' | translate }}
+                    }
+                  </ion-button>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </div>
+        }
+      }
+    </ion-list>
+  }
+
+  <!-- FAB: nuevo registro -->
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button
+      color="success"
+      (click)="openCreate()"
+      [disabled]="showForm()"
+      [attr.aria-label]="'BANK_MOVEMENT_TYPES.NEW_ITEM' | translate">
+      <ion-icon name="add-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>
+
+<!-- Footer -->
+<app-footer></app-footer>

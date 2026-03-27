@@ -1,0 +1,28 @@
+@if (isMobile()) {
+  <app-bank-movement-types-mobile
+    [items]="items()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    [accounts]="accounts()"
+    (refresh)="load()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (clearError)="clearError()"
+  />
+} @else {
+  <app-bank-movement-types-web
+    [items]="items()"
+    [totalCount]="totalCount()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    [accounts]="accounts()"
+    (refresh)="load()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (clearError)="clearError()"
+  />
+}

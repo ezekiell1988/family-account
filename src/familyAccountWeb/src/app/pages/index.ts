@@ -1,4 +1,5 @@
 export { AccountsPage } from './maintenance/accounts';
+export { BankMovementTypesPage } from './maintenance/bank-movement-types';
 export { BanksPage } from './maintenance/banks';
 export { AccountingEntriesPage } from './process/accounting-entries';
 export { ErrorPage } from './error';

@@ -590,6 +590,42 @@
       "INACTIVE": "Inactive"
     }
   },
+  "BANK_MOVEMENT_TYPES": {
+    "TITLE": "Bank Movement Types",
+    "PAGE_SUBTITLE": "Catalog of movement types (Charge / Credit)",
+    "NEW_ITEM": "New movement type",
+    "EMPTY": "No movement types found. Create one with the New Type button.",
+    "CONFIRM_DELETE": "Delete the selected movement type? This action cannot be undone.",
+    "FILTER_STATUS": "Filter by status",
+    "FILTER_SIGN": "Filter by sign",
+    "FILTER_SEARCH_PLACEHOLDER": "Search code or name…",
+    "ALL_SIGNS": "All signs",
+    "COL_CODE": "Code",
+    "COL_NAME": "Name",
+    "COL_SIGN": "Sign",
+    "COL_ACCOUNT": "Counterpart Account",
+    "COL_STATUS": "Status",
+    "COL_ACTIONS": "Actions",
+    "STATUS_ACTIVE": "Active",
+    "STATUS_INACTIVE": "Inactive",
+    "SIGN_CARGO": "Charge",
+    "SIGN_ABONO": "Credit",
+    "NEW_BTN": "New Type",
+    "FORM": {
+      "NEW_TITLE": "New Movement Type",
+      "EDIT_TITLE": "Edit Movement Type",
+      "CODE_LABEL": "Code",
+      "CODE_PLACEHOLDER": "e.g. DEP, WIT, PAY",
+      "NAME_LABEL": "Name",
+      "NAME_PLACEHOLDER": "Descriptive type name",
+      "ACCOUNT_LABEL": "Counterpart Account",
+      "SELECT_ACCOUNT": "-- Select account --",
+      "SIGN_LABEL": "Sign",
+      "IS_ACTIVE": "Active",
+      "SAVE_BTN": "Save changes",
+      "CREATE_BTN": "Create type"
+    }
+  },
   "BANKS": {
     "TITLE": "Banks",
     "NEW_BANK": "New Bank",

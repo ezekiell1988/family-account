@@ -1,0 +1,213 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Home</a></li>
+  <li class="breadcrumb-item">Mantenimiento</li>
+  <li class="breadcrumb-item active">{{ 'BANK_MOVEMENT_TYPES.TITLE' | translate }}</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  {{ 'BANK_MOVEMENT_TYPES.TITLE' | translate }}
+  <small>{{ 'BANK_MOVEMENT_TYPES.PAGE_SUBTITLE' | translate }}</small>
+</h1>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2"></i>
+    <strong>Error:</strong> {{ errorMessage() }}
+    <button type="button" class="btn-close" aria-label="Cerrar" (click)="clearError.emit()"></button>
+  </div>
+}
+
+@if (showForm()) {
+  <div class="card mb-3">
+    <div class="card-header fw-bold">
+      <i class="fa fa-exchange me-2"></i>{{ isEditing() ? ('BANK_MOVEMENT_TYPES.FORM.EDIT_TITLE' | translate) : ('BANK_MOVEMENT_TYPES.FORM.NEW_TITLE' | translate) }}
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label" for="fCode">{{ 'BANK_MOVEMENT_TYPES.FORM.CODE_LABEL' | translate }} <span class="text-danger">*</span></label>
+          <input id="fCode" type="text" class="form-control text-uppercase"
+            [placeholder]="'BANK_MOVEMENT_TYPES.FORM.CODE_PLACEHOLDER' | translate"
+            maxlength="20"
+            [value]="formCode()"
+            (input)="formCode.set($any($event.target).value)" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="fName">{{ 'BANK_MOVEMENT_TYPES.FORM.NAME_LABEL' | translate }} <span class="text-danger">*</span></label>
+          <input id="fName" type="text" class="form-control"
+            [placeholder]="'BANK_MOVEMENT_TYPES.FORM.NAME_PLACEHOLDER' | translate"
+            maxlength="150"
+            [value]="formName()"
+            (input)="formName.set($any($event.target).value)" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="fAccount">{{ 'BANK_MOVEMENT_TYPES.FORM.ACCOUNT_LABEL' | translate }} <span class="text-danger">*</span></label>
+          <select id="fAccount" class="form-select"
+            [value]="formAccountId() ?? ''"
+            (change)="formAccountId.set(+$any($event.target).value || null)">
+            <option value="">{{ 'BANK_MOVEMENT_TYPES.FORM.SELECT_ACCOUNT' | translate }}</option>
+            @for (acc of activeAccounts(); track acc.idAccount) {
+              <option [value]="acc.idAccount">{{ acc.codeAccount }} - {{ acc.nameAccount }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-md-1">
+          <label class="form-label" for="fSign">{{ 'BANK_MOVEMENT_TYPES.FORM.SIGN_LABEL' | translate }} <span class="text-danger">*</span></label>
+          <select id="fSign" class="form-select"
+            [value]="formSign()"
+            (change)="formSign.set($any($event.target).value)">
+            @for (s of movementSigns; track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-md-1 d-flex align-items-center pt-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="fIsActive"
+              [checked]="formIsActive()"
+              (change)="formIsActive.set($any($event.target).checked)" />
+            <label class="form-check-label" for="fIsActive">{{ 'BANK_MOVEMENT_TYPES.FORM.IS_ACTIVE' | translate }}</label>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" (click)="submitForm()" [disabled]="!isFormValid()">
+          <i class="fa fa-save me-1"></i>{{ isEditing() ? ('BANK_MOVEMENT_TYPES.FORM.SAVE_BTN' | translate) : ('BANK_MOVEMENT_TYPES.FORM.CREATE_BTN' | translate) }}
+        </button>
+        <button class="btn btn-secondary" (click)="cancelForm()">
+          <i class="fa fa-times me-1"></i>{{ 'COMMON.CANCEL' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (confirmDeleteId() !== null) {
+  <div class="alert alert-warning d-flex align-items-center gap-3 mb-3">
+    <i class="fa fa-exclamation-triangle fa-lg"></i>
+    <span>{{ 'BANK_MOVEMENT_TYPES.CONFIRM_DELETE' | translate }}</span>
+    <div class="ms-auto d-flex gap-2">
+      <button class="btn btn-sm btn-danger" (click)="confirmDelete()">
+        <i class="fa fa-trash me-1"></i>{{ 'COMMON.DELETE' | translate }}
+      </button>
+      <button class="btn btn-sm btn-secondary" (click)="cancelDelete()">{{ 'COMMON.CANCEL' | translate }}</button>
+    </div>
+  </div>
+}
+
+<panel [title]="'BANK_MOVEMENT_TYPES.TITLE' | translate"
+  variant="inverse"
+  [showReloadButton]="true"
+  [reload]="isLoading()"
+  (onReload)="refresh.emit()">
+
+  <ng-container panel-header>
+    <div class="d-flex align-items-center gap-2 ms-3 flex-wrap">
+      <button class="btn btn-success btn-sm" (click)="openCreate()" [disabled]="showForm()">
+        <i class="fa fa-plus me-1"></i>{{ 'BANK_MOVEMENT_TYPES.NEW_BTN' | translate }}
+      </button>
+      <select class="form-select form-select-sm w-auto"
+        [attr.aria-label]="'BANK_MOVEMENT_TYPES.FILTER_STATUS' | translate"
+        [value]="filterActive()"
+        (change)="filterActive.set($any($event.target).value)">
+        <option value="">{{ 'COMMON.ALL' | translate }}</option>
+        <option value="true">{{ 'BANK_MOVEMENT_TYPES.STATUS_ACTIVE' | translate }}</option>
+        <option value="false">{{ 'BANK_MOVEMENT_TYPES.STATUS_INACTIVE' | translate }}</option>
+      </select>
+      <select class="form-select form-select-sm w-auto"
+        [attr.aria-label]="'BANK_MOVEMENT_TYPES.FILTER_SIGN' | translate"
+        [value]="filterSign()"
+        (change)="filterSign.set($any($event.target).value)">
+        <option value="">{{ 'BANK_MOVEMENT_TYPES.ALL_SIGNS' | translate }}</option>
+        <option value="Cargo">{{ 'BANK_MOVEMENT_TYPES.SIGN_CARGO' | translate }}</option>
+        <option value="Abono">{{ 'BANK_MOVEMENT_TYPES.SIGN_ABONO' | translate }}</option>
+      </select>
+      <input type="text" class="form-control form-control-sm flex-fill"
+        [placeholder]="'BANK_MOVEMENT_TYPES.FILTER_SEARCH_PLACEHOLDER' | translate"
+        [attr.aria-label]="'BANK_MOVEMENT_TYPES.FILTER_SEARCH_PLACEHOLDER' | translate"
+        [value]="filterSearch()"
+        (input)="filterSearch.set($any($event.target).value)" />
+    </div>
+  </ng-container>
+
+  <ngx-datatable
+    class="bootstrap"
+    [rows]="filteredItems()"
+    [columnMode]="ColumnMode.force"
+    [headerHeight]="40"
+    [footerHeight]="50"
+    [rowHeight]="'auto'"
+    [limit]="20"
+    [count]="filteredItems().length"
+    [loadingIndicator]="isLoading()">
+
+    <ngx-datatable-column [name]="'BANK_MOVEMENT_TYPES.COL_CODE' | translate" prop="codeBankMovementType" [flexGrow]="2" [minWidth]="90" [maxWidth]="130">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        <span class="font-monospace fw-semibold">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column [name]="'BANK_MOVEMENT_TYPES.COL_NAME' | translate" prop="nameBankMovementType" [flexGrow]="5" [minWidth]="160">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        {{ value }}
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column [name]="'BANK_MOVEMENT_TYPES.COL_SIGN' | translate" prop="movementSign" [flexGrow]="2" [minWidth]="80" [maxWidth]="100">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        <span class="badge" [ngClass]="signBadgeClass(value)">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column [name]="'BANK_MOVEMENT_TYPES.COL_ACCOUNT' | translate" prop="codeAccountCounterpart" [flexGrow]="5" [minWidth]="200">
+      <ng-template ngx-datatable-cell-template let-row="row">
+        <span class="font-monospace me-1">{{ row.codeAccountCounterpart }}</span>
+        <span class="text-muted small">{{ row.nameAccountCounterpart }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column [name]="'BANK_MOVEMENT_TYPES.COL_STATUS' | translate" prop="isActive" [flexGrow]="2" [minWidth]="80" [maxWidth]="100" [sortable]="true">
+      <ng-template ngx-datatable-cell-template let-value="value">
+        @if (value) {
+          <span class="badge bg-success">{{ 'BANK_MOVEMENT_TYPES.STATUS_ACTIVE' | translate }}</span>
+        } @else {
+          <span class="badge bg-danger">{{ 'BANK_MOVEMENT_TYPES.STATUS_INACTIVE' | translate }}</span>
+        }
+      </ng-template>
+    </ngx-datatable-column>
+
+    <ngx-datatable-column [name]="'BANK_MOVEMENT_TYPES.COL_ACTIONS' | translate" [minWidth]="100" [maxWidth]="120" [sortable]="false">
+      <ng-template ngx-datatable-cell-template let-row="row">
+        <div class="d-flex gap-1">
+          <button class="btn btn-xs btn-info"
+            (click)="openEdit(row)"
+            [disabled]="showForm() || deletingId() === row.idBankMovementType"
+            [title]="'COMMON.EDIT' | translate">
+            <i class="fa fa-edit"></i>
+          </button>
+          <button class="btn btn-xs btn-danger"
+            (click)="askDelete(row.idBankMovementType)"
+            [disabled]="showForm() || deletingId() === row.idBankMovementType"
+            [title]="'COMMON.DELETE' | translate">
+            @if (deletingId() === row.idBankMovementType) {
+              <i class="fa fa-spinner fa-spin"></i>
+            } @else {
+              <i class="fa fa-trash"></i>
+            }
+          </button>
+        </div>
+      </ng-template>
+    </ngx-datatable-column>
+
+  </ngx-datatable>
+
+  @if (filteredItems().length === 0 && !isLoading()) {
+    <div class="text-center py-4 text-muted">
+      <i class="fa fa-exchange fa-2x mb-2 d-block"></i>
+      {{ 'BANK_MOVEMENT_TYPES.EMPTY' | translate }}
+    </div>
+  }
+
+</panel>

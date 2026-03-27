@@ -77,6 +77,13 @@ export class AppMenuService {
           url: "/maintenance/banks",
           roles: [1, 2],
         },
+        {
+          icon: "fa fa-exchange",
+          iconMobile: "swap-horizontal-outline",
+          title: "Tipos de Movimiento Bancario",
+          url: "/maintenance/bank-movement-types",
+          roles: [1, 2],
+        },
       ],
     },
   ];

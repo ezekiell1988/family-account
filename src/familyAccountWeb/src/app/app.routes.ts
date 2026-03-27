@@ -1,6 +1,7 @@
 import { Routes } from "@angular/router";
 import {
   AccountsPage,
+  BankMovementTypesPage,
   BanksPage,
   AccountingEntriesPage,
   ErrorPage,
@@ -23,6 +24,12 @@ export const routes: Routes = [
     path: "maintenance/accounts",
     component: AccountsPage,
     data: { title: "Cuentas Contables" },
+    canActivate: [AuthGuard],
+  },
+  {
+    path: "maintenance/bank-movement-types",
+    component: BankMovementTypesPage,
+    data: { title: "Tipos de Movimiento Bancario" },
     canActivate: [AuthGuard],
   },
   {
