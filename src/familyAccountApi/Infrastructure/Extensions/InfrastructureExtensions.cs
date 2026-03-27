@@ -1,3 +1,5 @@
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
+using Azure.Identity;
 using FamilyAccountApi.BackgroundJobs;
 using FamilyAccountApi.Infrastructure.Data;
 using FamilyAccountApi.Infrastructure.Options;
@@ -11,6 +13,11 @@ public static class InfrastructureExtensions
 {
     public static WebApplicationBuilder AddInfrastructure(this WebApplicationBuilder builder)
     {
+        // ─── Azure Key Vault (producción) ─────────────────────────────────────
+        var keyVaultUri = Environment.GetEnvironmentVariable("AZURE_KEYVAULT_URI");
+        if (!string.IsNullOrWhiteSpace(keyVaultUri))
+            builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+
         var cfg = builder.Configuration;
 
         // ─── Connection Strings ───────────────────────────────────────────────

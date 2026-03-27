@@ -19,7 +19,7 @@ public static class AccountsModule
             .WithTags("Accounts")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllAccounts")
             .WithSummary("Obtener todas las cuentas contables");
 

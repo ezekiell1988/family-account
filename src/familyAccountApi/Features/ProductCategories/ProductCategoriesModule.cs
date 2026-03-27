@@ -18,7 +18,7 @@ public static class ProductCategoriesModule
             .WithTags("ProductCategories")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllProductCategories")
             .WithSummary("Obtener todas las categorías de producto");
 

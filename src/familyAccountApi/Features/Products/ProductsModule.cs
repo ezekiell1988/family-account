@@ -20,7 +20,7 @@ public static class ProductsModule
             .RequireAuthorization();
 
         // ── CRUD base ────────────────────────────────────────
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllProducts")
             .WithSummary("Obtener todos los productos");
 

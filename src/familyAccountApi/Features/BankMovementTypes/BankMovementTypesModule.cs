@@ -19,7 +19,7 @@ public static class BankMovementTypesModule
             .WithTags("BankMovementTypes")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllBankMovementTypes")
             .WithSummary("Obtener todos los tipos de movimiento bancario");
 

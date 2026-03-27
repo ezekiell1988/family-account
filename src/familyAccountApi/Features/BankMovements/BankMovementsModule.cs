@@ -19,7 +19,7 @@ public static class BankMovementsModule
             .WithTags("BankMovements")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllBankMovements")
             .WithSummary("Obtener todos los movimientos bancarios");
 

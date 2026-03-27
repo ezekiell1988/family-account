@@ -19,7 +19,7 @@ public static class BankStatementTemplatesModule
             .WithTags("Bank Statement Templates")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllBankStatementTemplates")
             .WithSummary("Obtener todas las plantillas de extractos bancarios");
 

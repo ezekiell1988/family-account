@@ -395,7 +395,7 @@ public static class ProductsModule
             .WithTags("Products")
             .RequireAuthorization();             // todos los endpoints requieren token
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllProducts")
             .WithSummary("Obtener todos los productos");
 

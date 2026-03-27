@@ -19,7 +19,7 @@ public static class BankAccountsModule
             .WithTags("BankAccounts")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllBankAccounts")
             .WithSummary("Obtener todas las cuentas bancarias");
 

@@ -19,7 +19,7 @@ public static class ProductSKUsModule
             .WithTags("ProductSKUs")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllProductSKUs")
             .WithSummary("Obtener todos los productos SKU");
 

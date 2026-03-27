@@ -19,7 +19,7 @@ public static class AccountingEntriesModule
             .WithTags("AccountingEntries")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllAccountingEntries")
             .WithSummary("Obtener todos los asientos contables");
 

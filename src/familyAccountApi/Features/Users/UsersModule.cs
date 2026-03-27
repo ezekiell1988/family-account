@@ -19,7 +19,7 @@ public static class UsersModule
             .WithTags("Users")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllUsers")
             .WithSummary("Obtener todos los usuarios");
 

@@ -19,7 +19,7 @@ public static class ExchangeRatesModule
             .WithTags("ExchangeRates")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllExchangeRates")
             .WithSummary("Obtener todos los tipos de cambio");
 

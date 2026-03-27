@@ -19,7 +19,7 @@ public static class BankStatementTransactionsModule
             .WithTags("Bank Statement Transactions")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllBankStatementTransactions")
             .WithSummary("Obtener todas las transacciones de extractos bancarios");
 

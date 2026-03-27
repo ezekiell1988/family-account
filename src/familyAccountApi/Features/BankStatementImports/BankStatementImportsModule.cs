@@ -20,7 +20,7 @@ public static class BankStatementImportsModule
             .WithTags("Bank Statement Imports")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllBankStatementImports")
             .WithSummary("Obtener todas las importaciones de extractos bancarios");
 

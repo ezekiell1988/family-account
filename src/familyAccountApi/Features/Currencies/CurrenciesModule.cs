@@ -19,7 +19,7 @@ public static class CurrenciesModule
             .WithTags("Currencies")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllCurrencies")
             .WithSummary("Obtener todas las monedas");
 

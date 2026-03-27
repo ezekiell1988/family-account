@@ -42,7 +42,7 @@ export class AccountService {
   // ── LISTAR ───────────────────────────────────────────────────────
   loadList(): Observable<AccountDto[]> {
     this.start();
-    return this.http.get<AccountDto[]>(`${this.base}.json`).pipe(
+    return this.http.get<AccountDto[]>(`${this.base}/data.json`).pipe(
       tap(res => {
         const items = res ?? [];
         this.accounts.set(items);

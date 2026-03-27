@@ -19,7 +19,7 @@ public static class FiscalPeriodsModule
             .WithTags("FiscalPeriods")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllFiscalPeriods")
             .WithSummary("Obtener todos los períodos fiscales");
 

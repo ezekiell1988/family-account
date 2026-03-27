@@ -19,7 +19,7 @@ public static class CostCentersModule
             .WithTags("CostCenters")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllCostCenters")
             .WithSummary("Obtener todos los centros de costo");
 

@@ -9,6 +9,14 @@ namespace FamilyAccountApi.Infrastructure.Extensions;
 
 public static class SecurityExtensions
 {
+    public static IServiceCollection AddCorsPolicy(this IServiceCollection services)
+    {
+        services.AddCors(options =>
+            options.AddPolicy("AllowAll", policy =>
+                policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+        return services;
+    }
+
     public static IServiceCollection AddJwtSecurity(
         this IServiceCollection services, IConfiguration configuration)
     {

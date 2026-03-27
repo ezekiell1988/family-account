@@ -19,7 +19,7 @@ public static class BudgetsModule
             .WithTags("Budgets")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetAllBudgets")
             .WithSummary("Obtener todos los presupuestos");
 

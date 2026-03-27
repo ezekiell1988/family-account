@@ -110,7 +110,7 @@ export class <Nombre>Service {
   // ── LISTAR ───────────────────────────────────────────────────────
   loadList(): Observable<<Nombre>Dto[]> {
     this.start();
-    return this.http.get<<Nombre>Dto[]>(`${this.base}.json`).pipe(
+    return this.http.get<<Nombre>Dto[]>(`${this.base}/data.json`).pipe(
       tap(res => {
         this.items.set(res ?? []);
         this.totalCount.set(res?.length ?? 0);
@@ -177,7 +177,7 @@ export class <Nombre>Service {
   export { <Nombre>Service } from './<nombre>.service';
   ```
 - El estado son **signals** (`signal()`) — nunca `BehaviorSubject`.
-- `loadList()` llama a `<ruta>.json` (convención del API de este proyecto).
+- `loadList()` llama a `<ruta>/data.json` (convención del API de este proyecto).
 - `create()` llama a `<ruta>/` (con barra final), `update`/`delete` a `<ruta>/{id}`.
 - Los mensajes de error se obtienen de `err?.error` primero; si no es string, usar mensaje genérico.
 - No hay `PagedResult` para endpoints que devuelven array directo; usarlo solo cuando el API retorna `{ data, totalCount }`.
