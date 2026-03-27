@@ -1,0 +1,427 @@
+<header
+  pageTitle="Asientos Contables"
+  color="theme"
+  [translucent]="true">
+</header>
+
+<ion-content class="ion-padding">
+
+  <!-- Pull-to-refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Error -->
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="clearError.emit()">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
+
+  <!-- Spinner -->
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  <!-- ── FORMULARIO ──────────────────────────────────────────────── -->
+  @if (showForm()) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon [name]="isEditing() ? 'pencil-outline' : 'book-outline'"></ion-icon>
+          {{ formTitle() }}
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-grid>
+
+          <!-- Período fiscal -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-select
+                fill="outline"
+                labelPlacement="floating"
+                label="Período fiscal"
+                [value]="formFiscalPeriod()"
+                (ionChange)="formFiscalPeriod.set($event.detail.value)">
+                <ion-select-option [value]="0">— Seleccione período —</ion-select-option>
+                @for (fp of fiscalPeriods(); track fp.idFiscalPeriod) {
+                  <ion-select-option [value]="fp.idFiscalPeriod">
+                    {{ fp.namePeriod }}
+                    @if (fp.statusPeriod !== 'Abierto') { ({{ fp.statusPeriod }}) }
+                  </ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+
+          <!-- Moneda + T/C -->
+          <ion-row>
+            <ion-col size="7">
+              <ion-select
+                fill="outline"
+                labelPlacement="floating"
+                label="Moneda"
+                [value]="formCurrency()"
+                (ionChange)="formCurrency.set($event.detail.value)">
+                <ion-select-option [value]="0">— Moneda —</ion-select-option>
+                @for (c of currencies(); track c.idCurrency) {
+                  <ion-select-option [value]="c.idCurrency">{{ c.codeCurrency }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+            <ion-col size="5">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                label="T/C"
+                type="number"
+                min="0.000001"
+                step="0.01"
+                [value]="formExchangeRate()"
+                (ionInput)="formExchangeRate.set(+$any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+
+          <!-- Número de asiento -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                label="Nº Asiento"
+                placeholder="AS-2025-0001"
+                [value]="formNumber()"
+                (ionInput)="formNumber.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+
+          <!-- Fecha + Estado -->
+          <ion-row>
+            <ion-col size="6">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                label="Fecha"
+                type="date"
+                [value]="formDate()"
+                (ionChange)="formDate.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+            <ion-col size="6">
+              <ion-select
+                fill="outline"
+                labelPlacement="floating"
+                label="Estado"
+                [value]="formStatus()"
+                (ionChange)="formStatus.set($event.detail.value)">
+                @for (s of statusOptions; track s) {
+                  <ion-select-option [value]="s">{{ s }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+
+          <!-- Descripción -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                label="Descripción"
+                placeholder="Descripción del asiento"
+                [value]="formDescription()"
+                (ionInput)="formDescription.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+
+          <!-- Referencia -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-input
+                fill="outline"
+                labelPlacement="floating"
+                label="Referencia (opcional)"
+                placeholder="Nº documento origen"
+                [value]="formReference()"
+                (ionInput)="formReference.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+
+        </ion-grid>
+
+        <!-- Líneas -->
+        <div class="ion-margin-top">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <strong>Líneas del asiento</strong>
+            <ion-button fill="outline" size="small" (click)="addLine()">
+              <ion-icon slot="start" name="add-outline"></ion-icon>Agregar
+            </ion-button>
+          </div>
+
+          @for (line of formLines(); track $index; let idx = $index) {
+            <ion-card style="margin:0 0 8px;box-shadow:none;border:1px solid var(--ion-color-light-shade)">
+              <ion-card-content>
+                <ion-grid class="ion-no-padding">
+                  <ion-row>
+                    <ion-col size="12">
+                      <ion-select
+                        fill="outline"
+                        labelPlacement="floating"
+                        label="Cuenta contable"
+                        [value]="line.idAccount"
+                        (ionChange)="updateLineAccount(idx, $event.detail.value)">
+                        <ion-select-option [value]="0">— Seleccione cuenta —</ion-select-option>
+                        @for (acc of movementAccounts(); track acc.idAccount) {
+                          <ion-select-option [value]="acc.idAccount">
+                            {{ acc.codeAccount }} – {{ acc.nameAccount }}
+                          </ion-select-option>
+                        }
+                      </ion-select>
+                    </ion-col>
+                  </ion-row>
+                  <ion-row>
+                    <ion-col size="6">
+                      <ion-input
+                        fill="outline"
+                        labelPlacement="floating"
+                        label="Débito"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        [value]="line.debitAmount || ''"
+                        (ionInput)="updateLineDebit(idx, +$any($event.target).value)">
+                      </ion-input>
+                    </ion-col>
+                    <ion-col size="6">
+                      <ion-input
+                        fill="outline"
+                        labelPlacement="floating"
+                        label="Crédito"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        [value]="line.creditAmount || ''"
+                        (ionInput)="updateLineCredit(idx, +$any($event.target).value)">
+                      </ion-input>
+                    </ion-col>
+                  </ion-row>
+                  <ion-row class="ion-align-items-center">
+                    <ion-col>
+                      <ion-input
+                        fill="outline"
+                        labelPlacement="floating"
+                        label="Descripción línea (opc.)"
+                        [value]="line.descriptionLine"
+                        (ionInput)="updateLineDescription(idx, $any($event.target).value)">
+                      </ion-input>
+                    </ion-col>
+                    <ion-col size="auto">
+                      <ion-button fill="clear" color="danger" size="small"
+                        [disabled]="formLines().length <= 2"
+                        (click)="removeLine(idx)">
+                        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                      </ion-button>
+                    </ion-col>
+                  </ion-row>
+                </ion-grid>
+              </ion-card-content>
+            </ion-card>
+          }
+
+          <!-- Resumen de balance -->
+          <ion-item lines="none" [color]="isBalanced() ? 'success' : 'warning'">
+            <ion-icon slot="start"
+              [name]="isBalanced() ? 'checkmark-circle-outline' : 'alert-circle-outline'">
+            </ion-icon>
+            <ion-label>
+              <p>Débito: {{ formatAmount(totalDebit()) }}</p>
+              <p>Crédito: {{ formatAmount(totalCredit()) }}</p>
+            </ion-label>
+            <ion-note slot="end">{{ isBalanced() ? 'Balanceado' : 'Desbalanceado' }}</ion-note>
+          </ion-item>
+        </div>
+
+        <!-- Botones formulario -->
+        <ion-grid class="ion-margin-top">
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" (click)="submitForm()" [disabled]="!isFormValid()">
+                <ion-icon slot="start" name="save-outline"></ion-icon>
+                {{ isEditing() ? 'Guardar' : 'Crear' }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelForm()">
+                <ion-icon slot="start" name="close-outline"></ion-icon>
+                Cancelar
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- ── CONFIRMACIÓN ELIMINAR ───────────────────────────────────── -->
+  @if (confirmDeleteId() !== null) {
+    <ion-card color="warning">
+      <ion-card-content>
+        <ion-grid>
+          <ion-row class="ion-align-items-center">
+            <ion-col>
+              <ion-icon name="warning-outline"></ion-icon>
+              ¿Eliminar el asiento seleccionado? Esta acción no se puede deshacer.
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" color="danger" (click)="confirmDelete()">
+                <ion-icon slot="start" name="trash-outline"></ion-icon>Eliminar
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="dark" (click)="cancelDelete()">
+                Cancelar
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- ── LISTA DE ASIENTOS ───────────────────────────────────────── -->
+  @if (!isLoading() && entries().length === 0) {
+    <div class="ion-text-center ion-padding">
+      <ion-icon name="list-outline" style="font-size:3rem;color:var(--ion-color-medium)"></ion-icon>
+      <p>No hay asientos contables registrados.</p>
+    </div>
+  }
+
+  <ion-list>
+    @for (entry of entries(); track entry.idAccountingEntry) {
+      <ion-item button="true" detail="false" (click)="toggleExpand(entry.idAccountingEntry)">
+        <ion-icon slot="start"
+          [name]="expandedId() === entry.idAccountingEntry ? 'chevron-down-outline' : 'chevron-forward-outline'"
+          color="medium" aria-hidden="true">
+        </ion-icon>
+        <ion-label>
+          <h2><strong class="font-monospace">{{ entry.numberEntry }}</strong></h2>
+          <p>{{ entry.dateEntry | date:'dd/MM/yyyy' }} · {{ entry.descriptionEntry }}</p>
+          <p>{{ entry.nameFiscalPeriod }}</p>
+        </ion-label>
+        <ion-badge slot="end" [color]="getStatusColor(entry.statusEntry)">
+          {{ entry.statusEntry }}
+        </ion-badge>
+      </ion-item>
+
+      <!-- Detalle expandible -->
+      @if (expandedId() === entry.idAccountingEntry) {
+        <ion-card style="margin:0 8px 8px;box-shadow:none;border-left:4px solid var(--ion-color-primary)">
+          <ion-card-content>
+
+            <!-- Info cabecera -->
+            <ion-grid class="ion-no-padding">
+              <ion-row>
+                <ion-col size="6">
+                  <ion-note>Moneda</ion-note>
+                  <p>{{ entry.codeCurrency }} – {{ entry.nameCurrency }}</p>
+                </ion-col>
+                <ion-col size="6">
+                  <ion-note>T/C</ion-note>
+                  <p class="font-monospace">{{ entry.exchangeRateValue | number:'1.2-6' }}</p>
+                </ion-col>
+                @if (entry.referenceEntry) {
+                  <ion-col size="12">
+                    <ion-note>Referencia</ion-note>
+                    <p>{{ entry.referenceEntry }}</p>
+                  </ion-col>
+                }
+              </ion-row>
+            </ion-grid>
+
+            <!-- Líneas -->
+            <div class="ion-margin-top">
+              <p><strong>Líneas</strong></p>
+              @for (line of entry.lines; track line.idAccountingEntryLine) {
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--ion-color-light-shade)">
+                  <div style="flex:1;font-size:0.85rem">
+                    <span class="font-monospace">{{ line.codeAccount }}</span> – {{ line.nameAccount }}
+                    @if (line.descriptionLine) {
+                      <br><ion-note>{{ line.descriptionLine }}</ion-note>
+                    }
+                  </div>
+                  <div style="text-align:right;font-size:0.85rem;font-family:monospace;min-width:100px">
+                    @if (line.debitAmount > 0) {
+                      <span style="color:var(--ion-color-primary)">D {{ formatAmount(line.debitAmount) }}</span>
+                    }
+                    @if (line.creditAmount > 0) {
+                      <span style="color:var(--ion-color-success)">C {{ formatAmount(line.creditAmount) }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Totales -->
+              <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:bold;font-family:monospace;font-size:0.85rem">
+                <span>Total</span>
+                <span>D {{ formatAmount(getEntryTotalDebit(entry)) }} / C {{ formatAmount(getEntryTotalDebit(entry)) }}</span>
+              </div>
+            </div>
+
+            <!-- Acciones -->
+            @if (entry.statusEntry !== 'Anulado') {
+              <ion-grid class="ion-no-padding ion-margin-top">
+                <ion-row>
+                  <ion-col>
+                    <ion-button expand="block" size="small" (click)="openEdit(entry)">
+                      <ion-icon slot="start" name="pencil-outline"></ion-icon>Editar
+                    </ion-button>
+                  </ion-col>
+                  <ion-col>
+                    <ion-button expand="block" size="small" fill="outline" color="danger"
+                      [disabled]="deletingId() === entry.idAccountingEntry"
+                      (click)="askDelete(entry.idAccountingEntry)">
+                      <ion-icon slot="start" name="trash-outline"></ion-icon>Eliminar
+                    </ion-button>
+                  </ion-col>
+                </ion-row>
+              </ion-grid>
+            }
+
+          </ion-card-content>
+        </ion-card>
+      }
+    }
+  </ion-list>
+
+</ion-content>
+
+<!-- FAB nuevo asiento -->
+<ion-fab slot="fixed" vertical="bottom" horizontal="end">
+  <ion-fab-button color="primary" [disabled]="showForm()" (click)="openCreate()">
+    <ion-icon name="add-outline"></ion-icon>
+  </ion-fab-button>
+</ion-fab>
+
+<app-footer></app-footer>

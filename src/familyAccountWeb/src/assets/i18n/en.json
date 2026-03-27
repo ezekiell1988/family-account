@@ -560,6 +560,7 @@
     "CAT_OTHER": "Other"
   },
   "ACCOUNTS": {
+    "TITLE": "Chart of Accounts",
     "LOADING": "Loading accounts...",
     "NEW_ACCOUNT": "New Account",
     "EMPTY": "No accounting accounts found.",

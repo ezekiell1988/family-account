@@ -1,0 +1,399 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Home</a></li>
+  <li class="breadcrumb-item">Contabilidad</li>
+  <li class="breadcrumb-item active">Asientos Contables</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Asientos Contables
+  <small>Registro de asientos del diario contable</small>
+</h1>
+
+<!-- Error global -->
+@if (errorMessage()) {
+  <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2"></i>
+    <strong>Error:</strong> {{ errorMessage() }}
+    <button type="button" class="btn-close" aria-label="Cerrar" (click)="clearError.emit()"></button>
+  </div>
+}
+
+<!-- ── FORMULARIO CREAR / EDITAR ────────────────────────────────── -->
+@if (showForm()) {
+  <div class="card mb-3">
+    <div class="card-header fw-bold">
+      <i class="fa fa-book me-2"></i>{{ formTitle() }}
+    </div>
+    <div class="card-body">
+
+      <!-- Cabecera del asiento -->
+      <div class="row g-3 mb-3">
+
+        <!-- Período fiscal -->
+        <div class="col-md-4">
+          <label class="form-label" for="fFiscalPeriod">Período fiscal <span class="text-danger">*</span></label>
+          <select id="fFiscalPeriod" class="form-select"
+            [value]="formFiscalPeriod()"
+            (change)="formFiscalPeriod.set(+$any($event.target).value)">
+            <option value="0">— Seleccione un período —</option>
+            @for (fp of fiscalPeriods(); track fp.idFiscalPeriod) {
+              <option [value]="fp.idFiscalPeriod">
+                {{ fp.namePeriod }}
+                @if (fp.statusPeriod !== 'Abierto') { ({{ fp.statusPeriod }}) }
+              </option>
+            }
+          </select>
+        </div>
+
+        <!-- Moneda -->
+        <div class="col-md-3">
+          <label class="form-label" for="fCurrency">Moneda <span class="text-danger">*</span></label>
+          <select id="fCurrency" class="form-select"
+            [value]="formCurrency()"
+            (change)="formCurrency.set(+$any($event.target).value)">
+            <option value="0">— Seleccione moneda —</option>
+            @for (c of currencies(); track c.idCurrency) {
+              <option [value]="c.idCurrency">{{ c.codeCurrency }} – {{ c.nameCurrency }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Tipo de cambio -->
+        <div class="col-md-2">
+          <label class="form-label" for="fExchangeRate">T/C <span class="text-danger">*</span></label>
+          <input id="fExchangeRate" type="number" class="form-control" min="0.000001" step="0.01"
+            [value]="formExchangeRate()"
+            (input)="formExchangeRate.set(+$any($event.target).value)" />
+        </div>
+
+        <!-- Estado -->
+        <div class="col-md-3">
+          <label class="form-label" for="fStatus">Estado <span class="text-danger">*</span></label>
+          <select id="fStatus" class="form-select"
+            [value]="formStatus()"
+            (change)="formStatus.set($any($event.target).value)">
+            @for (s of statusOptions; track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Número de asiento -->
+        <div class="col-md-3">
+          <label class="form-label" for="fNumber">Nº Asiento <span class="text-danger">*</span></label>
+          <input id="fNumber" type="text" class="form-control" placeholder="ej: AS-2025-0001"
+            [value]="formNumber()"
+            (input)="formNumber.set($any($event.target).value)" />
+        </div>
+
+        <!-- Fecha -->
+        <div class="col-md-3">
+          <label class="form-label" for="fDate">Fecha <span class="text-danger">*</span></label>
+          <input id="fDate" type="date" class="form-control"
+            [value]="formDate()"
+            (change)="formDate.set($any($event.target).value)" />
+        </div>
+
+        <!-- Referencia -->
+        <div class="col-md-3">
+          <label class="form-label" for="fReference">Referencia</label>
+          <input id="fReference" type="text" class="form-control" placeholder="Nº documento origen"
+            [value]="formReference()"
+            (input)="formReference.set($any($event.target).value)" />
+        </div>
+
+        <!-- Descripción -->
+        <div class="col-12">
+          <label class="form-label" for="fDescription">Descripción <span class="text-danger">*</span></label>
+          <input id="fDescription" type="text" class="form-control" placeholder="Descripción del asiento"
+            [value]="formDescription()"
+            (input)="formDescription.set($any($event.target).value)" />
+        </div>
+
+      </div>
+
+      <!-- Líneas del asiento -->
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 class="mb-0 fw-semibold">
+          <i class="fa fa-list me-1"></i>Líneas del asiento
+        </h6>
+        <button class="btn btn-sm btn-outline-primary" type="button" (click)="addLine()">
+          <i class="fa fa-plus me-1"></i>Agregar línea
+        </button>
+      </div>
+
+      <div class="table-responsive mb-2">
+        <table class="table table-sm table-bordered align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:35%">Cuenta contable <span class="text-danger">*</span></th>
+              <th style="width:18%">Débito</th>
+              <th style="width:18%">Crédito</th>
+              <th>Descripción de línea</th>
+              <th style="width:48px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of formLines(); track $index; let idx = $index) {
+              <tr>
+                <td>
+                  <select class="form-select form-select-sm"
+                    [value]="line.idAccount"
+                    (change)="updateLineAccount(idx, +$any($event.target).value)">
+                    <option value="0">— Seleccione cuenta —</option>
+                    @for (acc of movementAccounts(); track acc.idAccount) {
+                      <option [value]="acc.idAccount">{{ acc.codeAccount }} – {{ acc.nameAccount }}</option>
+                    }
+                  </select>
+                </td>
+                <td>
+                  <input type="number" class="form-control form-control-sm text-end" min="0" step="0.01"
+                    [value]="line.debitAmount || ''"
+                    placeholder="0.00"
+                    (input)="updateLineDebit(idx, +$any($event.target).value)" />
+                </td>
+                <td>
+                  <input type="number" class="form-control form-control-sm text-end" min="0" step="0.01"
+                    [value]="line.creditAmount || ''"
+                    placeholder="0.00"
+                    (input)="updateLineCredit(idx, +$any($event.target).value)" />
+                </td>
+                <td>
+                  <input type="text" class="form-control form-control-sm"
+                    placeholder="Opcional"
+                    [value]="line.descriptionLine"
+                    (input)="updateLineDescription(idx, $any($event.target).value)" />
+                </td>
+                <td class="text-center">
+                  <button class="btn btn-sm btn-outline-danger" type="button"
+                    title="Eliminar línea"
+                    [disabled]="formLines().length <= 2"
+                    (click)="removeLine(idx)">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot class="table-light fw-semibold">
+            <tr>
+              <td>Totales</td>
+              <td class="text-end font-monospace">{{ formatAmount(totalDebit()) }}</td>
+              <td class="text-end font-monospace">{{ formatAmount(totalCredit()) }}</td>
+              <td colspan="2">
+                @if (isBalanced()) {
+                  <span class="badge bg-success"><i class="fa fa-check me-1"></i>Balanceado</span>
+                } @else if (formLines().length >= 2 && (totalDebit() > 0 || totalCredit() > 0)) {
+                  <span class="badge bg-danger"><i class="fa fa-exclamation-triangle me-1"></i>Desbalanceado</span>
+                }
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" (click)="submitForm()" [disabled]="!isFormValid()">
+          <i class="fa fa-save me-1"></i>{{ isEditing() ? 'Guardar cambios' : 'Crear asiento' }}
+        </button>
+        <button class="btn btn-secondary" (click)="cancelForm()">
+          <i class="fa fa-times me-1"></i>Cancelar
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- ── CONFIRMACIÓN ELIMINAR ──────────────────────────────────── -->
+@if (confirmDeleteId() !== null) {
+  <div class="alert alert-warning d-flex align-items-center gap-3 mb-3">
+    <i class="fa fa-exclamation-triangle fa-lg"></i>
+    <span>¿Eliminar el asiento seleccionado? Esta acción no se puede deshacer.</span>
+    <div class="ms-auto d-flex gap-2">
+      <button class="btn btn-sm btn-danger" (click)="confirmDelete()">
+        <i class="fa fa-trash me-1"></i>Eliminar
+      </button>
+      <button class="btn btn-sm btn-secondary" (click)="cancelDelete()">Cancelar</button>
+    </div>
+  </div>
+}
+
+<!-- ── PANEL CON TABLA ────────────────────────────────────────── -->
+<panel title="Asientos Contables"
+  variant="inverse"
+  [showReloadButton]="true"
+  [reload]="isLoading()"
+  (onReload)="refresh.emit()">
+
+  <!-- Header: botón Nuevo + filtros -->
+  <ng-container panel-header>
+    <div class="d-flex align-items-center gap-2 ms-3">
+      <button class="btn btn-success btn-sm" (click)="openCreate()" [disabled]="showForm()">
+        <i class="fa fa-plus me-1"></i>Nuevo Asiento
+      </button>
+
+      <select class="form-select form-select-sm w-auto"
+        aria-label="Filtrar por estado"
+        [value]="filterStatus()"
+        (change)="filterStatus.set($any($event.target).value)">
+        <option value="">Todos los estados</option>
+        @for (s of statusOptions; track s) {
+          <option [value]="s">{{ s }}</option>
+        }
+      </select>
+
+      <input type="text" class="form-control form-control-sm flex-fill"
+        placeholder="Buscar número, descripción o período…"
+        aria-label="Buscar asiento"
+        [value]="filterSearch()"
+        (input)="filterSearch.set($any($event.target).value)" />
+    </div>
+  </ng-container>
+
+  <ngx-datatable
+    class="bootstrap"
+    [rows]="filteredItems()"
+    [columnMode]="ColumnMode.force"
+    [headerHeight]="40"
+    [footerHeight]="50"
+    [rowHeight]="'auto'"
+    [limit]="25"
+    [count]="filteredItems().length"
+    [loadingIndicator]="isLoading()">
+
+    <!-- Row detail DEBE ir antes de las columnas -->
+    <ngx-datatable-row-detail rowHeight="auto">
+      <ng-template let-row="row" ngx-datatable-row-detail-template>
+        <div class="p-3 border-start border-4 border-primary bg-light">
+
+          <!-- Datos de cabecera -->
+          <div class="row g-2 small mb-2">
+            <div class="col-sm-3">
+              <span class="fw-semibold text-muted">Período:</span>
+              <span class="ms-1">{{ row.nameFiscalPeriod }}</span>
+            </div>
+            <div class="col-sm-3">
+              <span class="fw-semibold text-muted">Moneda:</span>
+              <span class="ms-1">{{ row.codeCurrency }} – {{ row.nameCurrency }}</span>
+            </div>
+            <div class="col-sm-2">
+              <span class="fw-semibold text-muted">T/C:</span>
+              <span class="ms-1 font-monospace">{{ row.exchangeRateValue | number:'1.2-6' }}</span>
+            </div>
+            <div class="col-sm-2">
+              <span class="fw-semibold text-muted">Referencia:</span>
+              <span class="ms-1">{{ row.referenceEntry ?? '—' }}</span>
+            </div>
+            <div class="col-sm-2">
+              <span class="fw-semibold text-muted">Creado:</span>
+              <span class="ms-1">{{ row.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+
+          <!-- Líneas del asiento -->
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-2">
+              <thead class="table-secondary">
+                <tr>
+                  <th>Cuenta</th>
+                  <th class="text-end" style="width:130px">Débito</th>
+                  <th class="text-end" style="width:130px">Crédito</th>
+                  <th>Descripción</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of row.lines; track line.idAccountingEntryLine) {
+                  <tr>
+                    <td class="font-monospace small">{{ line.codeAccount }} – {{ line.nameAccount }}</td>
+                    <td class="text-end font-monospace">
+                      @if (line.debitAmount > 0) { {{ line.debitAmount | number:'1.2-2' }} }
+                    </td>
+                    <td class="text-end font-monospace">
+                      @if (line.creditAmount > 0) { {{ line.creditAmount | number:'1.2-2' }} }
+                    </td>
+                    <td class="small text-muted">{{ line.descriptionLine ?? '' }}</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot class="table-light fw-semibold">
+                <tr>
+                  <td>Totales</td>
+                  <td class="text-end font-monospace">{{ getEntryTotalDebit(row) | number:'1.2-2' }}</td>
+                  <td class="text-end font-monospace">{{ getEntryTotalCredit(row) | number:'1.2-2' }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Acciones -->
+          @if (row.statusEntry !== 'Anulado') {
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-primary"
+                [disabled]="showForm() || deletingId() === row.idAccountingEntry"
+                (click)="openEdit(row)">
+                <i class="fa fa-pencil me-1"></i>Editar
+              </button>
+              <button class="btn btn-sm btn-danger"
+                [disabled]="showForm() || deletingId() === row.idAccountingEntry"
+                (click)="askDelete(row.idAccountingEntry)">
+                <i class="fa fa-trash me-1"></i>Eliminar
+              </button>
+            </div>
+          }
+        </div>
+      </ng-template>
+    </ngx-datatable-row-detail>
+
+    <!-- Número -->
+    <ngx-datatable-column name="Nº Asiento" prop="numberEntry" [width]="140" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        <span class="font-monospace fw-semibold">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Fecha -->
+    <ngx-datatable-column name="Fecha" prop="dateEntry" [width]="105" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        {{ value | date:'dd/MM/yyyy' }}
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Estado -->
+    <ngx-datatable-column name="Estado" prop="statusEntry" [width]="110" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        <span [class]="getStatusBadgeClass(value)">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Período -->
+    <ngx-datatable-column name="Período" prop="nameFiscalPeriod" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        {{ value }}
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Descripción -->
+    <ngx-datatable-column name="Descripción" prop="descriptionEntry" [sortable]="false">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        <span class="text-truncate d-block" style="max-width:280px" [title]="value">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Expandir -->
+    <ngx-datatable-column name="" [width]="50" [sortable]="false" [resizeable]="false">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        <button class="btn btn-sm btn-link p-0"
+          [attr.aria-label]="expandedId() === row.idAccountingEntry ? 'Contraer' : 'Expandir'"
+          (click)="toggleExpand(row)">
+          <i class="fa" [class.fa-chevron-down]="expandedId() === row.idAccountingEntry"
+                         [class.fa-chevron-right]="expandedId() !== row.idAccountingEntry"></i>
+        </button>
+      </ng-template>
+    </ngx-datatable-column>
+
+  </ngx-datatable>
+</panel>

@@ -1,0 +1,32 @@
+@if (isMobile()) {
+  <app-accounting-entries-mobile
+    [entries]="entries()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    [fiscalPeriods]="fiscalPeriods()"
+    [currencies]="currencies()"
+    [accounts]="accounts()"
+    (refresh)="loadAll()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (clearError)="clearError()">
+  </app-accounting-entries-mobile>
+} @else {
+  <app-accounting-entries-web
+    [entries]="entries()"
+    [totalCount]="totalCount()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    [fiscalPeriods]="fiscalPeriods()"
+    [currencies]="currencies()"
+    [accounts]="accounts()"
+    (refresh)="loadAll()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (clearError)="clearError()">
+  </app-accounting-entries-web>
+}

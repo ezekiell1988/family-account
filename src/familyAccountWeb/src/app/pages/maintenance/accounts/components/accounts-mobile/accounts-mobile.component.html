@@ -1,3 +1,9 @@
+<header
+  [pageTitle]="'ACCOUNTS.TITLE' | translate"
+  color="theme"
+  [translucent]="true">
+</header>
+
 <ion-content class="ion-padding">
   <!-- Pull-to-refresh -->
   <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
@@ -170,99 +176,7 @@
     </ion-card>
   }
 
-  <!-- Boton nueva cuenta -->
-  <ion-grid>
-    <ion-row class="ion-justify-content-end ion-margin-bottom">
-      <ion-col size="auto">
-        <ion-button size="small" color="success" (click)="openCreate()" [disabled]="showForm()">
-          <ion-icon slot="start" name="add-outline"></ion-icon>
-          {{ 'ACCOUNTS.NEW_ACCOUNT' | translate }}
-        </ion-button>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
-
   <!-- Lista de cuentas -->
-  @for (account of accounts(); track account.idAccount) {
-    <ion-card>
-      <ion-card-header (click)="toggleExpand(account.idAccount)">
-        <ion-grid>
-          <ion-row class="ion-align-items-center">
-            <ion-col>
-              <span class="font-monospace fw-bold">{{ account.codeAccount }}</span>
-              <ion-badge [color]="getTypeBadgeClass(account.typeAccount)" class="ion-margin-start">
-                {{ account.typeAccount }}
-              </ion-badge>
-            </ion-col>
-            <ion-col size="auto">
-              <ion-icon
-                [name]="expandedId() === account.idAccount ? 'chevron-down-outline' : 'chevron-forward-outline'"
-                color="medium">
-              </ion-icon>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-        <ion-card-title class="ion-margin-top">{{ account.nameAccount }}</ion-card-title>
-      </ion-card-header>
-
-      @if (expandedId() === account.idAccount) {
-        <ion-card-content>
-          <ion-text color="medium">
-            <p class="ion-no-margin">
-              <strong>{{ 'ACCOUNTS.DETAIL.PARENT' | translate }}</strong>
-              {{ account.nameAccountParent ?? ('ACCOUNTS.DETAIL.ROOT' | translate) }}
-            </p>
-            <p>
-              <strong>{{ 'ACCOUNTS.DETAIL.LEVEL' | translate }}</strong>
-              {{ account.levelAccount }}
-            </p>
-          </ion-text>
-          <ion-grid>
-            <ion-row>
-              <ion-col size="auto">
-                <ion-badge [color]="account.allowsMovements ? 'success' : 'medium'">
-                  {{ account.allowsMovements ? ('COMMON.YES' | translate) : ('COMMON.NO' | translate) }}
-                  {{ 'ACCOUNTS.DETAIL.MOVEMENTS' | translate }}
-                </ion-badge>
-              </ion-col>
-              <ion-col size="auto">
-                <ion-badge [color]="account.isActive ? 'success' : 'danger'">
-                  {{ account.isActive ? ('ACCOUNTS.DETAIL.ACTIVE' | translate) : ('ACCOUNTS.DETAIL.INACTIVE' | translate) }}
-                </ion-badge>
-              </ion-col>
-            </ion-row>
-            <ion-row class="ion-margin-top">
-              <ion-col>
-                <ion-button
-                  size="small"
-                  color="primary"
-                  (click)="openEdit(account)"
-                  [disabled]="showForm() || deletingId() === account.idAccount">
-                  <ion-icon slot="start" name="pencil-outline"></ion-icon>
-                  {{ 'COMMON.EDIT' | translate }}
-                </ion-button>
-              </ion-col>
-              <ion-col>
-                <ion-button
-                  size="small"
-                  color="danger"
-                  (click)="askDelete(account.idAccount)"
-                  [disabled]="showForm() || deletingId() === account.idAccount">
-                  @if (deletingId() === account.idAccount) {
-                    <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
-                  } @else {
-                    <ion-icon slot="start" name="trash-outline"></ion-icon>
-                    {{ 'COMMON.DELETE' | translate }}
-                  }
-                </ion-button>
-              </ion-col>
-            </ion-row>
-          </ion-grid>
-        </ion-card-content>
-      }
-    </ion-card>
-  }
-
   @if (accounts().length === 0 && !isLoading()) {
     <div class="ion-text-center ion-padding">
       <ion-icon name="albums-outline" size="large"></ion-icon>
@@ -270,5 +184,91 @@
         <p>{{ 'ACCOUNTS.EMPTY' | translate }}</p>
       </ion-text>
     </div>
+  } @else {
+    <ion-list>
+      @for (account of accounts(); track account.idAccount) {
+        <ion-item [button]="true" [detail]="false" (click)="toggleExpand(account.idAccount)">
+          <ion-icon
+            slot="start"
+            [name]="expandedId() === account.idAccount ? 'chevron-down-outline' : 'chevron-forward-outline'"
+            color="medium">
+          </ion-icon>
+          <ion-label>
+            <h2>
+              <span class="font-monospace fw-bold">{{ account.codeAccount }}</span>
+              <ion-badge [color]="getTypeBadgeClass(account.typeAccount)" class="ion-margin-start">
+                {{ account.typeAccount }}
+              </ion-badge>
+            </h2>
+            <p>{{ account.nameAccount }}</p>
+          </ion-label>
+        </ion-item>
+
+        @if (expandedId() === account.idAccount) {
+          <div class="ion-padding-horizontal ion-padding-bottom">
+            <ion-text color="medium">
+              <p class="ion-no-margin">
+                <strong>{{ 'ACCOUNTS.DETAIL.PARENT' | translate }}: </strong>
+                {{ account.nameAccountParent ?? ('ACCOUNTS.DETAIL.ROOT' | translate) }}
+              </p>
+              <p>
+                <strong>{{ 'ACCOUNTS.DETAIL.LEVEL' | translate }}: </strong>
+                {{ account.levelAccount }}
+              </p>
+            </ion-text>
+            <div class="ion-margin-bottom">
+              <ion-badge [color]="account.allowsMovements ? 'success' : 'medium'" class="ion-margin-end">
+                {{ account.allowsMovements ? ('COMMON.YES' | translate) : ('COMMON.NO' | translate) }}
+                {{ 'ACCOUNTS.DETAIL.MOVEMENTS' | translate }}
+              </ion-badge>
+              <ion-badge [color]="account.isActive ? 'success' : 'danger'">
+                {{ account.isActive ? ('ACCOUNTS.DETAIL.ACTIVE' | translate) : ('ACCOUNTS.DETAIL.INACTIVE' | translate) }}
+              </ion-badge>
+            </div>
+            <ion-grid>
+              <ion-row>
+                <ion-col>
+                  <ion-button
+                    size="small"
+                    color="primary"
+                    (click)="openEdit(account)"
+                    [disabled]="showForm() || deletingId() === account.idAccount">
+                    <ion-icon slot="start" name="pencil-outline"></ion-icon>
+                    {{ 'COMMON.EDIT' | translate }}
+                  </ion-button>
+                </ion-col>
+                <ion-col>
+                  <ion-button
+                    size="small"
+                    color="danger"
+                    (click)="askDelete(account.idAccount)"
+                    [disabled]="showForm() || deletingId() === account.idAccount">
+                    @if (deletingId() === account.idAccount) {
+                      <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                    } @else {
+                      <ion-icon slot="start" name="trash-outline"></ion-icon>
+                      {{ 'COMMON.DELETE' | translate }}
+                    }
+                  </ion-button>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </div>
+        }
+      }
+    </ion-list>
   }
+
+  <!-- FAB: nueva cuenta -->
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button
+      color="success"
+      (click)="openCreate()"
+      [disabled]="showForm()"
+      [attr.aria-label]="'ACCOUNTS.NEW_ACCOUNT' | translate">
+      <ion-icon name="add-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
 </ion-content>
+
+<app-footer></app-footer>

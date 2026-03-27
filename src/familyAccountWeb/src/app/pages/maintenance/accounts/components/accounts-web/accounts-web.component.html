@@ -175,6 +175,10 @@
         <div class="p-3 border-start border-4 border-primary bg-light">
           <div class="row g-2 small">
             <div class="col-sm-4">
+              <span class="fw-semibold text-muted">Tipo:</span>
+              <span class="ms-1 badge" [class]="getTypeBadgeClass(row.typeAccount)">{{ row.typeAccount }}</span>
+            </div>
+            <div class="col-sm-4">
               <span class="fw-semibold text-muted">Código:</span>
               <span class="ms-1 font-monospace">{{ row.codeAccount }}</span>
             </div>
@@ -212,7 +216,7 @@
     </ngx-datatable-row-detail>
 
     <!-- Código con chevron de expansión -->
-    <ngx-datatable-column name="Código" prop="codeAccount" [flexGrow]="2">
+    <ngx-datatable-column name="Código" prop="codeAccount" [flexGrow]="2" [minWidth]="130" [maxWidth]="200">
       <ng-template ngx-datatable-cell-template let-row="row">
         <button class="btn btn-link p-0 me-1 text-decoration-none"
           (click)="toggleExpand(row)" title="Ver detalle">
@@ -228,43 +232,14 @@
     </ngx-datatable-column>
 
     <!-- Nombre -->
-    <ngx-datatable-column name="Nombre" prop="nameAccount" [flexGrow]="4">
+    <ngx-datatable-column name="Nombre" prop="nameAccount" [flexGrow]="9" [minWidth]="160">
       <ng-template ngx-datatable-cell-template let-row="row">
         <span [style]="getIndentStyle(row.levelAccount)">{{ row.nameAccount }}</span>
       </ng-template>
     </ngx-datatable-column>
 
-    <!-- Tipo -->
-    <ngx-datatable-column name="Tipo" prop="typeAccount" [flexGrow]="2">
-      <ng-template ngx-datatable-cell-template let-value="value">
-        <span class="badge" [class]="getTypeBadgeClass(value)">{{ value }}</span>
-      </ng-template>
-    </ngx-datatable-column>
-
-    <!-- Permi mov. -->
-    <ngx-datatable-column name="Mov." prop="allowsMovements" [flexGrow]="1" [sortable]="true">
-      <ng-template ngx-datatable-cell-template let-value="value">
-        @if (value) {
-          <i class="fa fa-check text-success" title="Permite movimientos"></i>
-        } @else {
-          <i class="fa fa-minus text-muted" title="No permite movimientos directos"></i>
-        }
-      </ng-template>
-    </ngx-datatable-column>
-
-    <!-- Activo -->
-    <ngx-datatable-column name="Activo" prop="isActive" [flexGrow]="1" [sortable]="true">
-      <ng-template ngx-datatable-cell-template let-value="value">
-        @if (value) {
-          <span class="badge bg-success"><i class="fa fa-check me-1"></i>Sí</span>
-        } @else {
-          <span class="badge bg-danger"><i class="fa fa-times me-1"></i>No</span>
-        }
-      </ng-template>
-    </ngx-datatable-column>
-
     <!-- Acciones -->
-    <ngx-datatable-column name="Acciones" [flexGrow]="2" [sortable]="false">
+    <ngx-datatable-column name="Acciones" [minWidth]="85" [maxWidth]="100" [sortable]="false">
       <ng-template ngx-datatable-cell-template let-row="row">
         <div class="d-flex gap-1">
           <button class="btn btn-xs btn-info"

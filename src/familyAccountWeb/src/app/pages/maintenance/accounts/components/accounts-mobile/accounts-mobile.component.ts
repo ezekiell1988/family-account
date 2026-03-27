@@ -28,6 +28,9 @@ import {
   IonRefresherContent,
   IonSpinner,
   IonText,
+  IonList,
+  IonItem,
+  IonLabel,
   IonCard,
   IonCardHeader,
   IonCardTitle,
@@ -42,8 +45,11 @@ import {
   IonGrid,
   IonRow,
   IonCol,
+  IonFab,
+  IonFabButton,
 } from '@ionic/angular/standalone';
 import { AccountDto, CreateAccountRequest, UpdateAccountRequest } from '../../../../../shared/models';
+import { HeaderComponent, FooterComponent } from '../../../../../components';
 
 const ACCOUNT_TYPES = ['Activo', 'Pasivo', 'Capital', 'Ingreso', 'Gasto', 'Control'] as const;
 
@@ -56,11 +62,16 @@ const ACCOUNT_TYPES = ['Activo', 'Pasivo', 'Capital', 'Ingreso', 'Gasto', 'Contr
     CommonModule,
     FormsModule,
     TranslatePipe,
+    HeaderComponent,
+    FooterComponent,
     IonContent,
     IonRefresher,
     IonRefresherContent,
     IonSpinner,
     IonText,
+    IonList,
+    IonItem,
+    IonLabel,
     IonCard,
     IonCardHeader,
     IonCardTitle,
@@ -75,6 +86,8 @@ const ACCOUNT_TYPES = ['Activo', 'Pasivo', 'Capital', 'Ingreso', 'Gasto', 'Contr
     IonGrid,
     IonRow,
     IonCol,
+    IonFab,
+    IonFabButton,
   ],
   templateUrl: './accounts-mobile.component.html',
 })

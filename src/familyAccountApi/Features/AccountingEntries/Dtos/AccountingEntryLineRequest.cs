@@ -9,11 +9,11 @@ public sealed record AccountingEntryLineRequest
     [Description("Cuenta contable afectada por la línea del asiento")]
     public required int IdAccount { get; init; }
 
-    [Range(typeof(decimal), "0", "999999999999.99")]
+    [Range(typeof(decimal), "0", "999999999999.99", ParseLimitsInInvariantCulture = true)]
     [Description("Monto del débito. Debe ser 0 cuando la línea sea de crédito")]
     public decimal DebitAmount { get; init; }
 
-    [Range(typeof(decimal), "0", "999999999999.99")]
+    [Range(typeof(decimal), "0", "999999999999.99", ParseLimitsInInvariantCulture = true)]
     [Description("Monto del crédito. Debe ser 0 cuando la línea sea de débito")]
     public decimal CreditAmount { get; init; }
 

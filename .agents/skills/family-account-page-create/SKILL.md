@@ -4,9 +4,10 @@ description: >
   Guía completa para crear una página nueva en family-account: modelos TypeScript,
   service, estructura de carpetas, page coordinador (ResponsiveComponent + AppSettings),
   sub-componente web (Color Admin + Panel + ngx-datatable con row-detail opcional) y
-  mobile (Ionic cards colapsables), barrels, registro en rutas (app.routes.ts), registro en
-  menú (AppMenuService), i18n con ngx-translate, accesibilidad WCAG 2.1 AA, sistema CSS
-  híbrido desktop/mobile, dark mode unificado y tabla de anti-patrones.
+  mobile (Ionic: header/footer, ion-list expandible, FAB nuevo registro, formulario ion-card),
+  barrels, registro en rutas (app.routes.ts), registro en menú (AppMenuService),
+  i18n con ngx-translate, accesibilidad WCAG 2.1 AA, sistema CSS híbrido desktop/mobile,
+  dark mode unificado y tabla de anti-patrones.
   Usar SIEMPRE que se cree una página nueva en este proyecto.
 applyTo: "src/familyAccountWeb/**"
 ---
@@ -407,27 +408,43 @@ import {
   ChangeDetectionStrategy,
   input,
   output,
-  OnInit,
+  signal,
+  computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '@ngx-translate/core';
 import { addIcons } from 'ionicons';
-import { refreshOutline } from 'ionicons/icons';
+import {
+  addOutline, pencilOutline, trashOutline,
+  chevronDownOutline, chevronForwardOutline,
+  albumsOutline, warningOutline, closeOutline, saveOutline,
+} from 'ionicons/icons';
 import {
   IonContent,
-  IonGrid,
-  IonRow,
-  IonCol,
+  IonRefresher,
+  IonRefresherContent,
+  IonSpinner,
+  IonText,
+  IonList,
+  IonItem,
+  IonLabel,
   IonCard,
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonRefresher,
-  IonRefresherContent,
+  IonBadge,
+  IonButton,
   IonIcon,
-  IonSpinner,
-  IonText,
+  IonInput,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonFab,
+  IonFabButton,
 } from '@ionic/angular/standalone';
+import { HeaderComponent, FooterComponent } from '../../../../../components';
+import { MiItemDto } from '../../../../../shared/models';
 
 @Component({
   selector: 'app-mi-pagina-mobile',
@@ -437,37 +454,82 @@ import {
   imports: [
     CommonModule,
     FormsModule,
+    TranslatePipe,
+    HeaderComponent,
+    FooterComponent,
     IonContent,
-    IonGrid,
-    IonRow,
-    IonCol,
+    IonRefresher,
+    IonRefresherContent,
+    IonSpinner,
+    IonText,
+    IonList,
+    IonItem,
+    IonLabel,
     IonCard,
     IonCardHeader,
     IonCardTitle,
     IonCardContent,
-    IonRefresher,
-    IonRefresherContent,
+    IonBadge,
+    IonButton,
     IonIcon,
-    IonSpinner,
-    IonText,
+    IonInput,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonFab,
+    IonFabButton,
   ],
   templateUrl: './mi-pagina-mobile.component.html',
 })
-export class MiPaginaMobileComponent implements OnInit {
-  // Inputs del coordinador
-  loading      = input(false);
+export class MiPaginaMobileComponent {
+  items        = input<MiItemDto[]>([]);
+  isLoading    = input(false);
+  deletingId   = input<number | null>(null);
   errorMessage = input('');
 
-  // Outputs hacia el coordinador
-  refresh = output<void>();
+  refresh    = output<void>();
+  create     = output<unknown>(); // reemplazar con CreatePayload
+  editSave   = output<unknown>(); // reemplazar con UpdatePayload & { id: number }
+  remove     = output<number>();
+  clearError = output<void>();
 
-  ngOnInit(): void {
-    addIcons({ refreshOutline });
+  expandedId      = signal<number | null>(null);
+  showForm        = signal(false);
+  editingId       = signal<number | null>(null);
+  formField       = signal('');
+  confirmDeleteId = signal<number | null>(null);
+
+  isEditing   = computed(() => this.editingId() !== null);
+  isFormValid = computed(() => this.formField().trim().length > 0);
+
+  constructor() {
+    addIcons({
+      addOutline, pencilOutline, trashOutline,
+      chevronDownOutline, chevronForwardOutline,
+      albumsOutline, warningOutline, closeOutline, saveOutline,
+    });
   }
 
-  doRefresh(event: CustomEvent): void {
+  toggleExpand(id: number): void {
+    this.expandedId.update(v => v === id ? null : id);
+  }
+
+  // ⚠️ Debe ser async — el refresher necesita esperar antes de cerrarse
+  async handleRefresh(event: CustomEvent): Promise<void> {
     this.refresh.emit();
-    setTimeout(() => (event.target as HTMLIonRefresherElement).complete(), 1500);
+    await new Promise(r => setTimeout(r, 800));
+    (event.target as HTMLIonRefresherElement).complete();
+  }
+
+  openCreate(): void  { /* inicializar signals del form; showForm.set(true) */ }
+  openEdit(row: MiItemDto): void { /* cargar row en signals del form */ }
+  cancelForm(): void  { this.showForm.set(false); this.editingId.set(null); }
+  submitForm(): void  { /* emit create o editSave, luego cancelForm() */ }
+  askDelete(id: number): void    { this.confirmDeleteId.set(id); }
+  cancelDelete(): void           { this.confirmDeleteId.set(null); }
+  confirmDelete(): void {
+    const id = this.confirmDeleteId();
+    if (id !== null) { this.remove.emit(id); this.confirmDeleteId.set(null); }
   }
 }
 ```
@@ -475,47 +537,185 @@ export class MiPaginaMobileComponent implements OnInit {
 ### Template mobile (`<nombre-kebab>-mobile.component.html`)
 
 ```html
+<!-- Header (maneja ion-header, toolbar, menú y notificaciones internamente) -->
+<header
+  [pageTitle]="'MI_PAGINA.TITLE' | translate"
+  color="theme"
+  [translucent]="true">
+</header>
+
 <ion-content class="ion-padding">
-  <ion-grid>
-    <ion-row class="ion-justify-content-center">
-      <ion-col size="12" size-sm="10" size-md="8">
+  <!-- Pull-to-refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
 
-        <!-- Pull-to-refresh -->
-        <ion-refresher slot="fixed" (ionRefresh)="doRefresh($any($event))">
-          <ion-refresher-content></ion-refresher-content>
-        </ion-refresher>
+  <!-- Error -->
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="clearError.emit()">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
 
-        <!-- Error -->
-        @if (errorMessage()) {
-          <ion-text color="danger">
-            <p>
-              <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
-              {{ errorMessage() }}
-            </p>
-          </ion-text>
-        }
+  <!-- Spinner de carga -->
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
 
-        <!-- Loading -->
-        @if (loading()) {
-          <div class="ion-text-center ion-padding">
-            <ion-spinner name="crescent"></ion-spinner>
+  <!-- Formulario crear/editar (ion-card) -->
+  @if (showForm()) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon [name]="isEditing() ? 'pencil-outline' : 'add-outline'"></ion-icon>
+          {{ isEditing() ? ('MI_PAGINA.FORM.EDIT_TITLE' | translate) : ('MI_PAGINA.FORM.NEW_TITLE' | translate) }}
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <!-- ion-input standalone (SIN ion-item padre cuando se usa fill="outline") -->
+        <ion-input
+          fill="outline"
+          labelPlacement="floating"
+          [label]="'MI_PAGINA.FORM.CAMPO_LABEL' | translate"
+          [value]="formField()"
+          (ionInput)="formField.set($any($event.target).value)">
+        </ion-input>
+        <ion-grid class="ion-margin-top">
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" (click)="submitForm()" [disabled]="!isFormValid()">
+                <ion-icon slot="start" name="save-outline"></ion-icon>
+                {{ isEditing() ? ('COMMON.SAVE' | translate) : ('MI_PAGINA.FORM.CREATE_BTN' | translate) }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelForm()">
+                <ion-icon slot="start" name="close-outline"></ion-icon>
+                {{ 'COMMON.CANCEL' | translate }}
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Confirmación eliminar (ion-card color="warning") -->
+  @if (confirmDeleteId() !== null) {
+    <ion-card color="warning">
+      <ion-card-content>
+        <ion-text>
+          <p>
+            <ion-icon name="warning-outline"></ion-icon>
+            {{ 'MI_PAGINA.CONFIRM_DELETE' | translate }}
+          </p>
+        </ion-text>
+        <ion-grid>
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" color="danger" (click)="confirmDelete()">
+                <ion-icon slot="start" name="trash-outline"></ion-icon>
+                {{ 'COMMON.DELETE' | translate }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelDelete()">
+                {{ 'COMMON.CANCEL' | translate }}
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Lista de ítems (ion-list + ion-item expandible) -->
+  @if (items().length === 0 && !isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-icon name="albums-outline" size="large"></ion-icon>
+      <ion-text color="medium">
+        <p>{{ 'MI_PAGINA.EMPTY' | translate }}</p>
+      </ion-text>
+    </div>
+  } @else {
+    <ion-list>
+      @for (item of items(); track item.idMiItem) {
+        <ion-item [button]="true" [detail]="false" (click)="toggleExpand(item.idMiItem)">
+          <ion-icon
+            slot="start"
+            [name]="expandedId() === item.idMiItem ? 'chevron-down-outline' : 'chevron-forward-outline'"
+            color="medium">
+          </ion-icon>
+          <ion-label>
+            <h2>{{ item.nombre }}</h2>
+            <p><!-- subtítulo si aplica --></p>
+          </ion-label>
+          <ion-badge slot="end" [color]="item.isActive ? 'success' : 'medium'">
+            {{ item.isActive ? ('COMMON.YES' | translate) : ('COMMON.NO' | translate) }}
+          </ion-badge>
+        </ion-item>
+
+        @if (expandedId() === item.idMiItem) {
+          <div class="ion-padding-horizontal ion-padding-bottom">
+            <ion-text color="medium">
+              <p><!-- detalles adicionales --></p>
+            </ion-text>
+            <ion-grid>
+              <ion-row>
+                <ion-col>
+                  <ion-button size="small" color="primary" (click)="openEdit(item)"
+                    [disabled]="showForm() || deletingId() === item.idMiItem">
+                    <ion-icon slot="start" name="pencil-outline"></ion-icon>
+                    {{ 'COMMON.EDIT' | translate }}
+                  </ion-button>
+                </ion-col>
+                <ion-col>
+                  <ion-button size="small" color="danger" (click)="askDelete(item.idMiItem)"
+                    [disabled]="showForm() || deletingId() === item.idMiItem">
+                    @if (deletingId() === item.idMiItem) {
+                      <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                    } @else {
+                      <ion-icon slot="start" name="trash-outline"></ion-icon>
+                      {{ 'COMMON.DELETE' | translate }}
+                    }
+                  </ion-button>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
           </div>
         }
+      }
+    </ion-list>
+  }
 
-        <!-- Contenido -->
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>Mi Página</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <!-- contenido aquí -->
-          </ion-card-content>
-        </ion-card>
-
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+  <!-- FAB: nuevo registro (fijo abajo a la derecha, dentro de ion-content) -->
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button
+      color="success"
+      (click)="openCreate()"
+      [disabled]="showForm()"
+      [attr.aria-label]="'MI_PAGINA.NEW_ITEM' | translate">
+      <ion-icon name="add-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
 </ion-content>
+
+<!-- Footer (maneja ion-footer internamente) -->
+<app-footer></app-footer>
 ```
 
 ---

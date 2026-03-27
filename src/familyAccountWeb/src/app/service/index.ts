@@ -9,3 +9,4 @@ export { LanguageService, AVAILABLE_LANGUAGES, type Language } from './language.
 export { NotificationService, type AppNotification, type CampaignResult, type ExportResult } from './notification.service';
 export { LoginService } from './login.service';
 export { AccountService } from './account.service';
+export { AccountingEntryService } from './accounting-entry.service';

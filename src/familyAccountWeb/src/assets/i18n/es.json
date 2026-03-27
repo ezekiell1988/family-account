@@ -560,6 +560,7 @@
     "CAT_OTHER": "Otros"
   },
   "ACCOUNTS": {
+    "TITLE": "Cuentas Contables",
     "LOADING": "Cargando cuentas...",
     "NEW_ACCOUNT": "Nueva Cuenta",
     "EMPTY": "No hay cuentas contables.",

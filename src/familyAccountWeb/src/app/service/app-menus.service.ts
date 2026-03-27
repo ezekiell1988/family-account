@@ -53,6 +53,13 @@ export class AppMenuService {
           url: "/maintenance/accounts",
           roles: [1, 2],
         },
+        {
+          icon: "fa fa-book",
+          iconMobile: "book-outline",
+          title: "Asientos Contables",
+          url: "/process/accounting-entries",
+          roles: [1, 2],
+        },
       ],
     },
   ];
