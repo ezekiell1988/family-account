@@ -86,15 +86,16 @@ ion-content {
      ===================================================== */
   
   ion-menu ion-item.selected {
-    --background: var(--ion-color-primary-tint);
-    --color: var(--ion-color-primary);
+    --background: var(--ion-color-theme);
+    --color: var(--ion-color-theme-contrast);
     
     ion-label {
       font-weight: 600;
+      color: var(--ion-color-theme-contrast);
     }
     
     ion-icon[slot="start"] {
-      color: var(--ion-color-primary);
+      color: var(--ion-color-theme-contrast);
     }
   }
 
@@ -109,15 +110,15 @@ ion-content {
     }
     
     ion-menu ion-item.selected {
-      --background: rgba(52, 143, 226, 0.2);
-      --color: var(--ion-color-primary-tint);
+      --background: var(--ion-color-theme);
+      --color: var(--ion-color-theme-contrast);
       
       ion-label {
-        color: var(--ion-color-primary-tint);
+        color: var(--ion-color-theme-contrast);
       }
       
       ion-icon[slot="start"] {
-        color: var(--ion-color-primary-tint);
+        color: var(--ion-color-theme-contrast);
       }
     }
   }

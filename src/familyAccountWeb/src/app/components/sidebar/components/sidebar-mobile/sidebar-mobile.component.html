@@ -62,7 +62,7 @@
                                 routerLinkActive="selected"
                                 [detail]="false"
                                 lines="none"
-                                [class]="'menu-level-' + level"
+                                [ngClass]="'menu-level-' + level"
                                 [style.padding-left.px]="level > 0 ? level * 16 : null"
                                 #rla="routerLinkActive">
                                 @if (item.iconMobile) {

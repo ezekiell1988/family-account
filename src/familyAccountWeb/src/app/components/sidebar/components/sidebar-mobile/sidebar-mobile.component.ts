@@ -99,6 +99,21 @@ import { TranslatePipe } from '@ngx-translate/core';
     .user-profile-mobile .profile-info .user-phone {
       font-size: 0.8rem;
     }
+
+    /* Item seleccionado - usa el mismo color que ion-toolbar color="theme" */
+    ion-item.selected {
+      --background: var(--ion-color-theme, #00acac);
+      --color: var(--ion-color-theme-contrast, #ffffff);
+    }
+
+    ion-item.selected ion-label {
+      font-weight: 600;
+      color: var(--ion-color-theme-contrast, #ffffff) !important;
+    }
+
+    ion-item.selected ion-icon {
+      color: var(--ion-color-theme-contrast, #ffffff) !important;
+    }
   `],
   imports: [
     CommonModule,

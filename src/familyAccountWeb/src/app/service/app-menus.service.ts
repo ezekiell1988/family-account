@@ -39,6 +39,23 @@ export class AppMenuService {
       url: "/home",
     },
     {
+      icon: "fa fa-exchange",
+      iconMobile: "swap-horizontal-outline",
+      title: "Procesos",
+      url: "/process",
+      caret: "true",
+      roles: [1, 2],
+      submenu: [
+        {
+          icon: "fa fa-book",
+          iconMobile: "book-outline",
+          title: "Asientos Contables",
+          url: "/process/accounting-entries",
+          roles: [1, 2],
+        },
+      ],
+    },
+    {
       icon: "fa fa-wrench",
       iconMobile: "settings-outline",
       title: "Mantenimiento",
@@ -58,13 +75,6 @@ export class AppMenuService {
           iconMobile: "business-outline",
           title: "Bancos",
           url: "/maintenance/banks",
-          roles: [1, 2],
-        },
-        {
-          icon: "fa fa-book",
-          iconMobile: "book-outline",
-          title: "Asientos Contables",
-          url: "/process/accounting-entries",
           roles: [1, 2],
         },
       ],
