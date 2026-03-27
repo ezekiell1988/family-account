@@ -1,0 +1,26 @@
+@if (isMobile()) {
+  <app-banks-mobile
+    [banks]="banks()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    (refresh)="load()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (clearError)="clearError()">
+  </app-banks-mobile>
+} @else {
+  <app-banks-web
+    [banks]="banks()"
+    [totalCount]="totalCount()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    (refresh)="load()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (clearError)="clearError()">
+  </app-banks-web>
+}

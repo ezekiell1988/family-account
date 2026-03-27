@@ -54,6 +54,13 @@ export class AppMenuService {
           roles: [1, 2],
         },
         {
+          icon: "fa fa-university",
+          iconMobile: "business-outline",
+          title: "Bancos",
+          url: "/maintenance/banks",
+          roles: [1, 2],
+        },
+        {
           icon: "fa fa-book",
           iconMobile: "book-outline",
           title: "Asientos Contables",

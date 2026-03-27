@@ -589,5 +589,21 @@
       "ACTIVE": "Activa",
       "INACTIVE": "Inactiva"
     }
+  },
+  "BANKS": {
+    "TITLE": "Bancos",
+    "NEW_BANK": "Nuevo Banco",
+    "EMPTY": "No hay bancos registrados.",
+    "CONFIRM_DELETE": "¿Eliminar el banco seleccionado? Esta acción no se puede deshacer.",
+    "FORM": {
+      "NEW_TITLE": "Nuevo Banco",
+      "EDIT_TITLE": "Editar Banco",
+      "CODE_LABEL": "Código",
+      "CODE_PLACEHOLDER": "ej: BCR, BAC, BN",
+      "NAME_LABEL": "Nombre",
+      "NAME_PLACEHOLDER": "Nombre completo del banco",
+      "IS_ACTIVE": "Activo",
+      "CREATE_BTN": "Crear banco"
+    }
   }
 }

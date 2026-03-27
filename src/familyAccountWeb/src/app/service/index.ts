@@ -10,3 +10,4 @@ export { NotificationService, type AppNotification, type CampaignResult, type Ex
 export { LoginService } from './login.service';
 export { AccountService } from './account.service';
 export { AccountingEntryService } from './accounting-entry.service';
+export { BankService } from './bank.service';
