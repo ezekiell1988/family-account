@@ -9,7 +9,8 @@ public sealed record MeResponse(
     int IdUser,
     string CodeUser,
     string NameUser,
-    string EmailUser);
+    string EmailUser,
+    IReadOnlyList<int> Roles);
 
 public sealed record MessageResponse(string Message);
 

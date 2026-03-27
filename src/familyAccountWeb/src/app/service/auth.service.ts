@@ -199,7 +199,7 @@ export class AuthService {
                 nameLogin:  me.nameUser,
                 phoneLogin: null,
                 emailLogin: me.emailUser,
-                roles:      []
+                roles:      me.roles ?? []
               };
               this.currentUser.set(userData);
               this.logger.success('Sesión iniciada:', userData.nameLogin);

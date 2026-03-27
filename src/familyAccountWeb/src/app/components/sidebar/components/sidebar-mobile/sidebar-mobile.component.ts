@@ -155,13 +155,15 @@ export class SidebarMobileComponent implements OnInit {
     });
 
     effect(() => {
-      this.currentUser = this.authService.currentUser();
+      const user = this.authService.currentUser();
+      this.currentUser = user;
+      const userRoles = user?.roles ?? [];
+      this.menus = this.appMenuService.getMenuForRoles(userRoles);
+      this.cdr.markForCheck();
     });
   }
 
   ngOnInit(): void {
-    const userRoles = this.authService.currentUser()?.roles ?? [];
-    this.menus = this.appMenuService.getMenuForRoles(userRoles);
     this.initializeMobileMenuState(this.menus);
 
     this.router.events.pipe(

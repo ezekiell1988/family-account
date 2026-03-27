@@ -141,11 +141,21 @@ public sealed class AuthService(
 
     public async Task<MeResponse?> GetMeAsync(int idUser, CancellationToken ct = default)
     {
-        return await db.User
+        var user = await db.User
             .AsNoTracking()
             .Where(u => u.IdUser == idUser)
-            .Select(u => new MeResponse(u.IdUser, u.CodeUser, u.NameUser, u.EmailUser))
+            .Select(u => new { u.IdUser, u.CodeUser, u.NameUser, u.EmailUser })
             .FirstOrDefaultAsync(ct);
+
+        if (user is null) return null;
+
+        var roleIds = await db.UserRole
+            .AsNoTracking()
+            .Where(ur => ur.IdUser == idUser)
+            .Select(ur => ur.IdRole)
+            .ToListAsync(ct);
+
+        return new MeResponse(user.IdUser, user.CodeUser, user.NameUser, user.EmailUser, roleIds);
     }
 
     public async Task<CheckAuthResponse> CheckAuthAsync(int idUser, DateTime tokenExpiresAt, CancellationToken ct = default)

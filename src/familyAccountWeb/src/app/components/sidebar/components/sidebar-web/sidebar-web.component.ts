@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ElementRef, HostListener, ViewChild, OnInit, AfterViewChecked, AfterViewInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ElementRef, HostListener, ViewChild, OnInit, AfterViewChecked, AfterViewInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NgScrollbarModule } from 'ngx-scrollbar';
@@ -61,12 +61,16 @@ export class SidebarWebComponent implements OnInit, AfterViewChecked, AfterViewI
     loggerService: LoggerService
   ) {
     this.logger = loggerService.getLogger('SidebarWebComponent');
+
+    effect(() => {
+      const user = this.authService.currentUser();
+      this.currentUser = user;
+      const userRoles = user?.roles ?? [];
+      this.menus = this.appMenuService.getMenuForRoles(userRoles);
+    });
   }
 
   ngOnInit(): void {
-    const userRoles = this.authService.currentUser()?.roles ?? [];
-    this.menus = this.appMenuService.getMenuForRoles(userRoles);
-    this.currentUser = this.authService.currentUser();
   }
 
   toggleNavProfile(e: any): void {
