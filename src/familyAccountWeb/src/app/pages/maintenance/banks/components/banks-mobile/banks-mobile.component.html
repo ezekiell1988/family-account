@@ -181,12 +181,46 @@
                     }
                   </ion-button>
                 </ion-col>
+                <ion-col>
+                  <ion-button size="small"
+                    [color]="selectedBankId() === bank.idBank ? 'warning' : 'tertiary'"
+                    (click)="selectBank.emit(selectedBankId() === bank.idBank ? null : bank.idBank)">
+                    <ion-icon slot="start" name="card-outline"></ion-icon>
+                    {{ selectedBankId() === bank.idBank ? 'Cerrar Cuentas' : 'Ver Cuentas' }}
+                  </ion-button>
+                </ion-col>
               </ion-row>
             </ion-grid>
           </div>
         }
       }
     </ion-list>
+  }
+
+  <!-- Sección: Cuentas bancarias del banco seleccionado -->
+  @if (selectedBankId() !== null) {
+    <ion-item color="light" class="ion-margin-top">
+      <ion-icon slot="start" name="card-outline"></ion-icon>
+      <ion-label class="ion-text-bold">Cuentas – {{ selectedBankName() }}</ion-label>
+      <ion-button slot="end" fill="clear" color="medium" (click)="selectBank.emit(null)">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+    <app-bank-accounts-mobile
+      [bankAccounts]="bankAccounts()"
+      [banks]="banks()"
+      [accounts]="accounts()"
+      [currencies]="currencies()"
+      [isLoading]="bankAccountsLoading()"
+      [deletingId]="bankAccountsDeletingId()"
+      [errorMessage]="bankAccountsError()"
+      [preselectedBankId]="selectedBankId()"
+      (refresh)="refreshBankAccounts.emit()"
+      (create)="createBankAccount.emit($event)"
+      (editSave)="editSaveBankAccount.emit($event)"
+      (remove)="removeBankAccount.emit($event)"
+      (clearError)="clearBankAccountError.emit()">
+    </app-bank-accounts-mobile>
   }
 
   <!-- FAB: nuevo registro -->

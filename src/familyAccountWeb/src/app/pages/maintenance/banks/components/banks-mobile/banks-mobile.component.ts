@@ -13,7 +13,7 @@ import { addIcons } from 'ionicons';
 import {
   warningOutline, closeOutline, businessOutline, pencilOutline,
   saveOutline, addOutline, trashOutline, chevronDownOutline,
-  chevronForwardOutline, albumsOutline,
+  chevronForwardOutline, albumsOutline, cardOutline,
 } from 'ionicons/icons';
 import {
   IonContent,
@@ -39,8 +39,9 @@ import {
   IonFab,
   IonFabButton,
 } from '@ionic/angular/standalone';
-import { BankDto, CreateBankRequest, UpdateBankRequest } from '../../../../../shared/models';
+import { BankDto, CreateBankRequest, UpdateBankRequest, BankAccountDto, AccountDto, CurrencyDto, CreateBankAccountRequest, UpdateBankAccountRequest } from '../../../../../shared/models';
 import { HeaderComponent, FooterComponent } from '../../../../../components';
+import { BankAccountsMobileComponent } from '../bank-accounts-mobile/bank-accounts-mobile.component';
 
 @Component({
   selector: 'app-banks-mobile',
@@ -75,6 +76,7 @@ import { HeaderComponent, FooterComponent } from '../../../../../components';
     IonCol,
     IonFab,
     IonFabButton,
+    BankAccountsMobileComponent,
   ],
   templateUrl: './banks-mobile.component.html',
 })
@@ -84,11 +86,28 @@ export class BanksMobileComponent {
   deletingId   = input<number | null>(null);
   errorMessage = input('');
 
+  // ── Inputs cuentas bancarias ───────────────────────────────────
+  bankAccounts          = input<BankAccountDto[]>([]);
+  accounts              = input<AccountDto[]>([]);
+  currencies            = input<CurrencyDto[]>([]);
+  bankAccountsLoading   = input(false);
+  bankAccountsDeletingId = input<number | null>(null);
+  bankAccountsError     = input('');
+  selectedBankId        = input<number | null>(null);
+
   refresh    = output<void>();
   create     = output<CreateBankRequest>();
   editSave   = output<UpdateBankRequest & { id: number }>();
   remove     = output<number>();
   clearError = output<void>();
+
+  // ── Outputs cuentas bancarias ─────────────────────────────────
+  selectBank             = output<number | null>();
+  createBankAccount      = output<CreateBankAccountRequest>();
+  editSaveBankAccount    = output<UpdateBankAccountRequest & { id: number }>();
+  removeBankAccount      = output<number>();
+  clearBankAccountError  = output<void>();
+  refreshBankAccounts    = output<void>();
 
   expandedId      = signal<number | null>(null);
   showForm        = signal(false);
@@ -103,11 +122,17 @@ export class BanksMobileComponent {
     this.formCode().trim().length > 0 && this.formName().trim().length > 0,
   );
 
+  selectedBankName = computed(() => {
+    const id = this.selectedBankId();
+    if (id === null) return '';
+    return this.banks().find(b => b.idBank === id)?.nameBank ?? '';
+  });
+
   constructor() {
     addIcons({
       warningOutline, closeOutline, businessOutline, pencilOutline,
       saveOutline, addOutline, trashOutline, chevronDownOutline,
-      chevronForwardOutline, albumsOutline,
+      chevronForwardOutline, albumsOutline, cardOutline,
     });
   }
 

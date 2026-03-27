@@ -1,14 +1,11 @@
-<header
-  [pageTitle]="'BANK_ACCOUNTS.TITLE' | translate"
-  color="theme"
-  [translucent]="true">
-</header>
-
-<ion-content class="ion-padding">
-  <!-- Pull-to-refresh -->
-  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
-    <ion-refresher-content></ion-refresher-content>
-  </ion-refresher>
+<div>
+  <!-- Nueva cuenta (sólo cuando está embebido) -->
+  <div class="ion-padding-horizontal ion-padding-top">
+    <ion-button size="small" color="success" (click)="openCreate()" [disabled]="showForm()">
+      <ion-icon slot="start" name="add-outline"></ion-icon>
+      {{ 'BANK_ACCOUNTS.NEW_BANK_ACCOUNT' | translate }}
+    </ion-button>
+  </div>
 
   <!-- Error -->
   @if (errorMessage()) {
@@ -36,22 +33,6 @@
     </div>
   }
 
-  <!-- Filtro de banco -->
-  @if (banks().length > 0) {
-    <ion-item>
-      <ion-select
-        labelPlacement="floating"
-        [label]="'BANK_ACCOUNTS.FILTER_BANK' | translate"
-        [value]="filterBankId()"
-        (ionChange)="filterBankId.set($event.detail.value)">
-        <ion-select-option [value]="null">— {{ 'BANK_ACCOUNTS.ALL_BANKS' | translate }} —</ion-select-option>
-        @for (bank of banks(); track bank.idBank) {
-          <ion-select-option [value]="bank.idBank">{{ bank.codeBank }} – {{ bank.nameBank }}</ion-select-option>
-        }
-      </ion-select>
-    </ion-item>
-  }
-
   <!-- Formulario crear/editar -->
   @if (showForm()) {
     <ion-card>
@@ -63,24 +44,6 @@
       </ion-card-header>
       <ion-card-content>
         <ion-grid>
-
-          <!-- Banco -->
-          <ion-row>
-            <ion-col size="12">
-              <ion-item>
-                <ion-select
-                  labelPlacement="floating"
-                  [label]="'BANK_ACCOUNTS.FORM.BANK_LABEL' | translate"
-                  [value]="formBankId()"
-                  (ionChange)="formBankId.set($event.detail.value)">
-                  <ion-select-option [value]="null">— {{ 'BANK_ACCOUNTS.FORM.SELECT_BANK' | translate }} —</ion-select-option>
-                  @for (bank of banks(); track bank.idBank) {
-                    <ion-select-option [value]="bank.idBank">{{ bank.codeBank }} – {{ bank.nameBank }}</ion-select-option>
-                  }
-                </ion-select>
-              </ion-item>
-            </ion-col>
-          </ion-row>
 
           <!-- Cuenta Contable -->
           <ion-row>
@@ -286,17 +249,4 @@
     </ion-list>
   }
 
-  <!-- FAB: nueva cuenta -->
-  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-    <ion-fab-button
-      color="success"
-      (click)="openCreate()"
-      [disabled]="showForm()"
-      [attr.aria-label]="'BANK_ACCOUNTS.NEW_BANK_ACCOUNT' | translate">
-      <ion-icon name="add-outline"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
-</ion-content>
-
-<!-- Footer -->
-<app-footer></app-footer>
+</div>

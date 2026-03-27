@@ -5,11 +5,45 @@ import {
   output,
   signal,
   computed,
+  linkedSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NgxDatatableModule, ColumnMode } from '@swimlane/ngx-datatable';
-import { PanelComponent } from '../../../../../components';
+import { TranslatePipe } from '@ngx-translate/core';
+import { addIcons } from 'ionicons';
+import {
+  warningOutline,
+  closeOutline,
+  cardOutline,
+  pencilOutline,
+  saveOutline,
+  addOutline,
+  trashOutline,
+  chevronDownOutline,
+  chevronForwardOutline,
+  albumsOutline,
+} from 'ionicons/icons';
+import {
+  IonSpinner,
+  IonText,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonBadge,
+  IonButton,
+  IonIcon,
+  IonInput,
+  IonToggle,
+  IonSelect,
+  IonSelectOption,
+  IonGrid,
+  IonRow,
+  IonCol,
+} from '@ionic/angular/standalone';
 import {
   BankAccountDto,
   BankDto,
@@ -20,16 +54,38 @@ import {
 } from '../../../../../shared/models';
 
 @Component({
-  selector: 'app-bank-accounts-web',
+  selector: 'app-bank-accounts-mobile',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, FormsModule, NgxDatatableModule, PanelComponent],
-  templateUrl: './bank-accounts-web.component.html',
+  imports: [
+    CommonModule,
+    FormsModule,
+    TranslatePipe,
+    IonSpinner,
+    IonText,
+    IonList,
+    IonItem,
+    IonLabel,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardContent,
+    IonBadge,
+    IonButton,
+    IonIcon,
+    IonInput,
+    IonToggle,
+    IonSelect,
+    IonSelectOption,
+    IonGrid,
+    IonRow,
+    IonCol,
+  ],
+  templateUrl: './bank-accounts-mobile.component.html',
 })
-export class BankAccountsWebComponent {
+export class BankAccountsMobileComponent {
   // ── Inputs ──────────────────────────────────────────────────────
   bankAccounts = input<BankAccountDto[]>([]);
-  totalCount   = input(0);
   banks        = input<BankDto[]>([]);
   accounts     = input<AccountDto[]>([]);
   currencies   = input<CurrencyDto[]>([]);
@@ -44,12 +100,14 @@ export class BankAccountsWebComponent {
   remove     = output<number>();
   clearError = output<void>();
 
-  // ── Estado de filtros ────────────────────────────────────────────
-  filterBankId    = signal<number | null>(null);
-  filterSearch    = signal('');
-  filterActive    = signal('');
+  // ── Config ──────────────────────────────────────────────────────
+  preselectedBankId = input<number | null>(null);
+
+  // ── Estado de filtro ────────────────────────────────────────────
+  filterBankId = linkedSignal<number | null>(() => this.preselectedBankId());
 
   // ── Estado del formulario ────────────────────────────────────────
+  expandedId      = signal<number | null>(null);
   showForm        = signal(false);
   editingId       = signal<number | null>(null);
   formBankId      = signal<number | null>(null);
@@ -61,13 +119,8 @@ export class BankAccountsWebComponent {
   formIsActive    = signal(true);
   confirmDeleteId = signal<number | null>(null);
 
-  ColumnMode = ColumnMode;
-
   // ── Computados ───────────────────────────────────────────────────
-  isEditing  = computed(() => this.editingId() !== null);
-  formTitle  = computed(() =>
-    this.isEditing() ? 'Editar Cuenta Bancaria' : 'Nueva Cuenta Bancaria',
-  );
+  isEditing   = computed(() => this.editingId() !== null);
   isFormValid = computed(() =>
     this.formBankId() !== null &&
     this.formAccountId() !== null &&
@@ -78,31 +131,34 @@ export class BankAccountsWebComponent {
   );
 
   filteredItems = computed(() => {
-    let items = this.bankAccounts();
     const bankId = this.filterBankId();
-    const search = this.filterSearch().toLowerCase().trim();
-    const active = this.filterActive();
-    if (bankId !== null) items = items.filter(b => b.idBank === bankId);
-    if (search) {
-      items = items.filter(b =>
-        b.codeBankAccount.toLowerCase().includes(search) ||
-        b.accountNumber.toLowerCase().includes(search) ||
-        b.accountHolder.toLowerCase().includes(search) ||
-        b.nameAccount.toLowerCase().includes(search),
-      );
-    }
-    if (active === 'true')  items = items.filter(b => b.isActive);
-    if (active === 'false') items = items.filter(b => !b.isActive);
-    return items;
+    if (bankId === null) return this.bankAccounts();
+    return this.bankAccounts().filter(b => b.idBank === bankId);
   });
 
-  selectedBankName = computed(() => {
-    const id = this.filterBankId();
-    if (id === null) return null;
-    return this.banks().find(b => b.idBank === id)?.nameBank ?? null;
-  });
+  activeAccounts = computed(() =>
+    this.accounts().filter(a => a.allowsMovements && a.isActive),
+  );
 
-  // ── Acciones del formulario ──────────────────────────────────────
+  constructor() {
+    addIcons({
+      warningOutline,
+      closeOutline,
+      cardOutline,
+      pencilOutline,
+      saveOutline,
+      addOutline,
+      trashOutline,
+      chevronDownOutline,
+      chevronForwardOutline,
+      albumsOutline,
+    });
+  }
+
+  toggleExpand(id: number): void {
+    this.expandedId.update(v => (v === id ? null : id));
+  }
+
   openCreate(): void {
     this.editingId.set(null);
     this.formBankId.set(this.filterBankId());
@@ -127,10 +183,7 @@ export class BankAccountsWebComponent {
     this.showForm.set(true);
   }
 
-  cancelForm(): void {
-    this.showForm.set(false);
-    this.editingId.set(null);
-  }
+  cancelForm(): void { this.showForm.set(false); this.editingId.set(null); }
 
   submitForm(): void {
     if (!this.isFormValid()) return;
@@ -157,13 +210,6 @@ export class BankAccountsWebComponent {
 
   confirmDelete(): void {
     const id = this.confirmDeleteId();
-    if (id !== null) {
-      this.remove.emit(id);
-      this.confirmDeleteId.set(null);
-    }
-  }
-
-  onFilterBankChange(value: string): void {
-    this.filterBankId.set(value ? +value : null);
+    if (id !== null) { this.remove.emit(id); this.confirmDeleteId.set(null); }
   }
 }

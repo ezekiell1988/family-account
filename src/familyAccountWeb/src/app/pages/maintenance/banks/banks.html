@@ -4,11 +4,24 @@
     [isLoading]="isLoading()"
     [deletingId]="deletingId()"
     [errorMessage]="error() ?? ''"
+    [bankAccounts]="bankAccounts()"
+    [accounts]="accounts()"
+    [currencies]="currencies()"
+    [bankAccountsLoading]="bankAccountsIsLoading()"
+    [bankAccountsDeletingId]="deletingBankAccountId()"
+    [bankAccountsError]="bankAccountsError() ?? ''"
+    [selectedBankId]="selectedBankId()"
     (refresh)="load()"
     (create)="onCreate($event)"
     (editSave)="onEditSave($event)"
     (remove)="onDelete($event)"
-    (clearError)="clearError()">
+    (clearError)="clearError()"
+    (selectBank)="onSelectBank($event)"
+    (createBankAccount)="onBankAccountCreate($event)"
+    (editSaveBankAccount)="onBankAccountEditSave($event)"
+    (removeBankAccount)="onBankAccountDelete($event)"
+    (clearBankAccountError)="clearBankAccountError()"
+    (refreshBankAccounts)="loadBankAccounts()">
   </app-banks-mobile>
 } @else {
   <app-banks-web
@@ -17,10 +30,30 @@
     [isLoading]="isLoading()"
     [deletingId]="deletingId()"
     [errorMessage]="error() ?? ''"
+    [selectedBankId]="selectedBankId()"
     (refresh)="load()"
     (create)="onCreate($event)"
     (editSave)="onEditSave($event)"
     (remove)="onDelete($event)"
-    (clearError)="clearError()">
+    (clearError)="clearError()"
+    (selectBank)="onSelectBank($event)">
   </app-banks-web>
+  @if (selectedBankId() !== null) {
+    <app-bank-accounts-web
+      [bankAccounts]="bankAccounts()"
+      [totalCount]="bankAccountsTotalCount()"
+      [banks]="banks()"
+      [accounts]="accounts()"
+      [currencies]="currencies()"
+      [isLoading]="bankAccountsIsLoading()"
+      [deletingId]="deletingBankAccountId()"
+      [errorMessage]="bankAccountsError() ?? ''"
+      [preselectedBankId]="selectedBankId()"
+      (refresh)="loadBankAccounts()"
+      (create)="onBankAccountCreate($event)"
+      (editSave)="onBankAccountEditSave($event)"
+      (remove)="onBankAccountDelete($event)"
+      (clearError)="clearBankAccountError()">
+    </app-bank-accounts-web>
+  }
 }

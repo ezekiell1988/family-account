@@ -134,7 +134,7 @@
       </ng-template>
     </ngx-datatable-column>
 
-    <ngx-datatable-column name="Acciones" [minWidth]="85" [maxWidth]="100" [sortable]="false">
+    <ngx-datatable-column name="Acciones" [minWidth]="120" [maxWidth]="140" [sortable]="false">
       <ng-template ngx-datatable-cell-template let-row="row">
         <div class="d-flex gap-1">
           <button class="btn btn-xs btn-info"
@@ -152,6 +152,13 @@
             } @else {
               <i class="fa fa-trash"></i>
             }
+          </button>
+          <button class="btn btn-xs"
+            [class.btn-warning]="selectedBankId() === row.idBank"
+            [class.btn-secondary]="selectedBankId() !== row.idBank"
+            (click)="selectBank.emit(selectedBankId() === row.idBank ? null : row.idBank)"
+            title="Cuentas bancarias">
+            <i class="fa fa-credit-card"></i>
           </button>
         </div>
       </ng-template>

@@ -5,50 +5,12 @@ import {
   output,
   signal,
   computed,
+  linkedSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslatePipe } from '@ngx-translate/core';
-import { addIcons } from 'ionicons';
-import {
-  warningOutline,
-  closeOutline,
-  cardOutline,
-  pencilOutline,
-  saveOutline,
-  addOutline,
-  trashOutline,
-  chevronDownOutline,
-  chevronForwardOutline,
-  albumsOutline,
-} from 'ionicons/icons';
-import {
-  IonContent,
-  IonRefresher,
-  IonRefresherContent,
-  IonSpinner,
-  IonText,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardContent,
-  IonBadge,
-  IonButton,
-  IonIcon,
-  IonInput,
-  IonToggle,
-  IonSelect,
-  IonSelectOption,
-  IonGrid,
-  IonRow,
-  IonCol,
-  IonFab,
-  IonFabButton,
-} from '@ionic/angular/standalone';
-import { HeaderComponent, FooterComponent } from '../../../../../components';
+import { NgxDatatableModule, ColumnMode } from '@swimlane/ngx-datatable';
+import { PanelComponent } from '../../../../../components';
 import {
   BankAccountDto,
   BankDto,
@@ -59,46 +21,16 @@ import {
 } from '../../../../../shared/models';
 
 @Component({
-  selector: 'app-bank-accounts-mobile',
-  host: { class: 'ion-page' },
+  selector: 'app-bank-accounts-web',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    TranslatePipe,
-    HeaderComponent,
-    FooterComponent,
-    IonContent,
-    IonRefresher,
-    IonRefresherContent,
-    IonSpinner,
-    IonText,
-    IonList,
-    IonItem,
-    IonLabel,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardContent,
-    IonBadge,
-    IonButton,
-    IonIcon,
-    IonInput,
-    IonToggle,
-    IonSelect,
-    IonSelectOption,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonFab,
-    IonFabButton,
-  ],
-  templateUrl: './bank-accounts-mobile.component.html',
+  imports: [CommonModule, FormsModule, NgxDatatableModule, PanelComponent],
+  templateUrl: './bank-accounts-web.component.html',
 })
-export class BankAccountsMobileComponent {
+export class BankAccountsWebComponent {
   // ── Inputs ──────────────────────────────────────────────────────
   bankAccounts = input<BankAccountDto[]>([]);
+  totalCount   = input(0);
   banks        = input<BankDto[]>([]);
   accounts     = input<AccountDto[]>([]);
   currencies   = input<CurrencyDto[]>([]);
@@ -113,11 +45,16 @@ export class BankAccountsMobileComponent {
   remove     = output<number>();
   clearError = output<void>();
 
-  // ── Estado de filtro ─────────────────────────────────────────────
-  filterBankId = signal<number | null>(null);
+  // ── Config ──────────────────────────────────────────────────────
+  preselectedBankId = input<number | null>(null);
+  isBankPreselected = computed(() => this.preselectedBankId() !== null);
+
+  // ── Estado de filtros ────────────────────────────────────────────
+  filterBankId    = linkedSignal<number | null>(() => this.preselectedBankId());
+  filterSearch    = signal('');
+  filterActive    = signal('');
 
   // ── Estado del formulario ────────────────────────────────────────
-  expandedId      = signal<number | null>(null);
   showForm        = signal(false);
   editingId       = signal<number | null>(null);
   formBankId      = signal<number | null>(null);
@@ -129,8 +66,13 @@ export class BankAccountsMobileComponent {
   formIsActive    = signal(true);
   confirmDeleteId = signal<number | null>(null);
 
+  ColumnMode = ColumnMode;
+
   // ── Computados ───────────────────────────────────────────────────
-  isEditing   = computed(() => this.editingId() !== null);
+  isEditing  = computed(() => this.editingId() !== null);
+  formTitle  = computed(() =>
+    this.isEditing() ? 'Editar Cuenta Bancaria' : 'Nueva Cuenta Bancaria',
+  );
   isFormValid = computed(() =>
     this.formBankId() !== null &&
     this.formAccountId() !== null &&
@@ -141,40 +83,31 @@ export class BankAccountsMobileComponent {
   );
 
   filteredItems = computed(() => {
+    let items = this.bankAccounts();
     const bankId = this.filterBankId();
-    if (bankId === null) return this.bankAccounts();
-    return this.bankAccounts().filter(b => b.idBank === bankId);
+    const search = this.filterSearch().toLowerCase().trim();
+    const active = this.filterActive();
+    if (bankId !== null) items = items.filter(b => b.idBank === bankId);
+    if (search) {
+      items = items.filter(b =>
+        b.codeBankAccount.toLowerCase().includes(search) ||
+        b.accountNumber.toLowerCase().includes(search) ||
+        b.accountHolder.toLowerCase().includes(search) ||
+        b.nameAccount.toLowerCase().includes(search),
+      );
+    }
+    if (active === 'true')  items = items.filter(b => b.isActive);
+    if (active === 'false') items = items.filter(b => !b.isActive);
+    return items;
   });
 
-  activeAccounts = computed(() =>
-    this.accounts().filter(a => a.allowsMovements && a.isActive),
-  );
+  selectedBankName = computed(() => {
+    const id = this.filterBankId();
+    if (id === null) return null;
+    return this.banks().find(b => b.idBank === id)?.nameBank ?? null;
+  });
 
-  constructor() {
-    addIcons({
-      warningOutline,
-      closeOutline,
-      cardOutline,
-      pencilOutline,
-      saveOutline,
-      addOutline,
-      trashOutline,
-      chevronDownOutline,
-      chevronForwardOutline,
-      albumsOutline,
-    });
-  }
-
-  toggleExpand(id: number): void {
-    this.expandedId.update(v => (v === id ? null : id));
-  }
-
-  async handleRefresh(event: CustomEvent): Promise<void> {
-    this.refresh.emit();
-    await new Promise(r => setTimeout(r, 800));
-    (event.target as HTMLIonRefresherElement).complete();
-  }
-
+  // ── Acciones del formulario ──────────────────────────────────────
   openCreate(): void {
     this.editingId.set(null);
     this.formBankId.set(this.filterBankId());
@@ -199,7 +132,10 @@ export class BankAccountsMobileComponent {
     this.showForm.set(true);
   }
 
-  cancelForm(): void { this.showForm.set(false); this.editingId.set(null); }
+  cancelForm(): void {
+    this.showForm.set(false);
+    this.editingId.set(null);
+  }
 
   submitForm(): void {
     if (!this.isFormValid()) return;
@@ -226,6 +162,13 @@ export class BankAccountsMobileComponent {
 
   confirmDelete(): void {
     const id = this.confirmDeleteId();
-    if (id !== null) { this.remove.emit(id); this.confirmDeleteId.set(null); }
+    if (id !== null) {
+      this.remove.emit(id);
+      this.confirmDeleteId.set(null);
+    }
+  }
+
+  onFilterBankChange(value: string): void {
+    this.filterBankId.set(value ? +value : null);
   }
 }

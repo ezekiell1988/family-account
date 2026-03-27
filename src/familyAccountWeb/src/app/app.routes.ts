@@ -2,7 +2,6 @@ import { Routes } from "@angular/router";
 import {
   AccountsPage,
   BanksPage,
-  BankAccountsPage,
   AccountingEntriesPage,
   ErrorPage,
   LoginPage,

@@ -25,12 +25,14 @@ export class BanksWebComponent {
   isLoading    = input(false);
   deletingId   = input<number | null>(null);
   errorMessage = input('');
+  selectedBankId = input<number | null>(null);
 
   refresh    = output<void>();
   create     = output<CreateBankRequest>();
   editSave   = output<UpdateBankRequest & { id: number }>();
   remove     = output<number>();
   clearError = output<void>();
+  selectBank = output<number | null>();
 
   filterSearch    = signal('');
   filterActive    = signal('');
