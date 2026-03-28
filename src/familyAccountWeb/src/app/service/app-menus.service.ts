@@ -53,6 +53,13 @@ export class AppMenuService {
           url: "/process/accounting-entries",
           roles: [1, 2],
         },
+        {
+          icon: "fa fa-bank",
+          iconMobile: "card-outline",
+          title: "Movimientos Bancarios",
+          url: "/process/bank-movements",
+          roles: [1, 2],
+        },
       ],
     },
     {

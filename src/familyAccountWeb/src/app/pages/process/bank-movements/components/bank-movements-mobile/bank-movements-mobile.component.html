@@ -1,0 +1,464 @@
+<header
+  pageTitle="Movimientos Bancarios"
+  color="theme"
+  [translucent]="true">
+</header>
+
+<ion-content class="ion-padding">
+
+  <!-- Pull-to-refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Error -->
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="clearError.emit()">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
+
+  <!-- Spinner -->
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  <!-- ── FORMULARIO ──────────────────────────────────────────────── -->
+  @if (showForm()) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon [name]="isEditing() ? 'pencil-outline' : 'swap-horizontal-outline'"></ion-icon>
+          {{ formTitle() }}
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-grid>
+
+          <!-- Cuenta bancaria -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-select fill="outline" labelPlacement="floating" label="Cuenta bancaria"
+                [value]="formBankAccount()"
+                (ionChange)="formBankAccount.set($event.detail.value)">
+                <ion-select-option [value]="0">— Seleccione cuenta —</ion-select-option>
+                @for (ba of bankAccounts(); track ba.idBankAccount) {
+                  <ion-select-option [value]="ba.idBankAccount">
+                    {{ ba.codeBankAccount }} – {{ ba.accountNumber }}
+                  </ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+
+          <!-- Tipo de movimiento -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-select fill="outline" labelPlacement="floating" label="Tipo de movimiento"
+                [value]="formMovementType()"
+                (ionChange)="formMovementType.set($event.detail.value)">
+                <ion-select-option [value]="0">— Seleccione tipo —</ion-select-option>
+                @for (mt of movementTypes(); track mt.idBankMovementType) {
+                  @if (mt.isActive) {
+                    <ion-select-option [value]="mt.idBankMovementType">
+                      {{ mt.codeBankMovementType }} – {{ mt.nameBankMovementType }}
+                    </ion-select-option>
+                  }
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+
+          <!-- Período fiscal -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-select fill="outline" labelPlacement="floating" label="Período fiscal"
+                [value]="formFiscalPeriod()"
+                (ionChange)="formFiscalPeriod.set($event.detail.value)">
+                <ion-select-option [value]="0">— Seleccione período —</ion-select-option>
+                @for (fp of fiscalPeriods(); track fp.idFiscalPeriod) {
+                  <ion-select-option [value]="fp.idFiscalPeriod">
+                    {{ fp.namePeriod }}
+                    @if (fp.statusPeriod !== 'Abierto') { ({{ fp.statusPeriod }}) }
+                  </ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+
+          <!-- Número + Fecha -->
+          <ion-row>
+            <ion-col size="7">
+              <ion-input fill="outline" labelPlacement="floating" label="Número"
+                placeholder="MOV-2025-001"
+                [value]="formNumber()"
+                (ionInput)="formNumber.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+            <ion-col size="5">
+              <ion-input fill="outline" labelPlacement="floating" label="Fecha"
+                type="date"
+                [value]="formDate()"
+                (ionChange)="formDate.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+
+          <!-- Monto + T/C -->
+          <ion-row>
+            <ion-col size="6">
+              <ion-input fill="outline" labelPlacement="floating" label="Monto"
+                type="number" min="0.01" step="0.01"
+                [value]="formAmount() || ''"
+                (ionInput)="formAmount.set(+$any($event.target).value)">
+              </ion-input>
+            </ion-col>
+            <ion-col size="6">
+              <ion-input fill="outline" labelPlacement="floating" label="T/C"
+                type="number" min="0.000001" step="0.01"
+                [value]="formExchangeRate()"
+                (ionInput)="formExchangeRate.set(+$any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+
+          <!-- Estado -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-select fill="outline" labelPlacement="floating" label="Estado"
+                [value]="formStatus()"
+                (ionChange)="formStatus.set($event.detail.value)">
+                @for (s of statusOptions; track s) {
+                  <ion-select-option [value]="s">{{ s }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+
+          <!-- Descripción -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-input fill="outline" labelPlacement="floating" label="Descripción"
+                [value]="formDescription()"
+                (ionInput)="formDescription.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+
+          <!-- Referencia -->
+          <ion-row>
+            <ion-col size="12">
+              <ion-input fill="outline" labelPlacement="floating" label="Referencia (opcional)"
+                placeholder="N.º cheque, transferencia..."
+                [value]="formReference()"
+                (ionInput)="formReference.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+
+        </ion-grid>
+
+        <!-- Documentos de soporte -->
+        <div class="ion-margin-top">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <strong>Documentos de soporte</strong>
+            <ion-button fill="outline" size="small" (click)="addDocument()">
+              <ion-icon slot="start" name="add-outline"></ion-icon>Agregar
+            </ion-button>
+          </div>
+
+          @for (doc of formDocuments(); track $index; let idx = $index) {
+            <ion-card style="margin:0 0 8px;box-shadow:none;border:1px solid var(--ion-color-light-shade)">
+              <ion-card-content>
+                <ion-grid class="ion-no-padding">
+                  <ion-row>
+                    <ion-col size="10">
+                      <ion-select fill="outline" labelPlacement="floating" label="Tipo"
+                        [value]="doc.typeDocument"
+                        (ionChange)="updateDoc(idx, 'typeDocument', $event.detail.value)">
+                        @for (dt of docTypeOptions; track dt) {
+                          <ion-select-option [value]="dt">{{ dt }}</ion-select-option>
+                        }
+                      </ion-select>
+                    </ion-col>
+                    <ion-col size="2" class="ion-align-self-center">
+                      <ion-button fill="clear" color="danger" size="small" (click)="removeDocument(idx)">
+                        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                      </ion-button>
+                    </ion-col>
+                  </ion-row>
+                  <ion-row>
+                    <ion-col size="6">
+                      <ion-input fill="outline" labelPlacement="floating" label="Número"
+                        [value]="doc.numberDocument"
+                        (ionInput)="updateDoc(idx, 'numberDocument', $any($event.target).value)">
+                      </ion-input>
+                    </ion-col>
+                    <ion-col size="6">
+                      <ion-input fill="outline" labelPlacement="floating" label="Fecha"
+                        type="date"
+                        [value]="doc.dateDocument"
+                        (ionChange)="updateDoc(idx, 'dateDocument', $any($event.target).value)">
+                      </ion-input>
+                    </ion-col>
+                  </ion-row>
+                  <ion-row>
+                    <ion-col size="5">
+                      <ion-input fill="outline" labelPlacement="floating" label="Monto"
+                        type="number" min="0.01" step="0.01"
+                        [value]="doc.amountDocument || ''"
+                        (ionInput)="updateDoc(idx, 'amountDocument', +$any($event.target).value)">
+                      </ion-input>
+                    </ion-col>
+                    <ion-col size="7">
+                      <ion-input fill="outline" labelPlacement="floating" label="Descripción"
+                        [value]="doc.descriptionDocument"
+                        (ionInput)="updateDoc(idx, 'descriptionDocument', $any($event.target).value)">
+                      </ion-input>
+                    </ion-col>
+                  </ion-row>
+                </ion-grid>
+              </ion-card-content>
+            </ion-card>
+          }
+        </div>
+
+        <!-- Botones del formulario -->
+        <ion-grid class="ion-margin-top">
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" (click)="submitForm()" [disabled]="!isFormValid()">
+                <ion-icon slot="start" name="save-outline"></ion-icon>
+                {{ isEditing() ? 'Guardar' : 'Crear' }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelForm()">
+                <ion-icon slot="start" name="close-outline"></ion-icon>
+                Cancelar
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- ── CONFIRMACIÓN ELIMINAR ───────────────────────────────────── -->
+  @if (confirmDeleteId() !== null) {
+    <ion-card color="warning">
+      <ion-card-content>
+        <ion-grid>
+          <ion-row class="ion-align-items-center">
+            <ion-col>
+              <ion-icon name="warning-outline"></ion-icon>
+              ¿Eliminar este movimiento? Esta acción no se puede deshacer.
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" color="danger" (click)="confirmDelete()">
+                <ion-icon slot="start" name="trash-outline"></ion-icon>Eliminar
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="dark" (click)="cancelDelete()">
+                Cancelar
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- ── CONFIRMACIÓN CONFIRMAR / ANULAR ────────────────────────── -->
+  @if (confirmActionId() !== null) {
+    <ion-card [color]="confirmActionId()!.action === 'confirm' ? 'success' : 'warning'">
+      <ion-card-content>
+        <ion-grid>
+          <ion-row class="ion-align-items-center">
+            <ion-col>
+              @if (confirmActionId()!.action === 'confirm') {
+                <ion-icon name="checkmark-outline"></ion-icon>
+                ¿Confirmar este movimiento? Se generará un asiento contable automáticamente.
+              } @else {
+                <ion-icon name="ban-outline"></ion-icon>
+                ¿Anular este movimiento?
+              }
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block"
+                [color]="confirmActionId()!.action === 'confirm' ? 'success' : 'warning'"
+                (click)="doAction()">
+                {{ confirmActionId()!.action === 'confirm' ? 'Confirmar' : 'Anular' }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="dark" (click)="cancelAction()">
+                Cancelar
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- ── LISTA DE MOVIMIENTOS ────────────────────────────────────── -->
+  @if (!isLoading() && movements().length === 0) {
+    <div class="ion-text-center ion-padding">
+      <ion-icon name="list-outline" style="font-size:3rem;color:var(--ion-color-medium)"></ion-icon>
+      <p>No hay movimientos bancarios registrados.</p>
+    </div>
+  }
+
+  <ion-list>
+    @for (mov of movements(); track mov.idBankMovement) {
+      <ion-item button="true" detail="false" (click)="toggleExpand(mov.idBankMovement)">
+        <ion-icon slot="start"
+          [name]="expandedId() === mov.idBankMovement ? 'chevron-down-outline' : 'chevron-forward-outline'"
+          color="medium" aria-hidden="true">
+        </ion-icon>
+        <ion-label>
+          <h2><strong class="font-monospace">{{ mov.numberMovement }}</strong></h2>
+          <p>{{ mov.dateMovement }} · {{ mov.codeBankAccount }}</p>
+          <p>{{ mov.nameBankMovementType }}
+            <ion-badge [color]="getSignColor(mov.movementSign)" style="vertical-align:middle">
+              {{ mov.movementSign }}
+            </ion-badge>
+          </p>
+        </ion-label>
+        <div slot="end" style="text-align:right">
+          <ion-badge [color]="getStatusColor(mov.statusMovement)">{{ mov.statusMovement }}</ion-badge>
+          <p class="font-monospace" style="margin:4px 0 0;font-size:0.85rem">{{ formatAmount(mov.amount) }}</p>
+        </div>
+      </ion-item>
+
+      <!-- Detalle expandible -->
+      @if (expandedId() === mov.idBankMovement) {
+        <ion-card style="margin:0 8px 8px;box-shadow:none;border-left:4px solid var(--ion-color-primary)">
+          <ion-card-content>
+
+            <!-- Info cabecera -->
+            <ion-grid class="ion-no-padding">
+              <ion-row>
+                <ion-col size="6">
+                  <ion-note>Período</ion-note>
+                  <p>{{ mov.nameFiscalPeriod }}</p>
+                </ion-col>
+                <ion-col size="6">
+                  <ion-note>T/C</ion-note>
+                  <p class="font-monospace">{{ mov.exchangeRateValue | number:'1.2-6' }}</p>
+                </ion-col>
+                @if (mov.referenceMovement) {
+                  <ion-col size="12">
+                    <ion-note>Referencia</ion-note>
+                    <p>{{ mov.referenceMovement }}</p>
+                  </ion-col>
+                }
+                @if (mov.descriptionMovement) {
+                  <ion-col size="12">
+                    <ion-note>Descripción</ion-note>
+                    <p>{{ mov.descriptionMovement }}</p>
+                  </ion-col>
+                }
+              </ion-row>
+            </ion-grid>
+
+            <!-- Documentos -->
+            @if (mov.documents && mov.documents.length > 0) {
+              <div class="ion-margin-top">
+                <p><strong><ion-icon name="document-attach-outline"></ion-icon> Documentos</strong></p>
+                @for (doc of mov.documents; track doc.idBankMovementDocument) {
+                  <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--ion-color-light-shade)">
+                    <div style="flex:1;font-size:0.85rem">
+                      <ion-badge color="secondary">{{ doc.typeDocument }}</ion-badge>
+                      @if (doc.numberDocument) { {{ doc.numberDocument }} }
+                      @if (doc.descriptionDocument) {
+                        <br><ion-note>{{ doc.descriptionDocument }}</ion-note>
+                      }
+                    </div>
+                    <div style="text-align:right;font-size:0.85rem;font-family:monospace;min-width:80px">
+                      {{ formatAmount(doc.amountDocument) }}
+                    </div>
+                  </div>
+                }
+                <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:bold;font-size:0.85rem">
+                  <span>Total docs</span>
+                  <span class="font-monospace">{{ formatAmount(getDocTotal(mov)) }}</span>
+                </div>
+              </div>
+            }
+
+            <!-- Acciones -->
+            <ion-grid class="ion-no-padding ion-margin-top">
+              <ion-row>
+                @if (canEdit(mov.statusMovement)) {
+                  <ion-col>
+                    <ion-button expand="block" size="small" (click)="openEdit(mov)">
+                      <ion-icon slot="start" name="pencil-outline"></ion-icon>Editar
+                    </ion-button>
+                  </ion-col>
+                }
+                @if (canConfirm(mov.statusMovement)) {
+                  <ion-col>
+                    <ion-button expand="block" size="small" color="success"
+                      (click)="askAction(mov.idBankMovement, 'confirm')">
+                      <ion-icon slot="start" name="checkmark-outline"></ion-icon>Confirmar
+                    </ion-button>
+                  </ion-col>
+                }
+                @if (canCancel(mov.statusMovement)) {
+                  <ion-col>
+                    <ion-button expand="block" size="small" color="warning"
+                      (click)="askAction(mov.idBankMovement, 'cancel')">
+                      <ion-icon slot="start" name="ban-outline"></ion-icon>Anular
+                    </ion-button>
+                  </ion-col>
+                }
+                @if (canDelete(mov.statusMovement)) {
+                  <ion-col>
+                    <ion-button expand="block" size="small" fill="outline" color="danger"
+                      [disabled]="deletingId() === mov.idBankMovement"
+                      (click)="askDelete(mov.idBankMovement)">
+                      <ion-icon slot="start" name="trash-outline"></ion-icon>Eliminar
+                    </ion-button>
+                  </ion-col>
+                }
+              </ion-row>
+            </ion-grid>
+
+          </ion-card-content>
+        </ion-card>
+      }
+    }
+  </ion-list>
+
+</ion-content>
+
+<!-- FAB nuevo movimiento -->
+<ion-fab slot="fixed" vertical="bottom" horizontal="end">
+  <ion-fab-button color="primary" [disabled]="showForm()" (click)="openCreate()">
+    <ion-icon name="add-outline"></ion-icon>
+  </ion-fab-button>
+</ion-fab>
+
+<app-footer></app-footer>

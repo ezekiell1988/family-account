@@ -124,13 +124,73 @@ public sealed class BankMovementService(AppDbContext db) : IBankMovementService
 
     public async Task<BankMovementResponse?> ConfirmAsync(int idBankMovement, CancellationToken ct = default)
     {
-        var entity = await db.BankMovement.FindAsync([idBankMovement], ct);
+        var entity = await db.BankMovement
+            .Include(bm => bm.IdBankAccountNavigation)
+                .ThenInclude(ba => ba.IdCurrencyNavigation)
+            .Include(bm => bm.IdBankMovementTypeNavigation)
+            .Include(bm => bm.BankMovementDocuments)
+            .FirstOrDefaultAsync(bm => bm.IdBankMovement == idBankMovement, ct);
+
         if (entity is null) return null;
 
         if (entity.StatusMovement != "Borrador")
             throw new InvalidOperationException($"Solo se puede confirmar un movimiento en estado 'Borrador'. Estado actual: '{entity.StatusMovement}'.");
 
+        // ── Crear asiento contable automático ────────────────────────────
+        var bankAccount     = entity.IdBankAccountNavigation;
+        var movementType    = entity.IdBankMovementTypeNavigation;
+        var isCargo         = movementType.MovementSign == "Cargo";
+
+        var accountingEntry = new AccountingEntry
+        {
+            IdFiscalPeriod    = entity.IdFiscalPeriod,
+            IdCurrency        = bankAccount.IdCurrency,
+            NumberEntry       = $"ASI-{entity.NumberMovement}",
+            DateEntry         = entity.DateMovement,
+            DescriptionEntry  = entity.DescriptionMovement,
+            StatusEntry       = "Publicado",
+            ReferenceEntry    = entity.NumberMovement,
+            ExchangeRateValue = entity.ExchangeRateValue,
+            CreatedAt         = DateTime.UtcNow,
+            AccountingEntryLines =
+            [
+                new AccountingEntryLine
+                {
+                    IdAccount       = isCargo ? bankAccount.IdAccount : movementType.IdAccountCounterpart,
+                    DebitAmount     = entity.Amount,
+                    CreditAmount    = 0,
+                    DescriptionLine = entity.DescriptionMovement
+                },
+                new AccountingEntryLine
+                {
+                    IdAccount       = isCargo ? movementType.IdAccountCounterpart : bankAccount.IdAccount,
+                    DebitAmount     = 0,
+                    CreditAmount    = entity.Amount,
+                    DescriptionLine = entity.DescriptionMovement
+                },
+            ]
+        };
+
+        db.AccountingEntry.Add(accountingEntry);
+
+        // Agregar documento tipo "Asiento" vinculado al asiento creado
+        entity.BankMovementDocuments.Add(new BankMovementDocument
+        {
+            TypeDocument        = "Asiento",
+            NumberDocument      = $"ASI-{entity.NumberMovement}",
+            DateDocument        = entity.DateMovement,
+            AmountDocument      = entity.Amount,
+            DescriptionDocument = entity.DescriptionMovement,
+        });
+
         entity.StatusMovement = "Confirmado";
+
+        // Primero guardar para obtener IdAccountingEntry
+        await db.SaveChangesAsync(ct);
+
+        // Vincular el documento al asiento recién creado
+        var doc = entity.BankMovementDocuments.Last();
+        doc.IdAccountingEntry = accountingEntry.IdAccountingEntry;
         await db.SaveChangesAsync(ct);
 
         return await GetByIdAsync(idBankMovement, ct);

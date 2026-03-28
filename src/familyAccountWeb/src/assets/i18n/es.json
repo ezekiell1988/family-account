@@ -667,5 +667,48 @@
       "IS_ACTIVE": "Activo",
       "CREATE_BTN": "Crear cuenta"
     }
+  },
+  "BANK_MOVEMENTS": {
+    "TITLE": "Movimientos Bancarios",
+    "SUBTITLE": "Registro de movimientos de cuentas bancarias",
+    "NEW": "Nuevo movimiento",
+    "EMPTY": "No hay movimientos bancarios registrados.",
+    "CONFIRM_DELETE": "¿Eliminar este movimiento? Esta acción no se puede deshacer.",
+    "CONFIRM_ACTION": "¿Confirmar este movimiento? Se generará un asiento contable automáticamente.",
+    "CANCEL_ACTION": "¿Anular este movimiento?",
+    "STATUS": {
+      "DRAFT": "Borrador",
+      "CONFIRMED": "Confirmado",
+      "CANCELLED": "Anulado"
+    },
+    "SIGN": {
+      "DEBIT": "Cargo",
+      "CREDIT": "Abono"
+    },
+    "FORM": {
+      "NEW_TITLE": "Nuevo Movimiento Bancario",
+      "EDIT_TITLE": "Editar Movimiento Bancario",
+      "BANK_ACCOUNT": "Cuenta bancaria",
+      "MOVEMENT_TYPE": "Tipo de movimiento",
+      "FISCAL_PERIOD": "Período fiscal",
+      "NUMBER": "Número",
+      "DATE": "Fecha",
+      "AMOUNT": "Monto",
+      "EXCHANGE_RATE": "T/C",
+      "STATUS": "Estado",
+      "DESCRIPTION": "Descripción",
+      "REFERENCE": "Referencia"
+    },
+    "DOCUMENTS": {
+      "TITLE": "Documentos de soporte",
+      "ADD": "Agregar documento",
+      "EMPTY": "Sin documentos adjuntos.",
+      "TYPE": "Tipo",
+      "NUMBER": "Número",
+      "DATE": "Fecha",
+      "AMOUNT": "Monto",
+      "DESCRIPTION": "Descripción",
+      "ACCOUNTING_ENTRY": "Asiento"
+    }
   }
 }

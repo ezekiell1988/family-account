@@ -1,0 +1,36 @@
+@if (isMobile()) {
+  <app-bank-movements-mobile
+    [movements]="movements()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    [bankAccounts]="bankAccounts()"
+    [movementTypes]="movementTypes()"
+    [fiscalPeriods]="fiscalPeriods()"
+    (refresh)="loadAll()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (confirm)="onConfirm($event)"
+    (cancel)="onCancel($event)"
+    (clearError)="clearError()">
+  </app-bank-movements-mobile>
+} @else {
+  <app-bank-movements-web
+    [movements]="movements()"
+    [totalCount]="totalCount()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    [bankAccounts]="bankAccounts()"
+    [movementTypes]="movementTypes()"
+    [fiscalPeriods]="fiscalPeriods()"
+    (refresh)="loadAll()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (confirm)="onConfirm($event)"
+    (cancel)="onCancel($event)"
+    (clearError)="clearError()">
+  </app-bank-movements-web>
+}

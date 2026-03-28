@@ -1,0 +1,462 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Home</a></li>
+  <li class="breadcrumb-item">Procesos</li>
+  <li class="breadcrumb-item active">Movimientos Bancarios</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Movimientos Bancarios
+  <small>Registro de movimientos de cuentas bancarias</small>
+</h1>
+
+<!-- Error global -->
+@if (errorMessage()) {
+  <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2"></i>
+    <strong>Error:</strong> {{ errorMessage() }}
+    <button type="button" class="btn-close" aria-label="Cerrar" (click)="clearError.emit()"></button>
+  </div>
+}
+
+<!-- ── FORMULARIO CREAR / EDITAR ────────────────────────────────── -->
+@if (showForm()) {
+  <div class="card mb-3">
+    <div class="card-header fw-bold">
+      <i class="fa fa-exchange me-2"></i>{{ formTitle() }}
+    </div>
+    <div class="card-body">
+
+      <!-- Fila 1 -->
+      <div class="row g-3 mb-3">
+
+        <!-- Cuenta bancaria -->
+        <div class="col-md-4">
+          <label class="form-label" for="fBankAccount">Cuenta bancaria <span class="text-danger">*</span></label>
+          <select id="fBankAccount" class="form-select"
+            [value]="formBankAccount()"
+            (change)="formBankAccount.set(+$any($event.target).value)">
+            <option value="0">— Seleccione cuenta —</option>
+            @for (ba of bankAccounts(); track ba.idBankAccount) {
+              <option [value]="ba.idBankAccount">
+                {{ ba.codeBankAccount }} – {{ ba.accountNumber }}
+              </option>
+            }
+          </select>
+        </div>
+
+        <!-- Tipo de movimiento -->
+        <div class="col-md-4">
+          <label class="form-label" for="fMovType">Tipo de movimiento <span class="text-danger">*</span></label>
+          <select id="fMovType" class="form-select"
+            [value]="formMovementType()"
+            (change)="formMovementType.set(+$any($event.target).value)">
+            <option value="0">— Seleccione tipo —</option>
+            @for (mt of movementTypes(); track mt.idBankMovementType) {
+              @if (mt.isActive) {
+                <option [value]="mt.idBankMovementType">
+                  {{ mt.codeBankMovementType }} – {{ mt.nameBankMovementType }}
+                  ({{ mt.movementSign }})
+                </option>
+              }
+            }
+          </select>
+        </div>
+
+        <!-- Período fiscal -->
+        <div class="col-md-4">
+          <label class="form-label" for="fFiscalPeriod">Período fiscal <span class="text-danger">*</span></label>
+          <select id="fFiscalPeriod" class="form-select"
+            [value]="formFiscalPeriod()"
+            (change)="formFiscalPeriod.set(+$any($event.target).value)">
+            <option value="0">— Seleccione período —</option>
+            @for (fp of fiscalPeriods(); track fp.idFiscalPeriod) {
+              <option [value]="fp.idFiscalPeriod">
+                {{ fp.namePeriod }}
+                @if (fp.statusPeriod !== 'Abierto') { ({{ fp.statusPeriod }}) }
+              </option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Fila 2 -->
+      <div class="row g-3 mb-3">
+
+        <!-- Número -->
+        <div class="col-md-3">
+          <label class="form-label" for="fNumber">Número <span class="text-danger">*</span></label>
+          <input id="fNumber" type="text" class="form-control" maxlength="50"
+            placeholder="MOV-2025-001"
+            [value]="formNumber()"
+            (input)="formNumber.set($any($event.target).value)" />
+        </div>
+
+        <!-- Fecha -->
+        <div class="col-md-2">
+          <label class="form-label" for="fDate">Fecha <span class="text-danger">*</span></label>
+          <input id="fDate" type="date" class="form-control"
+            [value]="formDate()"
+            (change)="formDate.set($any($event.target).value)" />
+        </div>
+
+        <!-- Monto -->
+        <div class="col-md-2">
+          <label class="form-label" for="fAmount">Monto <span class="text-danger">*</span></label>
+          <input id="fAmount" type="number" class="form-control" min="0.01" step="0.01"
+            [value]="formAmount()"
+            (input)="formAmount.set(+$any($event.target).value)" />
+        </div>
+
+        <!-- T/C -->
+        <div class="col-md-2">
+          <label class="form-label" for="fExchangeRate">T/C <span class="text-danger">*</span></label>
+          <input id="fExchangeRate" type="number" class="form-control" min="0.000001" step="0.01"
+            [value]="formExchangeRate()"
+            (input)="formExchangeRate.set(+$any($event.target).value)" />
+        </div>
+
+        <!-- Estado -->
+        <div class="col-md-3">
+          <label class="form-label" for="fStatus">Estado <span class="text-danger">*</span></label>
+          <select id="fStatus" class="form-select"
+            [value]="formStatus()"
+            (change)="formStatus.set($any($event.target).value)">
+            <option value="Borrador">Borrador</option>
+            <option value="Confirmado">Confirmado</option>
+            <option value="Anulado">Anulado</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Fila 3 -->
+      <div class="row g-3 mb-3">
+        <!-- Descripción -->
+        <div class="col-md-8">
+          <label class="form-label" for="fDesc">Descripción <span class="text-danger">*</span></label>
+          <input id="fDesc" type="text" class="form-control" maxlength="500"
+            [value]="formDescription()"
+            (input)="formDescription.set($any($event.target).value)" />
+        </div>
+        <!-- Referencia -->
+        <div class="col-md-4">
+          <label class="form-label" for="fRef">Referencia</label>
+          <input id="fRef" type="text" class="form-control" maxlength="200"
+            placeholder="Núm. comprobante, cheque, etc."
+            [value]="formReference()"
+            (input)="formReference.set($any($event.target).value)" />
+        </div>
+      </div>
+
+      <!-- ── Documentos de soporte ──────────────────────────────── -->
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong><i class="fa fa-paperclip me-1"></i> Documentos de soporte</strong>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="addDocument()">
+            <i class="fa fa-plus me-1"></i> Agregar documento
+          </button>
+        </div>
+
+        @if (formDocuments().length === 0) {
+          <p class="text-muted small mb-0">Sin documentos adjuntos.</p>
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Tipo</th>
+                  <th>Número</th>
+                  <th>Fecha</th>
+                  <th>Monto</th>
+                  <th>Descripción</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (doc of formDocuments(); track $index) {
+                  <tr>
+                    <td>
+                      <select class="form-select form-select-sm"
+                        [value]="doc.typeDocument"
+                        (change)="updateDoc($index, 'typeDocument', $any($event.target).value)">
+                        @for (dt of docTypeOptions; track dt) {
+                          <option [value]="dt">{{ dt }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td>
+                      <input type="text" class="form-control form-control-sm" maxlength="100"
+                        [value]="doc.numberDocument"
+                        (input)="updateDoc($index, 'numberDocument', $any($event.target).value)" />
+                    </td>
+                    <td>
+                      <input type="date" class="form-control form-control-sm"
+                        [value]="doc.dateDocument"
+                        (change)="updateDoc($index, 'dateDocument', $any($event.target).value)" />
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm" min="0.01" step="0.01"
+                        [value]="doc.amountDocument"
+                        (input)="updateDoc($index, 'amountDocument', +$any($event.target).value)" />
+                    </td>
+                    <td>
+                      <input type="text" class="form-control form-control-sm" maxlength="500"
+                        [value]="doc.descriptionDocument"
+                        (input)="updateDoc($index, 'descriptionDocument', $any($event.target).value)" />
+                    </td>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-sm btn-outline-danger"
+                        (click)="removeDocument($index)"
+                        aria-label="Eliminar documento">
+                        <i class="fa fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Botones -->
+      <div class="d-flex gap-2 justify-content-end">
+        <button type="button" class="btn btn-default" (click)="cancelForm()">
+          <i class="fa fa-times me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-primary"
+          [disabled]="!isFormValid()"
+          (click)="submitForm()">
+          <i class="fa fa-save me-1"></i> Guardar
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- ── TABLA ─────────────────────────────────────────────────────── -->
+<panel title="Movimientos Bancarios">
+  <!-- Barra de herramientas -->
+  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+    <button type="button" class="btn btn-sm btn-primary" (click)="openCreate()">
+      <i class="fa fa-plus me-1"></i> Nuevo movimiento
+    </button>
+    <button type="button" class="btn btn-sm btn-default" (click)="refresh.emit()">
+      <i class="fa fa-refresh me-1"></i> Recargar
+    </button>
+    <select class="form-select form-select-sm w-auto"
+      [value]="filterStatus()"
+      (change)="filterStatus.set($any($event.target).value)"
+      aria-label="Filtrar por estado">
+      <option value="">— Todos los estados —</option>
+      @for (s of statusOptions; track s) {
+        <option [value]="s">{{ s }}</option>
+      }
+    </select>
+    <input type="search" class="form-control form-control-sm w-auto"
+      placeholder="Buscar..."
+      [value]="filterSearch()"
+      (input)="filterSearch.set($any($event.target).value)"
+      aria-label="Buscar movimiento" />
+    <span class="ms-auto text-muted small">{{ filteredItems().length }} de {{ totalCount() }}</span>
+  </div>
+
+  @if (isLoading()) {
+    <div class="text-center py-4" role="status" aria-live="polite">
+      <i class="fa fa-spinner fa-spin fa-2x text-primary"></i>
+      <p class="mt-2 mb-0 text-muted">Cargando movimientos...</p>
+    </div>
+  } @else {
+    <!-- Diálogo confirmar eliminar -->
+    @if (confirmDeleteId() !== null) {
+      <div class="alert alert-warning d-flex align-items-center justify-content-between mb-3" role="alert">
+        <span><i class="fa fa-exclamation-circle me-2"></i>¿Eliminar este movimiento? Esta acción no se puede deshacer.</span>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-default" (click)="cancelDelete()">Cancelar</button>
+          <button type="button" class="btn btn-sm btn-danger" (click)="confirmDelete()">Eliminar</button>
+        </div>
+      </div>
+    }
+
+    <!-- Diálogo confirmar / anular -->
+    @if (confirmActionId() !== null) {
+      <div class="alert alert-info d-flex align-items-center justify-content-between mb-3" role="alert">
+        @if (confirmActionId()!.action === 'confirm') {
+          <span><i class="fa fa-check-circle me-2"></i>¿Confirmar este movimiento? Se generará un asiento contable automáticamente.</span>
+        } @else {
+          <span><i class="fa fa-ban me-2"></i>¿Anular este movimiento?</span>
+        }
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-default" (click)="cancelAction()">Cancelar</button>
+          <button type="button" class="btn btn-sm btn-warning" (click)="doAction()">
+            {{ confirmActionId()!.action === 'confirm' ? 'Confirmar' : 'Anular' }}
+          </button>
+        </div>
+      </div>
+    }
+
+    <ngx-datatable
+      class="bootstrap"
+      [rows]="filteredItems()"
+      [columnMode]="ColumnMode.force"
+      [headerHeight]="40"
+      [footerHeight]="40"
+      [rowHeight]="'auto'"
+      [scrollbarH]="true"
+      [limit]="15"
+      [rowDetail]="rowDetailTpl"
+      (detailToggle)="toggleExpand($event.value)"
+      role="grid"
+      aria-label="Tabla de movimientos bancarios">
+
+      <!-- Expand toggle -->
+      <ngx-datatable-column [width]="30" [resizeable]="false" [sortable]="false" [draggable]="false" [canAutoResize]="false">
+        <ng-template ngx-datatable-cell-template let-row="row">
+          <a href="javascript:;" (click)="toggleExpand(row)" [attr.aria-label]="'Expandir movimiento ' + row.numberMovement">
+            <i class="fa" [class.fa-chevron-down]="expandedId() === row.idBankMovement"
+               [class.fa-chevron-right]="expandedId() !== row.idBankMovement"></i>
+          </a>
+        </ng-template>
+      </ngx-datatable-column>
+
+      <!-- Número -->
+      <ngx-datatable-column name="Número" prop="numberMovement" [width]="140">
+        <ng-template ngx-datatable-cell-template let-row="row">
+          <span class="fw-semibold">{{ row.numberMovement }}</span>
+        </ng-template>
+      </ngx-datatable-column>
+
+      <!-- Fecha -->
+      <ngx-datatable-column name="Fecha" prop="dateMovement" [width]="100">
+        <ng-template ngx-datatable-cell-template let-row="row">
+          {{ row.dateMovement }}
+        </ng-template>
+      </ngx-datatable-column>
+
+      <!-- Cuenta -->
+      <ngx-datatable-column name="Cuenta" [width]="160">
+        <ng-template ngx-datatable-cell-template let-row="row">
+          {{ row.codeBankAccount }}
+        </ng-template>
+      </ngx-datatable-column>
+
+      <!-- Tipo -->
+      <ngx-datatable-column name="Tipo" [width]="160">
+        <ng-template ngx-datatable-cell-template let-row="row">
+          <span [class]="getSignBadgeClass(row.movementSign)">{{ row.movementSign }}</span>
+          <span class="ms-1 small">{{ row.nameBankMovementType }}</span>
+        </ng-template>
+      </ngx-datatable-column>
+
+      <!-- Monto -->
+      <ngx-datatable-column name="Monto" [width]="120">
+        <ng-template ngx-datatable-cell-template let-row="row">
+          <span class="font-monospace">{{ formatAmount(row.amount) }}</span>
+        </ng-template>
+      </ngx-datatable-column>
+
+      <!-- Estado -->
+      <ngx-datatable-column name="Estado" [width]="110">
+        <ng-template ngx-datatable-cell-template let-row="row">
+          <span [class]="getStatusBadgeClass(row.statusMovement)">{{ row.statusMovement }}</span>
+        </ng-template>
+      </ngx-datatable-column>
+
+      <!-- Acciones -->
+      <ngx-datatable-column name="Acciones" [width]="210" [sortable]="false">
+        <ng-template ngx-datatable-cell-template let-row="row">
+          <div class="d-flex gap-1 flex-wrap">
+            @if (canEdit(row.statusMovement)) {
+              <button type="button" class="btn btn-xs btn-outline-primary"
+                (click)="openEdit(row)"
+                [attr.aria-label]="'Editar ' + row.numberMovement">
+                <i class="fa fa-pencil"></i>
+              </button>
+            }
+            @if (canConfirm(row.statusMovement)) {
+              <button type="button" class="btn btn-xs btn-outline-success"
+                (click)="askAction(row.idBankMovement, 'confirm')"
+                [attr.aria-label]="'Confirmar ' + row.numberMovement"
+                title="Confirmar — genera asiento contable">
+                <i class="fa fa-check"></i>
+              </button>
+            }
+            @if (canCancel(row.statusMovement)) {
+              <button type="button" class="btn btn-xs btn-outline-warning"
+                (click)="askAction(row.idBankMovement, 'cancel')"
+                [attr.aria-label]="'Anular ' + row.numberMovement">
+                <i class="fa fa-ban"></i>
+              </button>
+            }
+            @if (canDelete(row.statusMovement)) {
+              <button type="button" class="btn btn-xs btn-outline-danger"
+                [disabled]="deletingId() === row.idBankMovement"
+                (click)="askDelete(row.idBankMovement)"
+                [attr.aria-label]="'Eliminar ' + row.numberMovement">
+                <i class="fa fa-trash"></i>
+              </button>
+            }
+          </div>
+        </ng-template>
+      </ngx-datatable-column>
+    </ngx-datatable>
+
+    <!-- Row detail: documentos -->
+    <ngx-datatable-row-detail #rowDetailTpl [rowHeight]="'auto'">
+      <ng-template ngx-datatable-row-detail-template let-row="row">
+        <div class="p-3 bg-light">
+          <strong class="d-block mb-2"><i class="fa fa-folder-open me-1"></i> Documentos de soporte</strong>
+          @if (!row.documents || row.documents.length === 0) {
+            <p class="text-muted small mb-0">Sin documentos adjuntos.</p>
+          } @else {
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Número</th>
+                    <th>Fecha</th>
+                    <th>Monto</th>
+                    <th>Descripción</th>
+                    <th>Asiento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (doc of row.documents; track doc.idBankMovementDocument) {
+                    <tr>
+                      <td><span class="badge bg-secondary">{{ doc.typeDocument }}</span></td>
+                      <td>{{ doc.numberDocument ?? '—' }}</td>
+                      <td>{{ doc.dateDocument }}</td>
+                      <td class="font-monospace">{{ formatAmount(doc.amountDocument) }}</td>
+                      <td>{{ doc.descriptionDocument ?? '—' }}</td>
+                      <td>
+                        @if (doc.idAccountingEntry) {
+                          <span class="badge bg-info text-dark">ASI-{{ doc.idAccountingEntry }}</span>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                  <tr class="table-active fw-bold">
+                    <td colspan="3">Total documentos</td>
+                    <td class="font-monospace">{{ formatAmount(getMovementDocTotal(row)) }}</td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          }
+          <div class="mt-2 text-muted small">
+            Período: {{ row.nameFiscalPeriod }} &bull;
+            T/C: {{ row.exchangeRateValue }} &bull;
+            Referencia: {{ row.referenceMovement ?? '—' }} &bull;
+            Creado: {{ row.createdAt | date:'dd/MM/yyyy HH:mm' }}
+          </div>
+        </div>
+      </ng-template>
+    </ngx-datatable-row-detail>
+  }
+</panel>

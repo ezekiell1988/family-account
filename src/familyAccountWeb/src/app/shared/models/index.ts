@@ -7,3 +7,4 @@ export * from './bank.models';
 export * from './bank-account.models';
 export * from './bank-movement-type.models';
 export * from './currency.models';
+export * from './bank-movement.models';

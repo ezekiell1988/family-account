@@ -4,6 +4,7 @@ import {
   BankMovementTypesPage,
   BanksPage,
   AccountingEntriesPage,
+  BankMovementsPage,
   ErrorPage,
   LoginPage,
 } from "./pages";
@@ -42,6 +43,12 @@ export const routes: Routes = [
     path: "process/accounting-entries",
     component: AccountingEntriesPage,
     data: { title: "Asientos Contables" },
+    canActivate: [AuthGuard],
+  },
+  {
+    path: "process/bank-movements",
+    component: BankMovementsPage,
+    data: { title: "Movimientos Bancarios" },
     canActivate: [AuthGuard],
   },
   {

@@ -641,5 +641,48 @@
       "IS_ACTIVE": "Active",
       "CREATE_BTN": "Create bank"
     }
+  },
+  "BANK_MOVEMENTS": {
+    "TITLE": "Bank Movements",
+    "SUBTITLE": "Record of bank account movements",
+    "NEW": "New movement",
+    "EMPTY": "No bank movements found.",
+    "CONFIRM_DELETE": "Delete this movement? This action cannot be undone.",
+    "CONFIRM_ACTION": "Confirm this movement? An accounting entry will be generated automatically.",
+    "CANCEL_ACTION": "Cancel this movement?",
+    "STATUS": {
+      "DRAFT": "Draft",
+      "CONFIRMED": "Confirmed",
+      "CANCELLED": "Cancelled"
+    },
+    "SIGN": {
+      "DEBIT": "Debit",
+      "CREDIT": "Credit"
+    },
+    "FORM": {
+      "NEW_TITLE": "New Bank Movement",
+      "EDIT_TITLE": "Edit Bank Movement",
+      "BANK_ACCOUNT": "Bank account",
+      "MOVEMENT_TYPE": "Movement type",
+      "FISCAL_PERIOD": "Fiscal period",
+      "NUMBER": "Number",
+      "DATE": "Date",
+      "AMOUNT": "Amount",
+      "EXCHANGE_RATE": "Exchange rate",
+      "STATUS": "Status",
+      "DESCRIPTION": "Description",
+      "REFERENCE": "Reference"
+    },
+    "DOCUMENTS": {
+      "TITLE": "Supporting documents",
+      "ADD": "Add document",
+      "EMPTY": "No documents attached.",
+      "TYPE": "Type",
+      "NUMBER": "Number",
+      "DATE": "Date",
+      "AMOUNT": "Amount",
+      "DESCRIPTION": "Description",
+      "ACCOUNTING_ENTRY": "Accounting entry"
+    }
   }
 }
