@@ -129,7 +129,7 @@ public sealed class AccountingEntryService(AppDbContext db) : IAccountingEntrySe
                 .ThenInclude(line => line.IdAccountNavigation);
     }
 
-    private static System.Linq.Expressions.Expression<Func<AccountingEntry, AccountingEntryResponse>> MapResponse()
+    private System.Linq.Expressions.Expression<Func<AccountingEntry, AccountingEntryResponse>> MapResponse()
     {
         return ae => new AccountingEntryResponse(
             ae.IdAccountingEntry,
@@ -155,7 +155,8 @@ public sealed class AccountingEntryService(AppDbContext db) : IAccountingEntrySe
                     line.DebitAmount,
                     line.CreditAmount,
                     line.DescriptionLine))
-                .ToList());
+                .ToList(),
+            db.BankMovementDocument.Any(bmd => bmd.IdAccountingEntry == ae.IdAccountingEntry));
     }
 
     private async Task ValidateRequestAsync(

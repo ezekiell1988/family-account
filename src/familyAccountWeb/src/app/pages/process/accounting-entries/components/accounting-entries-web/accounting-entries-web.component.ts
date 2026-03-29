@@ -263,6 +263,9 @@ export class AccountingEntriesWebComponent {
   }
 
   // ── Eliminar ──────────────────────────────────────────────────────
+  canEdit(entry: AccountingEntryDto): boolean   { return !entry.isLinkedToBankMovement && entry.statusEntry !== 'Anulado'; }
+  canDelete(entry: AccountingEntryDto): boolean { return !entry.isLinkedToBankMovement && entry.statusEntry !== 'Anulado'; }
+
   askDelete(id: number): void    { this.confirmDeleteId.set(id); }
   cancelDelete(): void           { this.confirmDeleteId.set(null); }
   confirmDelete(): void {

@@ -10,10 +10,16 @@ import { finalize, forkJoin } from 'rxjs';
 import {
   AppSettings,
   BankMovementService,
+  AccountingEntryService,
+  AccountService,
   LoggerService,
 } from '../../../service';
 import { ResponsiveComponent } from '../../../shared';
-import { CreateBankMovementRequest, UpdateBankMovementRequest } from '../../../shared/models';
+import {
+  CreateBankMovementRequest,
+  UpdateBankMovementRequest,
+  UpdateAccountingEntryRequest,
+} from '../../../shared/models';
 import { BankMovementsWebComponent, BankMovementsMobileComponent } from './components';
 
 @Component({
@@ -24,10 +30,12 @@ import { BankMovementsWebComponent, BankMovementsMobileComponent } from './compo
   templateUrl: './bank-movements.html',
 })
 export class BankMovementsPage extends ResponsiveComponent implements OnInit, OnDestroy {
-  private readonly svc    = inject(BankMovementService);
-  private readonly logger = inject(LoggerService).getLogger('BankMovementsPage');
+  private readonly svc        = inject(BankMovementService);
+  private readonly entrySvc   = inject(AccountingEntryService);
+  private readonly accountSvc = inject(AccountService);
+  private readonly logger     = inject(LoggerService).getLogger('BankMovementsPage');
 
-  // ── Estado del servicio ───────────────────────────────────────────
+  // ── Estado del servicio ───────────────────────────────────────
   isLoading     = this.svc.isLoading;
   error         = this.svc.error;
   movements     = this.svc.items;
@@ -35,6 +43,8 @@ export class BankMovementsPage extends ResponsiveComponent implements OnInit, On
   bankAccounts  = this.svc.bankAccounts;
   movementTypes = this.svc.movementTypes;
   fiscalPeriods = this.svc.fiscalPeriods;
+  entries       = this.entrySvc.entries;
+  accounts      = this.accountSvc.accounts;
 
   // ── Estado local ──────────────────────────────────────────────────
   deletingId = signal<number | null>(null);
@@ -59,6 +69,8 @@ export class BankMovementsPage extends ResponsiveComponent implements OnInit, On
       this.svc.loadBankAccounts(),
       this.svc.loadMovementTypes(),
       this.svc.loadFiscalPeriods(),
+      this.entrySvc.loadList(),
+      this.accountSvc.loadList(),
     ]).pipe(
       finalize(() => this.logger.debug('Catálogos finalizados')),
     ).subscribe({
@@ -122,5 +134,15 @@ export class BankMovementsPage extends ResponsiveComponent implements OnInit, On
 
   clearError(): void {
     this.svc.clearError();
+  }
+
+  onEditEntrySave(req: UpdateAccountingEntryRequest & { id: number }): void {
+    const { id, ...payload } = req;
+    this.entrySvc.update(id, payload)
+      .pipe(finalize(() => {}))
+      .subscribe({
+        next: () => this.logger.success('✅ Asiento actualizado desde Movimientos Bancarios'),
+        error: (e) => this.logger.error('❌ Error al actualizar asiento:', e),
+      });
   }
 }

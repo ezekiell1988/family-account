@@ -330,20 +330,27 @@
           </div>
 
           <!-- Acciones -->
-          @if (row.statusEntry !== 'Anulado') {
-            <div class="d-flex gap-2">
+          <div class="d-flex gap-2 flex-wrap align-items-center">
+            @if (canEdit(row)) {
               <button class="btn btn-sm btn-primary"
                 [disabled]="showForm() || deletingId() === row.idAccountingEntry"
                 (click)="openEdit(row)">
                 <i class="fa fa-pencil me-1"></i>Editar
               </button>
+            }
+            @if (canDelete(row)) {
               <button class="btn btn-sm btn-danger"
                 [disabled]="showForm() || deletingId() === row.idAccountingEntry"
                 (click)="askDelete(row.idAccountingEntry)">
                 <i class="fa fa-trash me-1"></i>Eliminar
               </button>
-            </div>
-          }
+            }
+            @if (row.isLinkedToBankMovement) {
+              <span class="badge bg-warning text-dark fs-6">
+                <i class="fa fa-lock me-1"></i>Solo modificable desde Movimientos Bancarios
+              </span>
+            }
+          </div>
         </div>
       </ng-template>
     </ngx-datatable-row-detail>

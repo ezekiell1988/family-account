@@ -38,6 +38,7 @@ export interface AccountingEntryDto {
   referenceEntry: string | null;
   exchangeRateValue: number;
   createdAt: string;
+  isLinkedToBankMovement: boolean;
   lines: AccountingEntryLineDto[];
 }
 
