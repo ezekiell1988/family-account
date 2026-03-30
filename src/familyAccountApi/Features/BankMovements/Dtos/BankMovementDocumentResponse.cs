@@ -2,7 +2,7 @@ namespace FamilyAccountApi.Features.BankMovements.Dtos;
 
 public sealed record BankMovementDocumentResponse(
     int      IdBankMovementDocument,
-    int?     IdAccountingEntry,
+    int?     IdPurchaseInvoice,
     string   TypeDocument,
     string?  NumberDocument,
     DateOnly DateDocument,

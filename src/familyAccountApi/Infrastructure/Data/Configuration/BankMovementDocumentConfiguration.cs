@@ -12,7 +12,7 @@ public sealed class BankMovementDocumentConfiguration : IEntityTypeConfiguration
         {
             t.HasComment("Documentos de soporte vinculados a un movimiento bancario");
             t.HasCheckConstraint("CK_bankMovementDocument_typeDocument",
-                "typeDocument IN ('Asiento', 'Factura', 'Recibo', 'Transferencia', 'Cheque', 'Otro')");
+                "typeDocument IN ('FacturaCompra', 'Recibo', 'Transferencia', 'Cheque', 'Otro')");
         });
 
         builder.HasKey(bmd => bmd.IdBankMovementDocument);
@@ -24,14 +24,14 @@ public sealed class BankMovementDocumentConfiguration : IEntityTypeConfiguration
             .IsRequired()
             .HasComment("FK al movimiento bancario al que pertenece el documento");
 
-        builder.Property(bmd => bmd.IdAccountingEntry)
-            .HasComment("FK opcional al asiento contable vinculado a este documento");
+        builder.Property(bmd => bmd.IdPurchaseInvoice)
+            .HasComment("FK opcional a la factura de compra vinculada a este documento de soporte");
 
         builder.Property(bmd => bmd.TypeDocument)
             .HasMaxLength(20)
             .IsRequired()
             .IsUnicode(false)
-            .HasComment("Tipo de documento: 'Asiento', 'Factura', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'");
+            .HasComment("Tipo de documento: 'FacturaCompra', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'");
 
         builder.Property(bmd => bmd.NumberDocument)
             .HasMaxLength(100)
@@ -54,17 +54,18 @@ public sealed class BankMovementDocumentConfiguration : IEntityTypeConfiguration
         builder.HasIndex(bmd => bmd.IdBankMovement)
             .HasDatabaseName("IX_bankMovementDocument_idBankMovement");
 
-        builder.HasIndex(bmd => bmd.IdAccountingEntry)
-            .HasDatabaseName("IX_bankMovementDocument_idAccountingEntry");
+        builder.HasIndex(bmd => bmd.IdPurchaseInvoice)
+            .HasDatabaseName("IX_bankMovementDocument_idPurchaseInvoice")
+            .HasFilter("[idPurchaseInvoice] IS NOT NULL");
 
         builder.HasOne(bmd => bmd.IdBankMovementNavigation)
             .WithMany(bm => bm.BankMovementDocuments)
             .HasForeignKey(bmd => bmd.IdBankMovement)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(bmd => bmd.IdAccountingEntryNavigation)
-            .WithMany()
-            .HasForeignKey(bmd => bmd.IdAccountingEntry)
+        builder.HasOne(bmd => bmd.IdPurchaseInvoiceNavigation)
+            .WithMany(pi => pi.BankMovementDocuments)
+            .HasForeignKey(bmd => bmd.IdPurchaseInvoice)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

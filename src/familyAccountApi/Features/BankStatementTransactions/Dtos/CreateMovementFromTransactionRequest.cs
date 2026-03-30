@@ -21,7 +21,7 @@ public sealed record CreateMovementFromTransactionRequest
     [Description("Estado inicial del movimiento: 'Borrador' o 'Confirmado'")]
     public required string StatusMovement { get; init; } = "Borrador";
 
-    [Range(typeof(decimal), "0.0001", "999999999999.9999")]
+    [Range(typeof(decimal), "0.0001", "999999999999.9999", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     [Description("Tipo de cambio vigente. Por defecto 1.")]
     public decimal ExchangeRateValue { get; init; } = 1m;
 

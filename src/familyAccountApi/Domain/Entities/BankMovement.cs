@@ -14,9 +14,11 @@ public sealed class BankMovement
     public string?  ReferenceMovement   { get; set; }
     public decimal  ExchangeRateValue   { get; set; }
     public DateTime CreatedAt           { get; set; }
+    public int?     IdAccountingEntry   { get; set; }  // FK al asiento generado al confirmar
 
-    public BankAccount      IdBankAccountNavigation      { get; set; } = null!;
-    public BankMovementType IdBankMovementTypeNavigation { get; set; } = null!;
-    public FiscalPeriod     IdFiscalPeriodNavigation     { get; set; } = null!;
+    public BankAccount       IdBankAccountNavigation       { get; set; } = null!;
+    public BankMovementType  IdBankMovementTypeNavigation  { get; set; } = null!;
+    public FiscalPeriod      IdFiscalPeriodNavigation      { get; set; } = null!;
+    public AccountingEntry?  IdAccountingEntryNavigation   { get; set; }
     public ICollection<BankMovementDocument> BankMovementDocuments { get; set; } = [];
 }

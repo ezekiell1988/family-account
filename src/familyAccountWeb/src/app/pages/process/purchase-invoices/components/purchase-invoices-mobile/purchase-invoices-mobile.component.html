@@ -1,0 +1,305 @@
+<header [title]="'Facturas de Compra'"></header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Error -->
+  @if (errorMessage()) {
+    <ion-card color="danger" class="ion-margin">
+      <ion-card-content class="d-flex align-items-center justify-content-between">
+        <ion-text color="light">{{ errorMessage() }}</ion-text>
+        <ion-button fill="clear" color="light" (click)="clearError.emit()">
+          <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Spinner -->
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  <!-- Formulario nueva/editar factura -->
+  @if (showForm()) {
+    <ion-card class="ion-margin">
+      <ion-card-header>
+        <ion-card-title>
+          {{ editingId() ? 'Editar Factura' : 'Nueva Factura' }}
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+
+        <ion-grid>
+          <ion-row>
+            <ion-col size="12">
+              <ion-item>
+                <ion-label position="stacked">Tipo de Factura</ion-label>
+                <ion-select [value]="formInvoiceType()" (ionChange)="formInvoiceType.set(+$event.detail.value)" interface="action-sheet">
+                  @for (t of invoiceTypes(); track t.idPurchaseInvoiceType) {
+                    <ion-select-option [value]="t.idPurchaseInvoiceType">{{ t.namePurchaseInvoiceType }}</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+            </ion-col>
+            <ion-col size="12">
+              <ion-item>
+                <ion-label position="stacked">Período Fiscal</ion-label>
+                <ion-select [value]="formFiscalPeriod()" (ionChange)="formFiscalPeriod.set(+$event.detail.value)" interface="action-sheet">
+                  @for (p of fiscalPeriods(); track p.idFiscalPeriod) {
+                    <ion-select-option [value]="p.idFiscalPeriod">{{ p.namePeriod }}</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+            </ion-col>
+            <ion-col size="12">
+              <ion-item>
+                <ion-label position="stacked">Moneda</ion-label>
+                <ion-select [value]="formCurrency()" (ionChange)="formCurrency.set(+$event.detail.value)" interface="action-sheet">
+                  @for (c of currencies(); track c.idCurrency) {
+                    <ion-select-option [value]="c.idCurrency">{{ c.codeCurrency }} – {{ c.nameCurrency }}</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+            </ion-col>
+            @if (needsBankAccount()) {
+              <ion-col size="12">
+                <ion-item>
+                  <ion-label position="stacked">Cuenta Bancaria</ion-label>
+                  <ion-select [value]="formBankAccount()" (ionChange)="formBankAccount.set(+$event.detail.value || null)" interface="action-sheet">
+                    <ion-select-option [value]="null">-- Seleccione --</ion-select-option>
+                    @for (b of filteredBankAccounts(); track b.idBankAccount) {
+                      <ion-select-option [value]="b.idBankAccount">{{ b.codeBank }} – {{ b.codeBankAccount }} ({{ b.codeCurrency }})</ion-select-option>
+                    }
+                  </ion-select>
+                </ion-item>
+              </ion-col>
+            }
+            <ion-col size="6">
+              <ion-item>
+                <ion-label position="stacked">Número</ion-label>
+                <ion-input [value]="formNumber()" (ionInput)="formNumber.set($event.detail.value!)" placeholder="FCV-001"></ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-col size="6">
+              <ion-item>
+                <ion-label position="stacked">Fecha</ion-label>
+                <ion-input type="date" [value]="formDate()" (ionInput)="formDate.set($event.detail.value!)"></ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-col size="12">
+              <ion-item>
+                <ion-label position="stacked">Proveedor</ion-label>
+                <ion-input [value]="formProvider()" (ionInput)="formProvider.set($event.detail.value!)" placeholder="Nombre del proveedor"></ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-col size="6">
+              <ion-item>
+                <ion-label position="stacked">Tipo de Cambio</ion-label>
+                <ion-input type="number" [value]="formExchangeRate()" (ionInput)="formExchangeRate.set(+$event.detail.value!)"></ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-col size="12">
+              <ion-item>
+                <ion-label position="stacked">Descripción</ion-label>
+                <ion-input [value]="formDescription()" (ionInput)="formDescription.set($event.detail.value!)" placeholder="Opcional"></ion-input>
+              </ion-item>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+        <!-- Líneas -->
+        <p class="ion-padding-start fw-semibold mt-2 mb-1">Líneas de Factura</p>
+        @for (line of formLines(); track $index) {
+          <ion-card>
+            <ion-card-content>
+              <ion-grid>
+                <ion-row>
+                  <ion-col size="12">
+                    <ion-item>
+                      <ion-label position="stacked">Descripción</ion-label>
+                      <ion-input [value]="line.descriptionLine"
+                                 (ionInput)="updateLineField($index, 'descriptionLine', $event.detail.value!)">
+                      </ion-input>
+                    </ion-item>
+                  </ion-col>
+                  <ion-col size="4">
+                    <ion-item>
+                      <ion-label position="stacked">Cantidad</ion-label>
+                      <ion-input type="number" [value]="line.quantity"
+                                 (ionInput)="updateLineField($index, 'quantity', +$event.detail.value!)">
+                      </ion-input>
+                    </ion-item>
+                  </ion-col>
+                  <ion-col size="4">
+                    <ion-item>
+                      <ion-label position="stacked">Precio</ion-label>
+                      <ion-input type="number" [value]="line.unitPrice"
+                                 (ionInput)="updateLineField($index, 'unitPrice', +$event.detail.value!)">
+                      </ion-input>
+                    </ion-item>
+                  </ion-col>
+                  <ion-col size="4">
+                    <ion-item>
+                      <ion-label position="stacked">IVA %</ion-label>
+                      <ion-input type="number" [value]="line.taxPercent"
+                                 (ionInput)="updateLineField($index, 'taxPercent', +$event.detail.value!)">
+                      </ion-input>
+                    </ion-item>
+                  </ion-col>
+                  <ion-col size="12" class="ion-text-end">
+                    <ion-note color="medium">Total: {{ line.totalLineAmount | number:'1.2-2' }}</ion-note>
+                  </ion-col>
+                </ion-row>
+              </ion-grid>
+              @if (formLines().length > 1) {
+                <ion-button fill="clear" color="danger" size="small" (click)="removeLine($index)">
+                  <ion-icon slot="start" name="trash-outline"></ion-icon>
+                  Quitar línea
+                </ion-button>
+              }
+            </ion-card-content>
+          </ion-card>
+        }
+
+        <ion-button fill="outline" expand="block" (click)="addLine()">
+          <ion-icon slot="start" name="add-outline"></ion-icon>
+          Agregar línea
+        </ion-button>
+
+        <!-- Totales -->
+        <ion-list inset class="mt-2">
+          <ion-item>
+            <ion-label>Subtotal</ion-label>
+            <ion-note slot="end">{{ formSubTotal() | number:'1.2-2' }}</ion-note>
+          </ion-item>
+          <ion-item>
+            <ion-label>IVA</ion-label>
+            <ion-note slot="end">{{ formTax() | number:'1.2-2' }}</ion-note>
+          </ion-item>
+          <ion-item>
+            <ion-label><strong>Total</strong></ion-label>
+            <ion-note slot="end"><strong>{{ formTotal() | number:'1.2-2' }}</strong></ion-note>
+          </ion-item>
+        </ion-list>
+
+        <ion-grid>
+          <ion-row>
+            <ion-col>
+              <ion-button fill="outline" color="medium" expand="block" (click)="cancelForm()">
+                Cancelar
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button color="primary" expand="block" (click)="saveForm()">
+                <ion-icon slot="start" name="save-outline"></ion-icon>
+                {{ editingId() ? 'Guardar' : 'Crear' }}
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Lista de facturas -->
+  @if (!isLoading() && !showForm()) {
+    <ion-list>
+      @for (inv of invoices(); track inv.idPurchaseInvoice) {
+        <ion-item button (click)="toggleExpand(inv.idPurchaseInvoice)">
+          <ion-icon slot="start" name="receipt-outline" color="primary"></ion-icon>
+          <ion-label>
+            <h3>{{ inv.numberInvoice }}</h3>
+            <p>{{ inv.providerName }} · {{ inv.codeCurrency }}</p>
+            <p>{{ inv.totalAmount | number:'1.2-2' }}</p>
+          </ion-label>
+          <ion-badge slot="end" [color]="getStatusColor(inv.statusInvoice)">
+            {{ inv.statusInvoice }}
+          </ion-badge>
+          <ion-icon slot="end"
+                    [name]="expandedId() === inv.idPurchaseInvoice ? 'chevron-down-outline' : 'chevron-forward-outline'">
+          </ion-icon>
+        </ion-item>
+
+        @if (expandedId() === inv.idPurchaseInvoice) {
+          <ion-card class="ion-margin-horizontal ion-margin-bottom">
+            <ion-card-content>
+              <p><strong>Tipo:</strong> {{ inv.namePurchaseInvoiceType }}</p>
+              <p><strong>Período:</strong> {{ inv.nameFiscalPeriod }}</p>
+              <p><strong>Fecha:</strong> {{ inv.dateInvoice | date:'dd/MM/yyyy' }}</p>
+              <p><strong>Subtotal:</strong> {{ inv.subTotalAmount | number:'1.2-2' }}</p>
+              <p><strong>IVA:</strong> {{ inv.taxAmount | number:'1.2-2' }}</p>
+              @if (inv.descriptionInvoice) {
+                <p><strong>Descripción:</strong> {{ inv.descriptionInvoice }}</p>
+              }
+
+              <ion-grid>
+                <ion-row>
+                  @if (canEdit(inv)) {
+                    <ion-col>
+                      <ion-button fill="outline" expand="block" color="primary" (click)="openEdit(inv)">
+                        <ion-icon slot="start" name="pencil-outline"></ion-icon>
+                        Editar
+                      </ion-button>
+                    </ion-col>
+                  }
+                  @if (canConfirm(inv)) {
+                    <ion-col>
+                      <ion-button fill="outline" expand="block" color="success" (click)="confirm.emit(inv.idPurchaseInvoice)">
+                        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+                        Confirmar
+                      </ion-button>
+                    </ion-col>
+                  }
+                  @if (canCancel(inv)) {
+                    <ion-col>
+                      <ion-button fill="outline" expand="block" color="warning" (click)="cancel.emit(inv.idPurchaseInvoice)">
+                        <ion-icon slot="start" name="ban-outline"></ion-icon>
+                        Anular
+                      </ion-button>
+                    </ion-col>
+                  }
+                  @if (canDelete(inv)) {
+                    <ion-col>
+                      <ion-button fill="outline" expand="block" color="danger"
+                                  [disabled]="deletingId() === inv.idPurchaseInvoice"
+                                  (click)="remove.emit(inv.idPurchaseInvoice)">
+                        <ion-icon slot="start" name="trash-outline"></ion-icon>
+                        Eliminar
+                      </ion-button>
+                    </ion-col>
+                  }
+                </ion-row>
+              </ion-grid>
+            </ion-card-content>
+          </ion-card>
+        }
+      }
+
+      @if (invoices().length === 0) {
+        <ion-item>
+          <ion-label class="ion-text-center" color="medium">
+            No hay facturas registradas
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
+</ion-content>
+
+<!-- FAB Nueva Factura -->
+@if (!showForm()) {
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button color="primary" (click)="openCreate()">
+      <ion-icon name="add-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+}
+
+<app-footer></app-footer>

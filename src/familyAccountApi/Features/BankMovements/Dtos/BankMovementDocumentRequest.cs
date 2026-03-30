@@ -6,7 +6,7 @@ namespace FamilyAccountApi.Features.BankMovements.Dtos;
 public sealed record BankMovementDocumentRequest
 {
     [Required, StringLength(20, MinimumLength = 1)]
-    [Description("Tipo de documento: 'Asiento', 'Factura', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'")]
+    [Description("Tipo de documento: 'FacturaCompra', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'")]
     public required string TypeDocument { get; init; }
 
     [StringLength(100)]
@@ -17,7 +17,7 @@ public sealed record BankMovementDocumentRequest
     [Description("Fecha del documento de soporte")]
     public required DateOnly DateDocument { get; init; }
 
-    [Range(typeof(decimal), "0.01", "999999999999.99")]
+    [Range(typeof(decimal), "0.01", "999999999999.99", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     [Description("Monto del documento de soporte")]
     public decimal AmountDocument { get; init; }
 
@@ -26,6 +26,6 @@ public sealed record BankMovementDocumentRequest
     public string? DescriptionDocument { get; init; }
 
     [Range(1, int.MaxValue)]
-    [Description("ID del asiento contable vinculado (opcional)")]
-    public int? IdAccountingEntry { get; init; }
+    [Description("ID de la factura de compra vinculada (opcional)")]
+    public int? IdPurchaseInvoice { get; init; }
 }

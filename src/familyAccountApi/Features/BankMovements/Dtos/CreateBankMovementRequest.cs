@@ -29,7 +29,7 @@ public sealed record CreateBankMovementRequest
     [Description("Descripción del movimiento bancario")]
     public required string DescriptionMovement { get; init; }
 
-    [Range(typeof(decimal), "0.01", "999999999999.99")]
+    [Range(typeof(decimal), "0.01", "999999999999.99", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     [Description("Monto del movimiento en la moneda de la cuenta bancaria")]
     public decimal Amount { get; init; }
 
@@ -41,7 +41,7 @@ public sealed record CreateBankMovementRequest
     [Description("Referencia externa (número de cheque, comprobante, etc.)")]
     public string? ReferenceMovement { get; init; }
 
-    [Range(typeof(decimal), "0.0001", "999999999999.9999")]
+    [Range(typeof(decimal), "0.0001", "999999999999.9999", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     [Description("Tipo de cambio vigente al momento del movimiento")]
     public decimal ExchangeRateValue { get; init; }
 

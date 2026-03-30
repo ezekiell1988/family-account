@@ -15,3 +15,5 @@ export { BankAccountService } from './bank-account.service';
 export { BankMovementTypeService } from './bank-movement-type.service';
 export { CurrencyService } from './currency.service';
 export { BankMovementService } from './bank-movement.service';
+export { PurchaseInvoiceTypeService } from './purchase-invoice-type.service';
+export { PurchaseInvoiceService } from './purchase-invoice.service';

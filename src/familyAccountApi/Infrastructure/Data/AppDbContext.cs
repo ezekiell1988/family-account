@@ -34,6 +34,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<BankStatementTemplate>    BankStatementTemplate    => Set<BankStatementTemplate>();
     public DbSet<BankStatementImport>      BankStatementImport      => Set<BankStatementImport>();
     public DbSet<BankStatementTransaction> BankStatementTransaction => Set<BankStatementTransaction>();
+    public DbSet<ProductAccount>           ProductAccount           => Set<ProductAccount>();
+    public DbSet<PurchaseInvoiceType>      PurchaseInvoiceType      => Set<PurchaseInvoiceType>();
+    public DbSet<PurchaseInvoice>          PurchaseInvoice          => Set<PurchaseInvoice>();
+    public DbSet<PurchaseInvoiceLine>      PurchaseInvoiceLine      => Set<PurchaseInvoiceLine>();
+    public DbSet<PurchaseInvoiceEntry>     PurchaseInvoiceEntry     => Set<PurchaseInvoiceEntry>();
+    public DbSet<PurchaseInvoiceLineEntry> PurchaseInvoiceLineEntry => Set<PurchaseInvoiceLineEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -60,6 +60,13 @@ export class AppMenuService {
           url: "/process/bank-movements",
           roles: [1, 2],
         },
+        {
+          icon: "fa fa-file-text",
+          iconMobile: "receipt-outline",
+          title: "Facturas de Compra",
+          url: "/process/purchase-invoices",
+          roles: [1, 2],
+        },
       ],
     },
     {

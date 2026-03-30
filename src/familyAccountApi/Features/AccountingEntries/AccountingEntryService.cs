@@ -156,7 +156,8 @@ public sealed class AccountingEntryService(AppDbContext db) : IAccountingEntrySe
                     line.CreditAmount,
                     line.DescriptionLine))
                 .ToList(),
-            db.BankMovementDocument.Any(bmd => bmd.IdAccountingEntry == ae.IdAccountingEntry));
+            db.BankMovement.Any(bm => bm.IdAccountingEntry == ae.IdAccountingEntry) ||
+            db.PurchaseInvoiceEntry.Any(pe => pe.IdAccountingEntry == ae.IdAccountingEntry));
     }
 
     private async Task ValidateRequestAsync(

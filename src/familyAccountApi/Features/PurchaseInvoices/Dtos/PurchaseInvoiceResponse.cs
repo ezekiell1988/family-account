@@ -1,0 +1,26 @@
+namespace FamilyAccountApi.Features.PurchaseInvoices.Dtos;
+
+public sealed record PurchaseInvoiceResponse(
+    int      IdPurchaseInvoice,
+    int      IdFiscalPeriod,
+    string   NameFiscalPeriod,
+    int      IdCurrency,
+    string   CodeCurrency,
+    string   NameCurrency,
+    int      IdPurchaseInvoiceType,
+    string   CodePurchaseInvoiceType,
+    string   NamePurchaseInvoiceType,
+    bool     CounterpartFromBankMovement,
+    int?     IdBankAccount,
+    string?  CodeBankAccount,
+    string   NumberInvoice,
+    string   ProviderName,
+    DateOnly DateInvoice,
+    decimal  SubTotalAmount,
+    decimal  TaxAmount,
+    decimal  TotalAmount,
+    string   StatusInvoice,
+    string?  DescriptionInvoice,
+    decimal  ExchangeRateValue,
+    DateTime CreatedAt,
+    IReadOnlyList<PurchaseInvoiceLineResponse> Lines);

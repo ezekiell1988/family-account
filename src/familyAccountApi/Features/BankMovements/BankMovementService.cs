@@ -43,7 +43,7 @@ public sealed class BankMovementService(AppDbContext db) : IBankMovementService
             CreatedAt           = DateTime.UtcNow,
             BankMovementDocuments = request.Documents.Select(d => new BankMovementDocument
             {
-                IdAccountingEntry   = d.IdAccountingEntry,
+                IdPurchaseInvoice   = d.IdPurchaseInvoice,
                 TypeDocument        = d.TypeDocument.Trim(),
                 NumberDocument      = string.IsNullOrWhiteSpace(d.NumberDocument) ? null : d.NumberDocument.Trim(),
                 DateDocument        = d.DateDocument,
@@ -89,7 +89,7 @@ public sealed class BankMovementService(AppDbContext db) : IBankMovementService
         {
             entity.BankMovementDocuments.Add(new BankMovementDocument
             {
-                IdAccountingEntry   = d.IdAccountingEntry,
+                IdPurchaseInvoice   = d.IdPurchaseInvoice,
                 TypeDocument        = d.TypeDocument.Trim(),
                 NumberDocument      = string.IsNullOrWhiteSpace(d.NumberDocument) ? null : d.NumberDocument.Trim(),
                 DateDocument        = d.DateDocument,
@@ -151,6 +151,8 @@ public sealed class BankMovementService(AppDbContext db) : IBankMovementService
             StatusEntry       = "Publicado",
             ReferenceEntry    = entity.NumberMovement,
             ExchangeRateValue = entity.ExchangeRateValue,
+            OriginModule      = "BankMovement",
+            IdOriginRecord    = entity.IdBankMovement,
             CreatedAt         = DateTime.UtcNow,
             AccountingEntryLines =
             [
@@ -172,25 +174,11 @@ public sealed class BankMovementService(AppDbContext db) : IBankMovementService
         };
 
         db.AccountingEntry.Add(accountingEntry);
-
-        // Agregar documento tipo "Asiento" vinculado al asiento creado
-        entity.BankMovementDocuments.Add(new BankMovementDocument
-        {
-            TypeDocument        = "Asiento",
-            NumberDocument      = $"ASI-{entity.NumberMovement}",
-            DateDocument        = entity.DateMovement,
-            AmountDocument      = entity.Amount,
-            DescriptionDocument = entity.DescriptionMovement,
-        });
-
-        entity.StatusMovement = "Confirmado";
-
-        // Primero guardar para obtener IdAccountingEntry
         await db.SaveChangesAsync(ct);
 
-        // Vincular el documento al asiento recién creado
-        var doc = entity.BankMovementDocuments.Last();
-        doc.IdAccountingEntry = accountingEntry.IdAccountingEntry;
+        // Vincular el asiento al movimiento bancario
+        entity.IdAccountingEntry = accountingEntry.IdAccountingEntry;
+        entity.StatusMovement    = "Confirmado";
         await db.SaveChangesAsync(ct);
 
         return await GetByIdAsync(idBankMovement, ct);
@@ -244,7 +232,7 @@ public sealed class BankMovementService(AppDbContext db) : IBankMovementService
             bm.BankMovementDocuments
                 .Select(d => new BankMovementDocumentResponse(
                     d.IdBankMovementDocument,
-                    d.IdAccountingEntry,
+                    d.IdPurchaseInvoice,
                     d.TypeDocument,
                     d.NumberDocument,
                     d.DateDocument,

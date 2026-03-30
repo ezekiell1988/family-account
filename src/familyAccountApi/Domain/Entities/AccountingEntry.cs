@@ -12,6 +12,8 @@ public sealed class AccountingEntry
     public string?  ReferenceEntry    { get; set; }
     public decimal  ExchangeRateValue { get; set; }
     public DateTime CreatedAt         { get; set; }
+    public string?  OriginModule      { get; set; }  // null | "BankMovement" | "PurchaseInvoice"
+    public int?     IdOriginRecord    { get; set; }  // ID del registro origen
 
     public FiscalPeriod IdFiscalPeriodNavigation { get; set; } = null!;
     public Currency IdCurrencyNavigation { get; set; } = null!;

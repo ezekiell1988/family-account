@@ -98,5 +98,17 @@ public sealed class BankMovementConfiguration : IEntityTypeConfiguration<BankMov
             .WithMany()
             .HasForeignKey(bm => bm.IdFiscalPeriod)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(bm => bm.IdAccountingEntry)
+            .HasComment("FK opcional al asiento contable generado al confirmar el movimiento bancario. Relación 1:1 con AccountingEntry.");
+
+        builder.HasIndex(bm => bm.IdAccountingEntry)
+            .HasDatabaseName("IX_bankMovement_idAccountingEntry")
+            .HasFilter("[idAccountingEntry] IS NOT NULL");
+
+        builder.HasOne(bm => bm.IdAccountingEntryNavigation)
+            .WithMany()
+            .HasForeignKey(bm => bm.IdAccountingEntry)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

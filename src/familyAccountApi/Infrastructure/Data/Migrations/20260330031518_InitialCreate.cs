@@ -267,6 +267,37 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 comment: "Catálogo de tipos de movimiento bancario (depósito, retiro, pago, etc.)");
 
             migrationBuilder.CreateTable(
+                name: "purchaseInvoiceType",
+                columns: table => new
+                {
+                    idPurchaseInvoiceType = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del tipo de factura de compra.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    codePurchaseInvoiceType = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false, comment: "Código único del tipo: 'EFECTIVO', 'DEBITO', 'TC'."),
+                    namePurchaseInvoiceType = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false, comment: "Nombre descriptivo del tipo de factura (ej. 'Tarjeta de Crédito')."),
+                    counterpartFromBankMovement = table.Column<bool>(type: "bit", nullable: false, comment: "true = la cuenta CR del asiento se toma del BankAccount vinculado al BankMovement (DEBITO, TC). false = la cuenta CR es fija (EFECTIVO: Caja CRC o Caja USD según moneda)."),
+                    idAccountCounterpartCRC = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta Caja CRC. Solo aplica cuando CounterpartFromBankMovement = false (tipo EFECTIVO). La selección entre CRC o USD se hace automáticamente según la moneda de la factura."),
+                    idAccountCounterpartUSD = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta Caja USD. Solo aplica cuando CounterpartFromBankMovement = false (tipo EFECTIVO)."),
+                    isActive = table.Column<bool>(type: "bit", nullable: false, comment: "Indica si el tipo de factura está activo y disponible para registrar nuevas facturas.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_purchaseInvoiceType", x => x.idPurchaseInvoiceType);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoiceType_account_idAccountCounterpartCRC",
+                        column: x => x.idAccountCounterpartCRC,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoiceType_account_idAccountCounterpartUSD",
+                        column: x => x.idAccountCounterpartUSD,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "Catálogo de tipos de factura de compra. Define si la contrapartida contable (CR) proviene del BankMovement vinculado o de una cuenta Caja fija por moneda.");
+
+            migrationBuilder.CreateTable(
                 name: "contactContactType",
                 columns: table => new
                 {
@@ -368,7 +399,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     statusEntry = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false, comment: "Estado del asiento contable: Borrador | Publicado | Anulado."),
                     referenceEntry = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: true, comment: "Referencia opcional del asiento, como número de documento, factura o comprobante externo."),
                     exchangeRateValue = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false, comment: "Tipo de cambio utilizado al momento de registrar el asiento contable."),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()", comment: "Fecha y hora de creación del asiento contable.")
+                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()", comment: "Fecha y hora de creación del asiento contable."),
+                    originModule = table.Column<string>(type: "varchar(30)", unicode: false, maxLength: 30, nullable: true, comment: "Módulo que generó este asiento automáticamente: null (manual) | 'BankMovement' | 'PurchaseInvoice'. Los asientos con origen definido son solo lectura desde la vista general de asientos."),
+                    idOriginRecord = table.Column<int>(type: "int", nullable: true, comment: "ID del registro de origen (IdBankMovement o IdPurchaseInvoice). Sin FK física — referencia polimórfica controlada en la capa de servicio.")
                 },
                 constraints: table =>
                 {
@@ -419,6 +452,41 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         onDelete: ReferentialAction.Restrict);
                 },
                 comment: "Presupuestos contables por cuenta y período fiscal para control y análisis financiero.");
+
+            migrationBuilder.CreateTable(
+                name: "productAccount",
+                columns: table => new
+                {
+                    idProductAccount = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental de la distribución contable del producto.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idProduct = table.Column<int>(type: "int", nullable: false, comment: "FK al producto que se está distribuyendo contablemente."),
+                    idAccount = table.Column<int>(type: "int", nullable: false, comment: "FK a la cuenta contable de gasto (DR del asiento de factura)."),
+                    idCostCenter = table.Column<int>(type: "int", nullable: true, comment: "FK opcional al centro de costo. Nullable cuando el producto no requiere distribución por centro de costo."),
+                    percentageAccount = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false, comment: "Porcentaje del total de la línea asignado a esta cuenta/centro de costo. La suma por IdProduct debe ser 100.00.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_productAccount", x => x.idProductAccount);
+                    table.ForeignKey(
+                        name: "FK_productAccount_account_idAccount",
+                        column: x => x.idAccount,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_productAccount_costCenter_idCostCenter",
+                        column: x => x.idCostCenter,
+                        principalTable: "costCenter",
+                        principalColumn: "idCostCenter",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_productAccount_product_idProduct",
+                        column: x => x.idProduct,
+                        principalTable: "product",
+                        principalColumn: "idProduct",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "Distribución contable por producto: define la cuenta de gasto y el centro de costo para cada porcentaje del total de la línea de factura. La suma de PercentageAccount por IdProduct debe ser exactamente 100.");
 
             migrationBuilder.CreateTable(
                 name: "productProductCategory",
@@ -525,47 +593,49 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 comment: "Tabla de asociación muchos-a-muchos entre usuarios y roles. Un usuario puede tener múltiples roles y un rol puede asignarse a múltiples usuarios. No se permite asignar el mismo rol dos veces al mismo usuario.");
 
             migrationBuilder.CreateTable(
-                name: "bankMovement",
+                name: "purchaseInvoice",
                 columns: table => new
                 {
-                    idBankMovement = table.Column<int>(type: "int", nullable: false, comment: "Identificador único del movimiento bancario")
+                    idPurchaseInvoice = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental de la factura de compra.")
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    idBankAccount = table.Column<int>(type: "int", nullable: false, comment: "FK a la cuenta bancaria afectada por el movimiento"),
-                    idBankMovementType = table.Column<int>(type: "int", nullable: false, comment: "FK al tipo de movimiento bancario"),
-                    idFiscalPeriod = table.Column<int>(type: "int", nullable: false, comment: "FK al período fiscal al que pertenece el movimiento"),
-                    numberMovement = table.Column<string>(type: "varchar(50)", unicode: false, maxLength: 50, nullable: false, comment: "Número único del movimiento bancario (ej. MOV-2025-001)"),
-                    dateMovement = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha del movimiento bancario"),
-                    descriptionMovement = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false, comment: "Descripción del movimiento bancario"),
-                    amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Monto del movimiento en la moneda de la cuenta bancaria"),
-                    statusMovement = table.Column<string>(type: "varchar(15)", unicode: false, maxLength: 15, nullable: false, defaultValue: "Borrador", comment: "Estado del movimiento: 'Borrador', 'Confirmado' o 'Anulado'"),
-                    referenceMovement = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true, comment: "Referencia externa del movimiento (número de cheque, comprobante, etc.)"),
-                    exchangeRateValue = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false, comment: "Tipo de cambio vigente al momento del movimiento"),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false, comment: "Fecha y hora de creación del registro en UTC")
+                    idFiscalPeriod = table.Column<int>(type: "int", nullable: false, comment: "FK al período fiscal al que pertenece la factura de compra."),
+                    idCurrency = table.Column<int>(type: "int", nullable: false, comment: "FK a la moneda de la factura. Para tipo EFECTIVO determina qué cuenta Caja usar (CRC o USD)."),
+                    idPurchaseInvoiceType = table.Column<int>(type: "int", nullable: false, comment: "FK al tipo de factura de compra (EFECTIVO, DEBITO, TC)."),
+                    numberInvoice = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: false, comment: "Número de factura tal como aparece en el documento del proveedor."),
+                    providerName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, comment: "Nombre del proveedor (ingreso libre, sin catálogo en esta fase)."),
+                    dateInvoice = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha de emisión de la factura del proveedor."),
+                    subTotalAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Subtotal de la factura antes de impuestos."),
+                    taxAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Total de impuestos de la factura."),
+                    totalAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Total general de la factura (SubTotalAmount + TaxAmount)."),
+                    statusInvoice = table.Column<string>(type: "varchar(15)", unicode: false, maxLength: 15, nullable: false, defaultValue: "Borrador", comment: "Estado de la factura: 'Borrador', 'Confirmado' o 'Anulado'."),
+                    descriptionInvoice = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true, comment: "Notas adicionales opcionales sobre la factura de compra."),
+                    exchangeRateValue = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false, comment: "Tipo de cambio vigente al momento del registro de la factura."),
+                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()", comment: "Fecha y hora de creación del registro.")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_bankMovement", x => x.idBankMovement);
-                    table.CheckConstraint("CK_bankMovement_statusMovement", "statusMovement IN ('Borrador', 'Confirmado', 'Anulado')");
+                    table.PrimaryKey("PK_purchaseInvoice", x => x.idPurchaseInvoice);
+                    table.CheckConstraint("CK_purchaseInvoice_statusInvoice", "statusInvoice IN ('Borrador', 'Confirmado', 'Anulado')");
                     table.ForeignKey(
-                        name: "FK_bankMovement_bankAccount_idBankAccount",
-                        column: x => x.idBankAccount,
-                        principalTable: "bankAccount",
-                        principalColumn: "idBankAccount",
+                        name: "FK_purchaseInvoice_currency_idCurrency",
+                        column: x => x.idCurrency,
+                        principalTable: "currency",
+                        principalColumn: "idCurrency",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_bankMovement_bankMovementType_idBankMovementType",
-                        column: x => x.idBankMovementType,
-                        principalTable: "bankMovementType",
-                        principalColumn: "idBankMovementType",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_bankMovement_fiscalPeriod_idFiscalPeriod",
+                        name: "FK_purchaseInvoice_fiscalPeriod_idFiscalPeriod",
                         column: x => x.idFiscalPeriod,
                         principalTable: "fiscalPeriod",
                         principalColumn: "idFiscalPeriod",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoice_purchaseInvoiceType_idPurchaseInvoiceType",
+                        column: x => x.idPurchaseInvoiceType,
+                        principalTable: "purchaseInvoiceType",
+                        principalColumn: "idPurchaseInvoiceType",
+                        onDelete: ReferentialAction.Restrict);
                 },
-                comment: "Encabezado de movimientos bancarios (depósitos, retiros, pagos, etc.)");
+                comment: "Cabecera de factura de compra. Registra el gasto y genera automáticamente un asiento contable al confirmar.");
 
             migrationBuilder.CreateTable(
                 name: "bankStatementImport",
@@ -647,37 +717,113 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 comment: "Líneas del asiento contable. Cada línea afecta una cuenta contable con un monto al débito o al crédito.");
 
             migrationBuilder.CreateTable(
-                name: "bankMovementDocument",
+                name: "bankMovement",
                 columns: table => new
                 {
-                    idBankMovementDocument = table.Column<int>(type: "int", nullable: false, comment: "Identificador único del documento de soporte")
+                    idBankMovement = table.Column<int>(type: "int", nullable: false, comment: "Identificador único del movimiento bancario")
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    idBankMovement = table.Column<int>(type: "int", nullable: false, comment: "FK al movimiento bancario al que pertenece el documento"),
-                    idAccountingEntry = table.Column<int>(type: "int", nullable: true, comment: "FK opcional al asiento contable vinculado a este documento"),
-                    typeDocument = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false, comment: "Tipo de documento: 'Asiento', 'Factura', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'"),
-                    numberDocument = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: true, comment: "Número o referencia del documento (factura, cheque, etc.)"),
-                    dateDocument = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha del documento de soporte"),
-                    amountDocument = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Monto del documento de soporte"),
-                    descriptionDocument = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true, comment: "Descripción adicional del documento")
+                    idBankAccount = table.Column<int>(type: "int", nullable: false, comment: "FK a la cuenta bancaria afectada por el movimiento"),
+                    idBankMovementType = table.Column<int>(type: "int", nullable: false, comment: "FK al tipo de movimiento bancario"),
+                    idFiscalPeriod = table.Column<int>(type: "int", nullable: false, comment: "FK al período fiscal al que pertenece el movimiento"),
+                    numberMovement = table.Column<string>(type: "varchar(50)", unicode: false, maxLength: 50, nullable: false, comment: "Número único del movimiento bancario (ej. MOV-2025-001)"),
+                    dateMovement = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha del movimiento bancario"),
+                    descriptionMovement = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false, comment: "Descripción del movimiento bancario"),
+                    amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Monto del movimiento en la moneda de la cuenta bancaria"),
+                    statusMovement = table.Column<string>(type: "varchar(15)", unicode: false, maxLength: 15, nullable: false, defaultValue: "Borrador", comment: "Estado del movimiento: 'Borrador', 'Confirmado' o 'Anulado'"),
+                    referenceMovement = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true, comment: "Referencia externa del movimiento (número de cheque, comprobante, etc.)"),
+                    exchangeRateValue = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false, comment: "Tipo de cambio vigente al momento del movimiento"),
+                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false, comment: "Fecha y hora de creación del registro en UTC"),
+                    idAccountingEntry = table.Column<int>(type: "int", nullable: true, comment: "FK opcional al asiento contable generado al confirmar el movimiento bancario. Relación 1:1 con AccountingEntry.")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_bankMovementDocument", x => x.idBankMovementDocument);
-                    table.CheckConstraint("CK_bankMovementDocument_typeDocument", "typeDocument IN ('Asiento', 'Factura', 'Recibo', 'Transferencia', 'Cheque', 'Otro')");
+                    table.PrimaryKey("PK_bankMovement", x => x.idBankMovement);
+                    table.CheckConstraint("CK_bankMovement_statusMovement", "statusMovement IN ('Borrador', 'Confirmado', 'Anulado')");
                     table.ForeignKey(
-                        name: "FK_bankMovementDocument_accountingEntry_idAccountingEntry",
+                        name: "FK_bankMovement_accountingEntry_idAccountingEntry",
                         column: x => x.idAccountingEntry,
                         principalTable: "accountingEntry",
                         principalColumn: "idAccountingEntry",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_bankMovementDocument_bankMovement_idBankMovement",
-                        column: x => x.idBankMovement,
-                        principalTable: "bankMovement",
-                        principalColumn: "idBankMovement",
+                        name: "FK_bankMovement_bankAccount_idBankAccount",
+                        column: x => x.idBankAccount,
+                        principalTable: "bankAccount",
+                        principalColumn: "idBankAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_bankMovement_bankMovementType_idBankMovementType",
+                        column: x => x.idBankMovementType,
+                        principalTable: "bankMovementType",
+                        principalColumn: "idBankMovementType",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_bankMovement_fiscalPeriod_idFiscalPeriod",
+                        column: x => x.idFiscalPeriod,
+                        principalTable: "fiscalPeriod",
+                        principalColumn: "idFiscalPeriod",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "Encabezado de movimientos bancarios (depósitos, retiros, pagos, etc.)");
+
+            migrationBuilder.CreateTable(
+                name: "purchaseInvoiceEntry",
+                columns: table => new
+                {
+                    idPurchaseInvoiceEntry = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del vínculo factura-asiento.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idPurchaseInvoice = table.Column<int>(type: "int", nullable: false, comment: "FK a la factura de compra."),
+                    idAccountingEntry = table.Column<int>(type: "int", nullable: false, comment: "FK al asiento contable vinculado a la factura.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_purchaseInvoiceEntry", x => x.idPurchaseInvoiceEntry);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoiceEntry_accountingEntry_idAccountingEntry",
+                        column: x => x.idAccountingEntry,
+                        principalTable: "accountingEntry",
+                        principalColumn: "idAccountingEntry",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoiceEntry_purchaseInvoice_idPurchaseInvoice",
+                        column: x => x.idPurchaseInvoice,
+                        principalTable: "purchaseInvoice",
+                        principalColumn: "idPurchaseInvoice",
                         onDelete: ReferentialAction.Cascade);
                 },
-                comment: "Documentos de soporte vinculados a un movimiento bancario");
+                comment: "Tabla auxiliar N:M entre purchaseInvoice y accountingEntry. Una factura puede vincularse a más de un asiento: el asiento inicial de confirmación y cualquier asiento de ajuste posterior. Nunca se modifica un asiento confirmado; se agregan nuevas filas en esta tabla.");
+
+            migrationBuilder.CreateTable(
+                name: "purchaseInvoiceLine",
+                columns: table => new
+                {
+                    idPurchaseInvoiceLine = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental de la línea de factura de compra.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idPurchaseInvoice = table.Column<int>(type: "int", nullable: false, comment: "FK a la factura de compra cabecera. Cascade delete."),
+                    idProductSKU = table.Column<int>(type: "int", nullable: true, comment: "FK opcional al SKU del producto escaneado. Nullable hasta que se implemente el catálogo completo de productos."),
+                    descriptionLine = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false, comment: "Descripción de la línea tal como aparece en la factura del proveedor."),
+                    quantity = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false, comment: "Cantidad comprada."),
+                    unitPrice = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Precio unitario del producto o servicio."),
+                    taxPercent = table.Column<decimal>(type: "decimal(5,2)", precision: 5, scale: 2, nullable: false, comment: "Porcentaje de impuesto aplicado a la línea (ej. 13.00 para IVA 13%)."),
+                    totalLineAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Total de la línea calculado: Quantity * UnitPrice * (1 + TaxPercent / 100).")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_purchaseInvoiceLine", x => x.idPurchaseInvoiceLine);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoiceLine_productSKU_idProductSKU",
+                        column: x => x.idProductSKU,
+                        principalTable: "productSKU",
+                        principalColumn: "idProductSKU",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoiceLine_purchaseInvoice_idPurchaseInvoice",
+                        column: x => x.idPurchaseInvoice,
+                        principalTable: "purchaseInvoice",
+                        principalColumn: "idPurchaseInvoice",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "Líneas de la factura de compra. Cada línea representa un producto o servicio adquirido. Cuando IdProductSKU está presente la cadena productSKU → product → productAccount genera automáticamente las líneas DR del asiento contable.");
 
             migrationBuilder.CreateTable(
                 name: "bankStatementTransaction",
@@ -729,6 +875,66 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 },
                 comment: "Transacciones individuales importadas de extractos bancarios");
 
+            migrationBuilder.CreateTable(
+                name: "bankMovementDocument",
+                columns: table => new
+                {
+                    idBankMovementDocument = table.Column<int>(type: "int", nullable: false, comment: "Identificador único del documento de soporte")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idBankMovement = table.Column<int>(type: "int", nullable: false, comment: "FK al movimiento bancario al que pertenece el documento"),
+                    idPurchaseInvoice = table.Column<int>(type: "int", nullable: true, comment: "FK opcional a la factura de compra vinculada a este documento de soporte"),
+                    typeDocument = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false, comment: "Tipo de documento: 'FacturaCompra', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'"),
+                    numberDocument = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: true, comment: "Número o referencia del documento (factura, cheque, etc.)"),
+                    dateDocument = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha del documento de soporte"),
+                    amountDocument = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Monto del documento de soporte"),
+                    descriptionDocument = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true, comment: "Descripción adicional del documento")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_bankMovementDocument", x => x.idBankMovementDocument);
+                    table.CheckConstraint("CK_bankMovementDocument_typeDocument", "typeDocument IN ('FacturaCompra', 'Recibo', 'Transferencia', 'Cheque', 'Otro')");
+                    table.ForeignKey(
+                        name: "FK_bankMovementDocument_bankMovement_idBankMovement",
+                        column: x => x.idBankMovement,
+                        principalTable: "bankMovement",
+                        principalColumn: "idBankMovement",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_bankMovementDocument_purchaseInvoice_idPurchaseInvoice",
+                        column: x => x.idPurchaseInvoice,
+                        principalTable: "purchaseInvoice",
+                        principalColumn: "idPurchaseInvoice",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "Documentos de soporte vinculados a un movimiento bancario");
+
+            migrationBuilder.CreateTable(
+                name: "purchaseInvoiceLineEntry",
+                columns: table => new
+                {
+                    idPurchaseInvoiceLineEntry = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del vínculo línea-factura/línea-asiento.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idPurchaseInvoiceLine = table.Column<int>(type: "int", nullable: false, comment: "FK a la línea de factura de compra."),
+                    idAccountingEntryLine = table.Column<int>(type: "int", nullable: false, comment: "FK a la línea del asiento contable generada a partir de esta línea de factura.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_purchaseInvoiceLineEntry", x => x.idPurchaseInvoiceLineEntry);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoiceLineEntry_accountingEntryLine_idAccountingEntryLine",
+                        column: x => x.idAccountingEntryLine,
+                        principalTable: "accountingEntryLine",
+                        principalColumn: "idAccountingEntryLine",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoiceLineEntry_purchaseInvoiceLine_idPurchaseInvoiceLine",
+                        column: x => x.idPurchaseInvoiceLine,
+                        principalTable: "purchaseInvoiceLine",
+                        principalColumn: "idPurchaseInvoiceLine",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "Tabla auxiliar N:M entre purchaseInvoiceLine y accountingEntryLine. Permite trazar qué líneas del asiento contable se originaron de cada línea de factura. Una línea de factura genera N líneas contables según la distribución de ProductAccount.");
+
             migrationBuilder.InsertData(
                 table: "account",
                 columns: new[] { "idAccount", "allowsMovements", "codeAccount", "idAccountParent", "isActive", "levelAccount", "nameAccount", "typeAccount" },
@@ -758,7 +964,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
             migrationBuilder.InsertData(
                 table: "bankStatementTemplate",
                 columns: new[] { "idBankStatementTemplate", "bankName", "codeTemplate", "columnMappings", "dateFormat", "isActive", "keywordRules", "nameTemplate", "notes", "timeFormat" },
-                values: new object[] { 1, "Banco de Costa Rica", "BCR-HTML-XLS-V1", "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}", "dd/MM/yyyy", true, "[\r\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\r\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\r\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\r\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\r\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\r\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\r\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\r\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\r\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\r\n]", "BCR – Movimientos de Cuenta (HTML-XLS)", "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.", "HH:mm:ss" });
+                values: new object[] { 1, "Banco de Costa Rica", "BCR-HTML-XLS-V1", "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]", "BCR – Movimientos de Cuenta (HTML-XLS)", "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.", "HH:mm:ss" });
 
             migrationBuilder.InsertData(
                 table: "contactType",
@@ -805,6 +1011,15 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 10, new DateOnly(2026, 10, 31), 10, "Octubre 2026", new DateOnly(2026, 10, 1), "Abierto", 2026 },
                     { 11, new DateOnly(2026, 11, 30), 11, "Noviembre 2026", new DateOnly(2026, 11, 1), "Abierto", 2026 },
                     { 12, new DateOnly(2026, 12, 31), 12, "Diciembre 2026", new DateOnly(2026, 12, 1), "Abierto", 2026 }
+                });
+
+            migrationBuilder.InsertData(
+                table: "purchaseInvoiceType",
+                columns: new[] { "idPurchaseInvoiceType", "codePurchaseInvoiceType", "counterpartFromBankMovement", "idAccountCounterpartCRC", "idAccountCounterpartUSD", "isActive", "namePurchaseInvoiceType" },
+                values: new object[,]
+                {
+                    { 2, "DEBITO", true, null, null, true, "Tarjeta de Débito / Transferencia" },
+                    { 3, "TC", true, null, null, true, "Tarjeta de Crédito" }
                 });
 
             migrationBuilder.InsertData(
@@ -910,7 +1125,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 87, true, "5.11.02", 100, true, 3, "Campo Santo", "Gasto" },
                     { 88, true, "5.11.03", 100, true, 3, "Campo Santo Mantenimiento", "Gasto" },
                     { 102, true, "4.4.01", 101, true, 3, "Diferencial Cambiario Favorable", "Ingreso" },
-                    { 104, true, "5.13.01", 103, true, 3, "Diferencial Cambiario Desfavorable", "Gasto" }
+                    { 104, true, "5.13.01", 103, true, 3, "Diferencial Cambiario Desfavorable", "Gasto" },
+                    { 105, false, "1.1.06", 7, true, 3, "Caja / Efectivo", "Activo" }
                 });
 
             migrationBuilder.InsertData(
@@ -943,7 +1159,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 49, true, "1.2.02.01", 48, true, 4, "CCSS - IVM Trabajador - Baltodano Cubillo Ezequiel", "Activo" },
                     { 51, true, "1.2.03.01", 50, true, 4, "Banco Popular - LPT - Baltodano Cubillo Ezequiel", "Activo" },
                     { 53, true, "2.1.03.01", 52, true, 4, "Adelanto Salarial ITQS - Baltodano Cubillo Ezequiel", "Pasivo" },
-                    { 55, true, "1.1.05.01", 54, true, 4, "Davivienda - AHO CR98010401446613244113 (₡) - Baltodano Cubillo Ezequiel [Nómina ITQS]", "Activo" }
+                    { 55, true, "1.1.05.01", 54, true, 4, "Davivienda - AHO CR98010401446613244113 (₡) - Baltodano Cubillo Ezequiel [Nómina ITQS]", "Activo" },
+                    { 106, true, "1.1.06.01", 105, true, 4, "Caja CRC (₡)", "Activo" },
+                    { 107, true, "1.1.06.02", 105, true, 4, "Caja USD ($)", "Activo" }
                 });
 
             migrationBuilder.InsertData(
@@ -983,6 +1201,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 8, "TRANSF-ENV", 34, true, "Cargo", "Transferencia Enviada" }
                 });
 
+            migrationBuilder.InsertData(
+                table: "purchaseInvoiceType",
+                columns: new[] { "idPurchaseInvoiceType", "codePurchaseInvoiceType", "counterpartFromBankMovement", "idAccountCounterpartCRC", "idAccountCounterpartUSD", "isActive", "namePurchaseInvoiceType" },
+                values: new object[] { 1, "EFECTIVO", false, 106, 107, true, "Pago en Efectivo" });
+
             migrationBuilder.CreateIndex(
                 name: "IX_account_idAccountParent",
                 table: "account",
@@ -998,6 +1221,12 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "IX_accountingEntry_idCurrency",
                 table: "accountingEntry",
                 column: "idCurrency");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_accountingEntry_originModule_idOriginRecord",
+                table: "accountingEntry",
+                columns: new[] { "originModule", "idOriginRecord" },
+                filter: "[originModule] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "UQ_accountingEntry_idFiscalPeriod_numberEntry",
@@ -1055,6 +1284,12 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_bankMovement_idAccountingEntry",
+                table: "bankMovement",
+                column: "idAccountingEntry",
+                filter: "[idAccountingEntry] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_bankMovement_idBankAccount",
                 table: "bankMovement",
                 column: "idBankAccount");
@@ -1076,14 +1311,15 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_bankMovementDocument_idAccountingEntry",
-                table: "bankMovementDocument",
-                column: "idAccountingEntry");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_bankMovementDocument_idBankMovement",
                 table: "bankMovementDocument",
                 column: "idBankMovement");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_bankMovementDocument_idPurchaseInvoice",
+                table: "bankMovementDocument",
+                column: "idPurchaseInvoice",
+                filter: "[idPurchaseInvoice] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_bankMovementType_idAccountCounterpart",
@@ -1227,6 +1463,24 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_productAccount_idAccount",
+                table: "productAccount",
+                column: "idAccount");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_productAccount_idCostCenter",
+                table: "productAccount",
+                column: "idCostCenter",
+                filter: "[idCostCenter] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_productAccount_idProduct_idAccount_idCostCenter",
+                table: "productAccount",
+                columns: new[] { "idProduct", "idAccount", "idCostCenter" },
+                unique: true,
+                filter: "[idCostCenter] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_productProductCategory_idProductCategory",
                 table: "productProductCategory",
                 column: "idProductCategory");
@@ -1252,6 +1506,78 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "UQ_productSKU_codeProductSKU",
                 table: "productSKU",
                 column: "codeProductSKU",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoice_idCurrency",
+                table: "purchaseInvoice",
+                column: "idCurrency");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoice_idFiscalPeriod",
+                table: "purchaseInvoice",
+                column: "idFiscalPeriod");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoice_idPurchaseInvoiceType",
+                table: "purchaseInvoice",
+                column: "idPurchaseInvoiceType");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_purchaseInvoice_numberInvoice",
+                table: "purchaseInvoice",
+                column: "numberInvoice",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoiceEntry_idAccountingEntry",
+                table: "purchaseInvoiceEntry",
+                column: "idAccountingEntry");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_purchaseInvoiceEntry_idPurchaseInvoice_idAccountingEntry",
+                table: "purchaseInvoiceEntry",
+                columns: new[] { "idPurchaseInvoice", "idAccountingEntry" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoiceLine_idProductSKU",
+                table: "purchaseInvoiceLine",
+                column: "idProductSKU",
+                filter: "[idProductSKU] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoiceLine_idPurchaseInvoice",
+                table: "purchaseInvoiceLine",
+                column: "idPurchaseInvoice");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoiceLineEntry_idAccountingEntryLine",
+                table: "purchaseInvoiceLineEntry",
+                column: "idAccountingEntryLine");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_purchaseInvoiceLineEntry_idPurchaseInvoiceLine_idAccountingEntryLine",
+                table: "purchaseInvoiceLineEntry",
+                columns: new[] { "idPurchaseInvoiceLine", "idAccountingEntryLine" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoiceType_idAccountCounterpartCRC",
+                table: "purchaseInvoiceType",
+                column: "idAccountCounterpartCRC",
+                filter: "[idAccountCounterpartCRC] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoiceType_idAccountCounterpartUSD",
+                table: "purchaseInvoiceType",
+                column: "idAccountCounterpartUSD",
+                filter: "[idAccountCounterpartUSD] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_purchaseInvoiceType_codePurchaseInvoiceType",
+                table: "purchaseInvoiceType",
+                column: "codePurchaseInvoiceType",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1288,9 +1614,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "accountingEntryLine");
-
-            migrationBuilder.DropTable(
                 name: "bankMovementDocument");
 
             migrationBuilder.DropTable(
@@ -1306,10 +1629,19 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "exchangeRate");
 
             migrationBuilder.DropTable(
+                name: "productAccount");
+
+            migrationBuilder.DropTable(
                 name: "productProductCategory");
 
             migrationBuilder.DropTable(
                 name: "productProductSKU");
+
+            migrationBuilder.DropTable(
+                name: "purchaseInvoiceEntry");
+
+            migrationBuilder.DropTable(
+                name: "purchaseInvoiceLineEntry");
 
             migrationBuilder.DropTable(
                 name: "userPin");
@@ -1318,13 +1650,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "userRole");
 
             migrationBuilder.DropTable(
-                name: "costCenter");
-
-            migrationBuilder.DropTable(
                 name: "bankMovement");
-
-            migrationBuilder.DropTable(
-                name: "accountingEntry");
 
             migrationBuilder.DropTable(
                 name: "bankStatementImport");
@@ -1339,19 +1665,19 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "productCategory");
 
             migrationBuilder.DropTable(
-                name: "productSKU");
+                name: "product");
 
             migrationBuilder.DropTable(
-                name: "product");
+                name: "accountingEntryLine");
+
+            migrationBuilder.DropTable(
+                name: "purchaseInvoiceLine");
 
             migrationBuilder.DropTable(
                 name: "role");
 
             migrationBuilder.DropTable(
                 name: "bankMovementType");
-
-            migrationBuilder.DropTable(
-                name: "fiscalPeriod");
 
             migrationBuilder.DropTable(
                 name: "bankAccount");
@@ -1363,13 +1689,31 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "user");
 
             migrationBuilder.DropTable(
-                name: "account");
+                name: "accountingEntry");
+
+            migrationBuilder.DropTable(
+                name: "costCenter");
+
+            migrationBuilder.DropTable(
+                name: "productSKU");
+
+            migrationBuilder.DropTable(
+                name: "purchaseInvoice");
 
             migrationBuilder.DropTable(
                 name: "bank");
 
             migrationBuilder.DropTable(
                 name: "currency");
+
+            migrationBuilder.DropTable(
+                name: "fiscalPeriod");
+
+            migrationBuilder.DropTable(
+                name: "purchaseInvoiceType");
+
+            migrationBuilder.DropTable(
+                name: "account");
         }
     }
 }

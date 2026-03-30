@@ -1,0 +1,318 @@
+<panel
+  [title]="'Facturas de Compra'"
+  [noButton]="true">
+
+  <!-- Barra de acciones -->
+  <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <button class="btn btn-success btn-sm" (click)="openCreate()">
+      <i class="fa fa-plus me-1"></i> Nueva Factura
+    </button>
+    <button class="btn btn-white btn-sm" (click)="refresh.emit()">
+      <i class="fa fa-refresh me-1"></i> Actualizar
+    </button>
+    <select class="form-select form-select-sm w-auto"
+            [ngModel]="filterStatus()"
+            (ngModelChange)="filterStatus.set($event)">
+      <option value="">Todos los estados</option>
+      @for (s of statusOptions; track s) {
+        <option [value]="s">{{ s }}</option>
+      }
+    </select>
+    <input class="form-control form-control-sm w-auto"
+           type="text"
+           placeholder="Buscar..."
+           [ngModel]="filterSearch()"
+           (ngModelChange)="filterSearch.set($event)" />
+    <span class="ms-auto text-muted small">{{ filteredItems().length }} registros</span>
+  </div>
+
+  <!-- Alerta de error -->
+  @if (errorMessage()) {
+    <div class="alert alert-danger alert-dismissible mb-3">
+      {{ errorMessage() }}
+      <button type="button" class="btn-close" (click)="clearError.emit()"></button>
+    </div>
+  }
+
+  <!-- Spinner -->
+  @if (isLoading()) {
+    <div class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+    </div>
+  }
+
+  <!-- Tabla ngx-datatable -->
+  @if (!isLoading()) {
+    <ngx-datatable
+      class="bootstrap"
+      [rows]="filteredItems()"
+      [columnMode]="ColumnMode.force"
+      [headerHeight]="40"
+      [footerHeight]="40"
+      [rowHeight]="48"
+      [externalPaging]="false"
+      [limit]="15">
+
+      <ngx-datatable-column name="#" [width]="60" [sortable]="false">
+        <ng-template let-rowIndex="rowIndex" ngx-datatable-cell-template>
+          {{ rowIndex + 1 }}
+        </ng-template>
+      </ngx-datatable-column>
+
+      <ngx-datatable-column name="Número" prop="numberInvoice" [width]="130"></ngx-datatable-column>
+
+      <ngx-datatable-column name="Proveedor" prop="providerName" [minWidth]="150"></ngx-datatable-column>
+
+      <ngx-datatable-column name="Fecha" prop="dateInvoice" [width]="110">
+        <ng-template let-value="value" ngx-datatable-cell-template>
+          {{ value | date:'dd/MM/yyyy' }}
+        </ng-template>
+      </ngx-datatable-column>
+
+      <ngx-datatable-column name="Tipo" prop="namePurchaseInvoiceType" [width]="130"></ngx-datatable-column>
+
+      <ngx-datatable-column name="Moneda" prop="codeCurrency" [width]="90"></ngx-datatable-column>
+
+      <ngx-datatable-column name="Subtotal" prop="subTotalAmount" [width]="120">
+        <ng-template let-value="value" ngx-datatable-cell-template>
+          {{ value | number:'1.2-2' }}
+        </ng-template>
+      </ngx-datatable-column>
+
+      <ngx-datatable-column name="Total" prop="totalAmount" [width]="120">
+        <ng-template let-value="value" ngx-datatable-cell-template>
+          {{ value | number:'1.2-2' }}
+        </ng-template>
+      </ngx-datatable-column>
+
+      <ngx-datatable-column name="Estado" prop="statusInvoice" [width]="110">
+        <ng-template let-row="row" ngx-datatable-cell-template>
+          <span [class]="getStatusClass(row.statusInvoice)">{{ row.statusInvoice }}</span>
+        </ng-template>
+      </ngx-datatable-column>
+
+      <ngx-datatable-column name="Acciones" [width]="180" [sortable]="false">
+        <ng-template let-row="row" ngx-datatable-cell-template>
+          @if (canEdit(row)) {
+            <button class="btn btn-xs btn-primary me-1" title="Editar" (click)="openEdit(row)">
+              <i class="fa fa-pencil"></i>
+            </button>
+          }
+          @if (canConfirm(row)) {
+            <button class="btn btn-xs btn-success me-1" title="Confirmar" (click)="confirm.emit(row.idPurchaseInvoice)">
+              <i class="fa fa-check"></i>
+            </button>
+          }
+          @if (canCancel(row)) {
+            <button class="btn btn-xs btn-warning me-1" title="Anular" (click)="cancel.emit(row.idPurchaseInvoice)">
+              <i class="fa fa-ban"></i>
+            </button>
+          }
+          @if (canDelete(row)) {
+            <button class="btn btn-xs btn-danger"
+                    title="Eliminar"
+                    [disabled]="deletingId() === row.idPurchaseInvoice"
+                    (click)="remove.emit(row.idPurchaseInvoice)">
+              @if (deletingId() === row.idPurchaseInvoice) {
+                <i class="fa fa-spinner fa-spin"></i>
+              } @else {
+                <i class="fa fa-trash"></i>
+              }
+            </button>
+          }
+        </ng-template>
+      </ngx-datatable-column>
+
+    </ngx-datatable>
+  }
+
+</panel>
+
+<!-- Modal formulario -->
+@if (showForm()) {
+  <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            {{ editingId() ? 'Editar Factura' : 'Nueva Factura de Compra' }}
+          </h5>
+          <button type="button" class="btn-close" (click)="cancelForm()"></button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Datos de cabecera -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Tipo de Factura</label>
+              <select class="form-select"
+                      [ngModel]="formInvoiceType()"
+                      (ngModelChange)="formInvoiceType.set(+$event)">
+                @for (t of invoiceTypes(); track t.idPurchaseInvoiceType) {
+                  <option [value]="t.idPurchaseInvoiceType">{{ t.namePurchaseInvoiceType }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Período Fiscal</label>
+              <select class="form-select"
+                      [ngModel]="formFiscalPeriod()"
+                      (ngModelChange)="formFiscalPeriod.set(+$event)">
+                @for (p of fiscalPeriods(); track p.idFiscalPeriod) {
+                  <option [value]="p.idFiscalPeriod">{{ p.namePeriod }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Moneda</label>
+              <select class="form-select"
+                      [ngModel]="formCurrency()"
+                      (ngModelChange)="formCurrency.set(+$event)">
+                @for (c of currencies(); track c.idCurrency) {
+                  <option [value]="c.idCurrency">{{ c.codeCurrency }} – {{ c.nameCurrency }}</option>
+                }
+              </select>
+            </div>
+            @if (needsBankAccount()) {
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Cuenta Bancaria</label>
+                <select class="form-select"
+                        title="Cuenta bancaria"
+                        [ngModel]="formBankAccount()"
+                        (ngModelChange)="formBankAccount.set(+$event || null)">
+                  <option [ngValue]="null">-- Seleccione --</option>
+                  @for (b of filteredBankAccounts(); track b.idBankAccount) {
+                    <option [value]="b.idBankAccount">{{ b.codeBank }} – {{ b.codeBankAccount }} ({{ b.codeCurrency }})</option>
+                  }
+                </select>
+              </div>
+            }
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Número de Factura</label>
+              <input type="text" class="form-control"
+                     [ngModel]="formNumber()"
+                     (ngModelChange)="formNumber.set($event)"
+                     placeholder="Ej. FCV-001" />
+            </div>
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">Proveedor</label>
+              <input type="text" class="form-control"
+                     [ngModel]="formProvider()"
+                     (ngModelChange)="formProvider.set($event)"
+                     placeholder="Nombre del proveedor" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Fecha</label>
+              <input type="date" class="form-control"
+                     [ngModel]="formDate()"
+                     (ngModelChange)="formDate.set($event)" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Tipo de Cambio</label>
+              <input type="number" class="form-control"
+                     [ngModel]="formExchangeRate()"
+                     (ngModelChange)="formExchangeRate.set(+$event)"
+                     min="0" step="0.01" />
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Descripción</label>
+              <input type="text" class="form-control"
+                     [ngModel]="formDescription()"
+                     (ngModelChange)="formDescription.set($event)"
+                     placeholder="Descripción opcional" />
+            </div>
+          </div>
+
+          <!-- Líneas de factura -->
+          <h6 class="fw-semibold mb-2">Líneas de Factura</h6>
+          <div class="table-responsive mb-2">
+            <table class="table table-sm table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th>Descripción</th>
+                  <th style="width:90px">Cantidad</th>
+                  <th style="width:110px">Precio Unit.</th>
+                  <th style="width:90px">IVA %</th>
+                  <th style="width:120px">Total línea</th>
+                  <th style="width:50px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of formLines(); track $index) {
+                  <tr>
+                    <td>
+                      <input type="text" class="form-control form-control-sm"
+                             [ngModel]="line.descriptionLine"
+                             (ngModelChange)="updateLine($index, 'descriptionLine', $event)"
+                             placeholder="Descripción" />
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm"
+                             [ngModel]="line.quantity"
+                             (ngModelChange)="updateLine($index, 'quantity', +$event)"
+                             min="1" step="1" />
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm"
+                             [ngModel]="line.unitPrice"
+                             (ngModelChange)="updateLine($index, 'unitPrice', +$event)"
+                             min="0" step="0.01" />
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm"
+                             [ngModel]="line.taxPercent"
+                             (ngModelChange)="updateLine($index, 'taxPercent', +$event)"
+                             min="0" max="100" step="0.01" />
+                    </td>
+                    <td class="text-end">
+                      {{ line.totalLineAmount | number:'1.2-2' }}
+                    </td>
+                    <td class="text-center">
+                      @if (formLines().length > 1) {
+                        <button class="btn btn-xs btn-danger" (click)="removeLine($index)">
+                          <i class="fa fa-times"></i>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary mb-3" (click)="addLine()">
+            <i class="fa fa-plus me-1"></i> Agregar línea
+          </button>
+
+          <!-- Totales calculados -->
+          <div class="row g-2 justify-content-end">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Subtotal</label>
+              <input type="number" class="form-control" readonly
+                     [ngModel]="formSubTotal()" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">IVA</label>
+              <input type="number" class="form-control" readonly
+                     [ngModel]="formTax()" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Total</label>
+              <input type="number" class="form-control fw-bold" readonly
+                     [ngModel]="formTotal()" />
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-white" (click)="cancelForm()">Cancelar</button>
+          <button type="button" class="btn btn-primary" (click)="saveForm()">
+            <i class="fa fa-save me-1"></i>
+            {{ editingId() ? 'Guardar Cambios' : 'Crear Factura' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

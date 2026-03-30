@@ -79,5 +79,17 @@ public sealed class AccountingEntryConfiguration : IEntityTypeConfiguration<Acco
             .WithMany(c => c.AccountingEntries)
             .HasForeignKey(ae => ae.IdCurrency)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(ae => ae.OriginModule)
+            .HasMaxLength(30)
+            .IsUnicode(false)
+            .HasComment("Módulo que generó este asiento automáticamente: null (manual) | 'BankMovement' | 'PurchaseInvoice'. Los asientos con origen definido son solo lectura desde la vista general de asientos.");
+
+        builder.Property(ae => ae.IdOriginRecord)
+            .HasComment("ID del registro de origen (IdBankMovement o IdPurchaseInvoice). Sin FK física — referencia polimórfica controlada en la capa de servicio.");
+
+        builder.HasIndex(ae => new { ae.OriginModule, ae.IdOriginRecord })
+            .HasDatabaseName("IX_accountingEntry_originModule_idOriginRecord")
+            .HasFilter("[originModule] IS NOT NULL");
     }
 }

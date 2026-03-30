@@ -1,0 +1,38 @@
+@if (isMobile()) {
+  <app-purchase-invoices-mobile
+    [invoices]="invoices()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    [invoiceTypes]="invoiceTypes()"
+    [currencies]="currencies()"
+    [fiscalPeriods]="fiscalPeriods()"
+    [bankAccounts]="bankAccounts()"
+    (refresh)="loadAll()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (confirm)="onConfirm($event)"
+    (cancel)="onCancel($event)"
+    (clearError)="clearError()">
+  </app-purchase-invoices-mobile>
+} @else {
+  <app-purchase-invoices-web
+    [invoices]="invoices()"
+    [totalCount]="totalCount()"
+    [isLoading]="isLoading()"
+    [deletingId]="deletingId()"
+    [errorMessage]="error() ?? ''"
+    [invoiceTypes]="invoiceTypes()"
+    [currencies]="currencies()"
+    [fiscalPeriods]="fiscalPeriods()"
+    [bankAccounts]="bankAccounts()"
+    (refresh)="loadAll()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onDelete($event)"
+    (confirm)="onConfirm($event)"
+    (cancel)="onCancel($event)"
+    (clearError)="clearError()">
+  </app-purchase-invoices-web>
+}

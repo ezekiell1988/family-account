@@ -17,7 +17,10 @@ using FamilyAccountApi.Features.FiscalPeriods;
 using FamilyAccountApi.Features.Health;
 using FamilyAccountApi.Features.ProductCategories;
 using FamilyAccountApi.Features.Products;
+using FamilyAccountApi.Features.ProductAccounts;
 using FamilyAccountApi.Features.ProductSKUs;
+using FamilyAccountApi.Features.PurchaseInvoiceTypes;
+using FamilyAccountApi.Features.PurchaseInvoices;
 using FamilyAccountApi.Features.Users;
 
 namespace FamilyAccountApi.Infrastructure.Extensions;
@@ -45,7 +48,10 @@ public static class FeaturesExtensions
             .AddBankMovementsModule()
             .AddBankStatementTemplatesModule()
             .AddBankStatementImportsModule()
-            .AddBankStatementTransactionsModule();
+            .AddBankStatementTransactionsModule()
+            .AddProductAccountsModule()
+            .AddPurchaseInvoiceTypesModule()
+            .AddPurchaseInvoicesModule();
 
     public static WebApplication MapAllEndpoints(this WebApplication app)
     {
@@ -74,6 +80,9 @@ public static class FeaturesExtensions
         v1.MapBankStatementTemplatesEndpoints();
         v1.MapBankStatementImportsEndpoints();
         v1.MapBankStatementTransactionsEndpoints();
+        v1.MapProductAccountsEndpoints();
+        v1.MapPurchaseInvoiceTypesEndpoints();
+        v1.MapPurchaseInvoicesEndpoints();
 
         return app;
     }

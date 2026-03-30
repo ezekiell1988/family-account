@@ -34,7 +34,7 @@ public sealed record CreateAccountingEntryRequest
     [Description("Referencia opcional del asiento, por ejemplo número de documento")]
     public string? ReferenceEntry { get; init; }
 
-    [Range(typeof(decimal), "0.000001", "999999999999999.999999", ParseLimitsInInvariantCulture = true)]
+    [Range(typeof(decimal), "0.000001", "999999999999999.999999", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     [Description("Tipo de cambio usado al registrar el asiento")]
     public required decimal ExchangeRateValue { get; init; }
 

@@ -13,7 +13,7 @@ public sealed record UpdateBudgetRequest
     [Description("Período fiscal al que aplica el presupuesto")]
     public required int IdFiscalPeriod { get; init; }
 
-    [Range(typeof(decimal), "0.01", "999999999999999.99")]
+    [Range(typeof(decimal), "0.01", "999999999999999.99", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     [Description("Monto presupuestado")]
     public required decimal AmountBudget { get; init; }
 

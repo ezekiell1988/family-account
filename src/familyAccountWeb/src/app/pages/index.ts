@@ -3,5 +3,6 @@ export { BankMovementTypesPage } from './maintenance/bank-movement-types';
 export { BanksPage } from './maintenance/banks';
 export { AccountingEntriesPage } from './process/accounting-entries';
 export { BankMovementsPage } from './process/bank-movements';
+export { PurchaseInvoicesPage } from './process/purchase-invoices';
 export { ErrorPage } from './error';
 export { LoginPage } from './login';

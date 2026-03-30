@@ -222,6 +222,11 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             new Account { IdAccount = 96,  CodeAccount = "5.12",    NameAccount = "Otros",                              TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
             new Account { IdAccount = 75,  CodeAccount = "5.12.01", NameAccount = "Gastos en Pareja",                   TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 96,  AllowsMovements = true,  IsActive = true },
 
+            // ── 1.1.06 Caja / Efectivo ─────────────────────────────────────
+            new Account { IdAccount = 105, CodeAccount = "1.1.06",    NameAccount = "Caja / Efectivo",  TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 106, CodeAccount = "1.1.06.01", NameAccount = "Caja CRC (₡)",    TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 105, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 107, CodeAccount = "1.1.06.02", NameAccount = "Caja USD ($)",    TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 105, AllowsMovements = true,  IsActive = true },
+
             // ── 5.13 Gastos Financieros ───────────────────────────────────────
             new Account { IdAccount = 103, CodeAccount = "5.13",    NameAccount = "Gastos Financieros",                 TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
             new Account { IdAccount = 104, CodeAccount = "5.13.01", NameAccount = "Diferencial Cambiario Desfavorable", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 103, AllowsMovements = true,  IsActive = true }

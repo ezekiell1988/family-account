@@ -266,6 +266,13 @@ Para **cabecera/detalle**, no asumir que es igual:
 - Request: propiedades con `required` + `{ get; init; }`.
 - Validación con atributos `[Required]`, `[StringLength]`, `[EmailAddress]`, etc. — el middleware `.AddValidation()` los procesa automáticamente con código 400.
 - `[Description]` para documentar en Scalar/OpenAPI.
+- Al usar `[Range]` sobre `decimal`, **siempre** incluir `ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true`; sin ellos el servidor intenta parsear los límites con la cultura del sistema (que usa coma decimal) y falla con 400 aunque el valor enviado sea válido:
+  ```csharp
+  [Range(typeof(decimal), "0", "999999999999.99",
+      ParseLimitsInInvariantCulture = true,
+      ConvertValueInInvariantCulture = true)]
+  public required decimal SubTotalAmount { get; init; }
+  ```
 - Cuando existe detalle hijo, crear DTO separado para la línea: `AccountingEntryLineRequest`, `AccountingEntryLineResponse`, etc.
 - Si una regla depende de más de una fila, validarla también en el service y, si es crítica, reforzarla en BD.
 
@@ -611,8 +618,8 @@ protected override void Down(MigrationBuilder migrationBuilder)
 - [ ] `Infrastructure/Data/Configuration/{Entidad}Configuration.cs` — PK, campos, índices, FKs, **HasComment() en tabla y TODAS las columnas**
 - [ ] `AppDbContext.cs` — `DbSet<{Entidad}>`
 - [ ] `Features/{Entidades}/Dtos/{Entidad}Response.cs` — sealed record positional
-- [ ] `Features/{Entidades}/Dtos/Create{Entidad}Request.cs` — validaciones
-- [ ] `Features/{Entidades}/Dtos/Update{Entidad}Request.cs` — validaciones
+- [ ] `Features/{Entidades}/Dtos/Create{Entidad}Request.cs` — validaciones; `[Range]` de decimal con `ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true`
+- [ ] `Features/{Entidades}/Dtos/Update{Entidad}Request.cs` — validaciones; `[Range]` de decimal con `ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true`
 - [ ] Si hay detalle: DTOs hijos `LineRequest` / `LineResponse`
 - [ ] `Features/{Entidades}/I{Entidad}Service.cs` — 5 métodos CRUD
 - [ ] `Features/{Entidades}/`{Entidad}Service.cs` — implementación
