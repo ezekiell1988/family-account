@@ -11,6 +11,7 @@
       <i class="fa fa-refresh me-1"></i> Actualizar
     </button>
     <select class="form-select form-select-sm w-auto"
+            aria-label="Filtrar por estado"
             [ngModel]="filterStatus()"
             (ngModelChange)="filterStatus.set($event)">
       <option value="">Todos los estados</option>
@@ -30,7 +31,7 @@
   @if (errorMessage()) {
     <div class="alert alert-danger alert-dismissible mb-3">
       {{ errorMessage() }}
-      <button type="button" class="btn-close" (click)="clearError.emit()"></button>
+      <button type="button" class="btn-close" aria-label="Cerrar alerta" (click)="clearError.emit()"></button>
     </div>
   }
 
@@ -260,8 +261,8 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Moneda</label>
-          <input type="text" class="form-control" readonly [value]="entryFormCurrencyDisplay()" />
+          <label class="form-label" for="efCurrency">Moneda</label>
+          <input id="efCurrency" type="text" class="form-control" readonly [value]="entryFormCurrencyDisplay()" />
         </div>
         <div class="col-md-3">
           <label class="form-label" for="efNumber">Número <span class="text-danger">*</span></label>
@@ -336,6 +337,7 @@
                   <tr>
                     <td>
                       <select class="form-select form-select-sm"
+                        aria-label="Cuenta contable"
                         [value]="line.idAccount"
                         (change)="updateEntryLine($index, 'idAccount', +$any($event.target).value)">
                         <option value="0">— Cuenta —</option>
@@ -345,23 +347,23 @@
                       </select>
                     </td>
                     <td>
-                      <input type="number" class="form-control form-control-sm" min="0" step="0.01"
+                      <input type="number" class="form-control form-control-sm" aria-label="Débito" min="0" step="0.01"
                         [value]="line.debitAmount"
                         (input)="updateEntryLine($index, 'debitAmount', +$any($event.target).value)" />
                     </td>
                     <td>
-                      <input type="number" class="form-control form-control-sm" min="0" step="0.01"
+                      <input type="number" class="form-control form-control-sm" aria-label="Crédito" min="0" step="0.01"
                         [value]="line.creditAmount"
                         (input)="updateEntryLine($index, 'creditAmount', +$any($event.target).value)" />
                     </td>
                     <td>
-                      <input type="text" class="form-control form-control-sm" maxlength="200"
+                      <input type="text" class="form-control form-control-sm" aria-label="Descripción" maxlength="200"
                         [value]="line.descriptionLine"
                         (input)="updateEntryLine($index, 'descriptionLine', $any($event.target).value)" />
                     </td>
                     <td>
-                      <button type="button" class="btn btn-xs btn-outline-danger" (click)="removeEntryLine($index)">
-                        <i class="fa fa-trash"></i>
+                      <button type="button" class="btn btn-xs btn-outline-danger" aria-label="Eliminar línea" (click)="removeEntryLine($index)">
+                        <i class="fa fa-trash" aria-hidden="true"></i>
                       </button>
                     </td>
                   </tr>
@@ -412,15 +414,15 @@
           <h5 class="modal-title">
             {{ editingId() ? 'Editar Factura' : 'Nueva Factura de Compra' }}
           </h5>
-          <button type="button" class="btn-close" (click)="cancelForm()"></button>
+          <button type="button" class="btn-close" aria-label="Cerrar" (click)="cancelForm()"></button>
         </div>
         <div class="modal-body">
 
           <!-- Datos de cabecera -->
           <div class="row g-3 mb-3">
             <div class="col-md-4">
-              <label class="form-label fw-semibold">Tipo de Factura</label>
-              <select class="form-select"
+              <label class="form-label fw-semibold" for="modalInvoiceType">Tipo de Factura</label>
+              <select id="modalInvoiceType" class="form-select"
                       [ngModel]="formInvoiceType()"
                       (ngModelChange)="formInvoiceType.set(+$event)">
                 @for (t of invoiceTypes(); track t.idPurchaseInvoiceType) {
@@ -429,8 +431,8 @@
               </select>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-semibold">Período Fiscal</label>
-              <select class="form-select"
+              <label class="form-label fw-semibold" for="modalFiscalPeriod">Período Fiscal</label>
+              <select id="modalFiscalPeriod" class="form-select"
                       [ngModel]="formFiscalPeriod()"
                       (ngModelChange)="formFiscalPeriod.set(+$event)">
                 @for (p of fiscalPeriods(); track p.idFiscalPeriod) {
@@ -439,8 +441,8 @@
               </select>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-semibold">Moneda</label>
-              <select class="form-select"
+              <label class="form-label fw-semibold" for="modalCurrency">Moneda</label>
+              <select id="modalCurrency" class="form-select"
                       [ngModel]="formCurrency()"
                       (ngModelChange)="formCurrency.set(+$event)">
                 @for (c of currencies(); track c.idCurrency) {
@@ -477,14 +479,14 @@
                      placeholder="Nombre del proveedor" />
             </div>
             <div class="col-md-2">
-              <label class="form-label fw-semibold">Fecha</label>
-              <input type="date" class="form-control"
+              <label class="form-label fw-semibold" for="modalDate">Fecha</label>
+              <input id="modalDate" type="date" class="form-control"
                      [ngModel]="formDate()"
                      (ngModelChange)="formDate.set($event)" />
             </div>
             <div class="col-md-2">
-              <label class="form-label fw-semibold">Tipo de Cambio</label>
-              <input type="number" class="form-control"
+              <label class="form-label fw-semibold" for="modalExchangeRate">Tipo de Cambio</label>
+              <input id="modalExchangeRate" type="number" class="form-control"
                      [ngModel]="formExchangeRate()"
                      (ngModelChange)="formExchangeRate.set(+$event)"
                      min="0" step="0.01" />
@@ -522,19 +524,19 @@
                              placeholder="Descripción" />
                     </td>
                     <td>
-                      <input type="number" class="form-control form-control-sm"
+                      <input type="number" class="form-control form-control-sm" aria-label="Cantidad"
                              [ngModel]="line.quantity"
                              (ngModelChange)="updateLine($index, 'quantity', +$event)"
                              min="1" step="1" />
                     </td>
                     <td>
-                      <input type="number" class="form-control form-control-sm"
+                      <input type="number" class="form-control form-control-sm" aria-label="Precio unitario"
                              [ngModel]="line.unitPrice"
                              (ngModelChange)="updateLine($index, 'unitPrice', +$event)"
                              min="0" step="0.01" />
                     </td>
                     <td>
-                      <input type="number" class="form-control form-control-sm"
+                      <input type="number" class="form-control form-control-sm" aria-label="IVA %"
                              [ngModel]="line.taxPercent"
                              (ngModelChange)="updateLine($index, 'taxPercent', +$event)"
                              min="0" max="100" step="0.01" />
@@ -544,8 +546,8 @@
                     </td>
                     <td class="text-center">
                       @if (formLines().length > 1) {
-                        <button class="btn btn-xs btn-danger" (click)="removeLine($index)">
-                          <i class="fa fa-times"></i>
+                        <button class="btn btn-xs btn-danger" aria-label="Eliminar línea" (click)="removeLine($index)">
+                          <i class="fa fa-times" aria-hidden="true"></i>
                         </button>
                       }
                     </td>
@@ -561,18 +563,18 @@
           <!-- Totales calculados -->
           <div class="row g-2 justify-content-end">
             <div class="col-md-3">
-              <label class="form-label fw-semibold">Subtotal</label>
-              <input type="number" class="form-control" readonly
+              <label class="form-label fw-semibold" for="modalSubtotal">Subtotal</label>
+              <input id="modalSubtotal" type="number" class="form-control" readonly
                      [ngModel]="formSubTotal()" />
             </div>
             <div class="col-md-3">
-              <label class="form-label fw-semibold">IVA</label>
-              <input type="number" class="form-control" readonly
+              <label class="form-label fw-semibold" for="modalTax">IVA</label>
+              <input id="modalTax" type="number" class="form-control" readonly
                      [ngModel]="formTax()" />
             </div>
             <div class="col-md-3">
-              <label class="form-label fw-semibold">Total</label>
-              <input type="number" class="form-control fw-bold" readonly
+              <label class="form-label fw-semibold" for="modalTotal">Total</label>
+              <input id="modalTotal" type="number" class="form-control fw-bold" readonly
                      [ngModel]="formTotal()" />
             </div>
           </div>
