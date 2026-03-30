@@ -1,6 +1,9 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  ViewChild,
+  inject,
   input,
   output,
   signal,
@@ -11,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import {
   NgxDatatableModule,
   ColumnMode,
+  DatatableRowDetailDirective,
 } from '@swimlane/ngx-datatable';
 import { PanelComponent } from '../../../../../components';
 import {
@@ -22,9 +26,14 @@ import {
   FiscalPeriodLookup,
   CurrencyDto,
   BankAccountDto,
+  AccountingEntryDto,
+  AccountingEntryLineRequest,
+  UpdateAccountingEntryRequest,
+  AccountDto,
 } from '../../../../../shared/models';
 
 const STATUS_OPTIONS = ['Borrador', 'Confirmado', 'Anulado'] as const;
+const ENTRY_STATUS_OPTIONS = ['Borrador', 'Publicado', 'Anulado'] as const;
 
 interface FormLine {
   idProductSKU:    number | null;
@@ -37,6 +46,13 @@ interface FormLine {
 
 function emptyLine(): FormLine {
   return { idProductSKU: null, descriptionLine: '', quantity: 1, unitPrice: 0, taxPercent: 13, totalLineAmount: 0 };
+}
+
+interface FormEntryLine {
+  idAccount:       number;
+  debitAmount:     number;
+  creditAmount:    number;
+  descriptionLine: string;
 }
 
 @Component({
@@ -57,24 +73,32 @@ export class PurchaseInvoicesWebComponent {
   currencies    = input<CurrencyDto[]>([]);
   fiscalPeriods = input<FiscalPeriodLookup[]>([]);
   bankAccounts  = input<BankAccountDto[]>([]);
+  entries       = input<AccountingEntryDto[]>([]);
+  accounts      = input<AccountDto[]>([]);
 
   // ── Outputs ───────────────────────────────────────────────────────
-  refresh    = output<void>();
-  create     = output<CreatePurchaseInvoiceRequest>();
-  editSave   = output<UpdatePurchaseInvoiceRequest & { id: number }>();
-  remove     = output<number>();
-  confirm    = output<number>();
-  cancel     = output<number>();
-  clearError = output<void>();
+  refresh       = output<void>();
+  create        = output<CreatePurchaseInvoiceRequest>();
+  editSave      = output<UpdatePurchaseInvoiceRequest & { id: number }>();
+  remove        = output<number>();
+  confirm       = output<number>();
+  cancel        = output<number>();
+  clearError    = output<void>();
+  editEntrySave = output<UpdateAccountingEntryRequest & { id: number }>();
+
+  // ── Row detail ────────────────────────────────────────────────────
+  @ViewChild(DatatableRowDetailDirective) rowDetail!: DatatableRowDetailDirective;
+  private cdr = inject(ChangeDetectorRef);
+  expandedId  = signal<number | null>(null);
 
   // ── Constantes ────────────────────────────────────────────────────
-  readonly ColumnMode     = ColumnMode;
-  readonly statusOptions  = STATUS_OPTIONS;
+  readonly ColumnMode         = ColumnMode;
+  readonly statusOptions      = STATUS_OPTIONS;
+  readonly entryStatusOptions = ENTRY_STATUS_OPTIONS;
 
   // ── Filtros ───────────────────────────────────────────────────────
   filterStatus = signal('');
   filterSearch = signal('');
-
   filteredItems = computed(() => {
     let items = this.invoices();
     const status = this.filterStatus();
@@ -253,5 +277,123 @@ export class PurchaseInvoicesWebComponent {
 
   canDelete(inv: PurchaseInvoiceDto): boolean {
     return inv.statusInvoice === 'Borrador';
+  }
+
+  // ── Row detail ────────────────────────────────────────────────────
+  toggleExpand(row: PurchaseInvoiceDto): void {
+    this.rowDetail.toggleExpandRow(row);
+    const id = row.idPurchaseInvoice;
+    this.expandedId.update(k => (k === id ? null : id));
+    this.cdr.markForCheck();
+  }
+
+  // ── Helper: asiento vinculado ─────────────────────────────────────
+  getLinkedEntry(inv: PurchaseInvoiceDto): AccountingEntryDto | undefined {
+    if (!inv.idAccountingEntry) return undefined;
+    return this.entries().find(e => e.idAccountingEntry === inv.idAccountingEntry);
+  }
+
+  getEntryTotalDebitInRow(entry: AccountingEntryDto): number {
+    return entry.lines.reduce((s, l) => s + l.debitAmount, 0);
+  }
+
+  getEntryTotalCreditInRow(entry: AccountingEntryDto): number {
+    return entry.lines.reduce((s, l) => s + l.creditAmount, 0);
+  }
+
+  // ── Editor de Asiento Contable ────────────────────────────────────
+  showEntryForm            = signal(false);
+  entryEditingId           = signal<number | null>(null);
+  entryFormFiscalPeriod    = signal(0);
+  entryFormCurrency        = signal(0);
+  entryFormCurrencyDisplay = signal('');
+  entryFormNumber          = signal('');
+  entryFormDate            = signal('');
+  entryFormDescription     = signal('');
+  entryFormStatus          = signal<string>('Borrador');
+  entryFormReference       = signal('');
+  entryFormExchangeRate    = signal(1);
+  entryFormLines           = signal<FormEntryLine[]>([]);
+
+  entryTotalDebit  = computed(() => this.entryFormLines().reduce((s, l) => s + (l.debitAmount || 0), 0));
+  entryTotalCredit = computed(() => this.entryFormLines().reduce((s, l) => s + (l.creditAmount || 0), 0));
+  entryIsBalanced  = computed(() => this.entryTotalDebit() > 0 && this.entryTotalDebit() === this.entryTotalCredit());
+
+  entryIsFormValid = computed(() =>
+    this.entryFormFiscalPeriod() > 0 &&
+    this.entryFormCurrency() > 0 &&
+    this.entryFormNumber().trim().length > 0 &&
+    this.entryFormDate().length > 0 &&
+    this.entryFormDescription().trim().length > 0 &&
+    this.entryFormExchangeRate() > 0 &&
+    this.entryFormLines().length >= 2 &&
+    this.entryIsBalanced(),
+  );
+
+  movementAccounts = computed(() => this.accounts().filter(a => a.allowsMovements && a.isActive));
+
+  openEditEntry(entry: AccountingEntryDto): void {
+    this.entryEditingId.set(entry.idAccountingEntry);
+    this.entryFormFiscalPeriod.set(entry.idFiscalPeriod);
+    this.entryFormCurrency.set(entry.idCurrency);
+    this.entryFormCurrencyDisplay.set(`${entry.codeCurrency} – ${entry.nameCurrency}`);
+    this.entryFormNumber.set(entry.numberEntry);
+    this.entryFormDate.set(entry.dateEntry);
+    this.entryFormDescription.set(entry.descriptionEntry);
+    this.entryFormStatus.set(entry.statusEntry);
+    this.entryFormReference.set(entry.referenceEntry ?? '');
+    this.entryFormExchangeRate.set(entry.exchangeRateValue);
+    this.entryFormLines.set(entry.lines.map(l => ({
+      idAccount:       l.idAccount,
+      debitAmount:     l.debitAmount,
+      creditAmount:    l.creditAmount,
+      descriptionLine: l.descriptionLine ?? '',
+    })));
+    this.showEntryForm.set(true);
+  }
+
+  cancelEntryForm(): void {
+    this.showEntryForm.set(false);
+    this.entryEditingId.set(null);
+  }
+
+  addEntryLine(): void {
+    this.entryFormLines.update(ls => [
+      ...ls,
+      { idAccount: 0, debitAmount: 0, creditAmount: 0, descriptionLine: '' },
+    ]);
+  }
+
+  removeEntryLine(index: number): void {
+    this.entryFormLines.update(ls => ls.filter((_, i) => i !== index));
+  }
+
+  updateEntryLine<K extends keyof FormEntryLine>(index: number, key: K, value: FormEntryLine[K]): void {
+    this.entryFormLines.update(ls => ls.map((l, i) => i === index ? { ...l, [key]: value } : l));
+  }
+
+  submitEntryForm(): void {
+    if (!this.entryIsFormValid()) return;
+    const id = this.entryEditingId();
+    if (id === null) return;
+    const lines: AccountingEntryLineRequest[] = this.entryFormLines().map(l => ({
+      idAccount:       l.idAccount,
+      debitAmount:     l.debitAmount,
+      creditAmount:    l.creditAmount,
+      descriptionLine: l.descriptionLine.trim() || null,
+    }));
+    this.editEntrySave.emit({
+      id,
+      idFiscalPeriod:   this.entryFormFiscalPeriod(),
+      idCurrency:       this.entryFormCurrency(),
+      numberEntry:      this.entryFormNumber().trim(),
+      dateEntry:        this.entryFormDate(),
+      descriptionEntry: this.entryFormDescription().trim(),
+      statusEntry:      this.entryFormStatus(),
+      referenceEntry:   this.entryFormReference().trim() || null,
+      exchangeRateValue: this.entryFormExchangeRate(),
+      lines,
+    });
+    this.cancelEntryForm();
   }
 }

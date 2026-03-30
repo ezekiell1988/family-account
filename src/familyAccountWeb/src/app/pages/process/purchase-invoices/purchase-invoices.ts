@@ -13,12 +13,15 @@ import {
   PurchaseInvoiceTypeService,
   CurrencyService,
   BankAccountService,
+  AccountingEntryService,
+  AccountService,
   LoggerService,
 } from '../../../service';
 import { ResponsiveComponent } from '../../../shared';
 import {
   CreatePurchaseInvoiceRequest,
   UpdatePurchaseInvoiceRequest,
+  UpdateAccountingEntryRequest,
 } from '../../../shared/models';
 import { PurchaseInvoicesWebComponent, PurchaseInvoicesMobileComponent } from './components';
 
@@ -34,6 +37,8 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
   private readonly typeSvc    = inject(PurchaseInvoiceTypeService);
   private readonly currSvc    = inject(CurrencyService);
   private readonly bankSvc    = inject(BankAccountService);
+  private readonly entrySvc   = inject(AccountingEntryService);
+  private readonly accountSvc = inject(AccountService);
   private readonly logger     = inject(LoggerService).getLogger('PurchaseInvoicesPage');
 
   // ── Estado del servicio ───────────────────────────────────────
@@ -45,6 +50,8 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
   currencies    = this.currSvc.currencies;
   fiscalPeriods = this.svc.fiscalPeriods;
   bankAccounts  = this.bankSvc.items;
+  entries       = this.entrySvc.entries;
+  accounts      = this.accountSvc.accounts;
 
   // ── Estado local ──────────────────────────────────────────────────
   deletingId = signal<number | null>(null);
@@ -70,6 +77,8 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
       this.currSvc.loadList(),
       this.svc.loadFiscalPeriods(),
       this.bankSvc.loadList(),
+      this.entrySvc.loadList(),
+      this.accountSvc.loadList(),
     ]).pipe(
       finalize(() => this.logger.debug('Catálogos finalizados')),
     ).subscribe({
@@ -133,5 +142,15 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
 
   clearError(): void {
     this.svc.clearError();
+  }
+
+  onEditEntrySave(req: UpdateAccountingEntryRequest & { id: number }): void {
+    const { id, ...payload } = req;
+    this.entrySvc.update(id, payload)
+      .pipe(finalize(() => {}))
+      .subscribe({
+        next: () => this.logger.success('✅ Asiento actualizado desde Facturas de Compra'),
+        error: (e) => this.logger.error('❌ Error al actualizar asiento:', e),
+      });
   }
 }

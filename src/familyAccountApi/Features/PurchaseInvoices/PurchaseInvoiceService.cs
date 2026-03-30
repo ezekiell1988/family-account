@@ -16,7 +16,8 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
             .Include(pi => pi.IdPurchaseInvoiceTypeNavigation)
             .Include(pi => pi.IdBankAccountNavigation)
             .Include(pi => pi.PurchaseInvoiceLines)
-                .ThenInclude(l => l.IdProductSKUNavigation);
+                .ThenInclude(l => l.IdProductSKUNavigation)
+            .Include(pi => pi.PurchaseInvoiceEntries);
 
     private static PurchaseInvoiceResponse ToResponse(PurchaseInvoice pi) => new(
         pi.IdPurchaseInvoice,
@@ -41,6 +42,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         pi.DescriptionInvoice,
         pi.ExchangeRateValue,
         pi.CreatedAt,
+        pi.PurchaseInvoiceEntries.FirstOrDefault()?.IdAccountingEntry,
         pi.PurchaseInvoiceLines
             .Select(l => new PurchaseInvoiceLineResponse(
                 l.IdPurchaseInvoiceLine,

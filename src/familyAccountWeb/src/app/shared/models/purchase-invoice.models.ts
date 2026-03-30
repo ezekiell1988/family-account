@@ -44,6 +44,7 @@ export interface PurchaseInvoiceDto {
   descriptionInvoice:          string | null;
   exchangeRateValue:           number;
   createdAt:                   string;
+  idAccountingEntry:           number | null;
   lines:                       PurchaseInvoiceLineDto[];
 }
 

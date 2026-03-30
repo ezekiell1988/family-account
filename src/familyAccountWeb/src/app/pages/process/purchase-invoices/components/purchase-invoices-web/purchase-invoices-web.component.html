@@ -53,11 +53,17 @@
       [footerHeight]="40"
       [rowHeight]="48"
       [externalPaging]="false"
-      [limit]="15">
+      [limit]="15"
+      [rowDetail]="rowDetailTpl"
+      (detailToggle)="toggleExpand($event.value)">
 
-      <ngx-datatable-column name="#" [width]="60" [sortable]="false">
-        <ng-template let-rowIndex="rowIndex" ngx-datatable-cell-template>
-          {{ rowIndex + 1 }}
+      <!-- Expand toggle -->
+      <ngx-datatable-column [width]="30" [resizeable]="false" [sortable]="false" [draggable]="false" [canAutoResize]="false">
+        <ng-template ngx-datatable-cell-template let-row="row">
+          <a href="javascript:;" (click)="toggleExpand(row)">
+            <i class="fa" [class.fa-chevron-down]="expandedId() === row.idPurchaseInvoice"
+               [class.fa-chevron-right]="expandedId() !== row.idPurchaseInvoice"></i>
+          </a>
         </ng-template>
       </ngx-datatable-column>
 
@@ -125,12 +131,285 @@
         </ng-template>
       </ngx-datatable-column>
 
+      <!-- Row detail: líneas de factura + asiento contable -->
+      <ngx-datatable-row-detail #rowDetailTpl [rowHeight]="'auto'">
+        <ng-template ngx-datatable-row-detail-template let-row="row">
+          <div class="p-3 bg-light">
+
+            <!-- Sección 1: Líneas de factura -->
+            <strong class="d-block mb-2"><i class="fa fa-list me-1"></i> Líneas de factura</strong>
+            @if (!row.lines || row.lines.length === 0) {
+              <p class="text-muted small mb-2">Sin líneas.</p>
+            } @else {
+              <div class="table-responsive mb-3">
+                <table class="table table-sm table-bordered mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Descripción</th>
+                      <th>Cant.</th>
+                      <th>Precio unit.</th>
+                      <th>IVA %</th>
+                      <th>Total línea</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (line of row.lines; track line.idPurchaseInvoiceLine) {
+                      <tr>
+                        <td>{{ line.descriptionLine }}</td>
+                        <td class="font-monospace">{{ line.quantity }}</td>
+                        <td class="font-monospace">{{ line.unitPrice | number:'1.2-2' }}</td>
+                        <td class="font-monospace">{{ line.taxPercent }}%</td>
+                        <td class="font-monospace">{{ line.totalLineAmount | number:'1.2-2' }}</td>
+                      </tr>
+                    }
+                    <tr class="table-active fw-bold">
+                      <td colspan="4">Total factura</td>
+                      <td class="font-monospace">{{ row.totalAmount | number:'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            <!-- Sección 2: Asiento contable -->
+            <strong class="d-block mb-2"><i class="fa fa-book me-1"></i> Asiento contable</strong>
+            @let linkedEntry = getLinkedEntry(row);
+            @if (!linkedEntry) {
+              <p class="text-muted small">Sin asiento contable vinculado.</p>
+            } @else {
+              <div class="mb-2 d-flex gap-3 flex-wrap small">
+                <span><strong>Número:</strong> {{ linkedEntry.numberEntry }}</span>
+                <span><strong>Fecha:</strong> {{ linkedEntry.dateEntry }}</span>
+                <span><strong>Período:</strong> {{ linkedEntry.nameFiscalPeriod }}</span>
+                <span><strong>Moneda:</strong> {{ linkedEntry.codeCurrency }}</span>
+                <span><strong>T/C:</strong> {{ linkedEntry.exchangeRateValue }}</span>
+                <span><strong>Estado:</strong>
+                  <span class="badge bg-info text-dark ms-1">{{ linkedEntry.statusEntry }}</span>
+                </span>
+              </div>
+              <p class="small mb-2 text-muted fst-italic">{{ linkedEntry.descriptionEntry }}</p>
+              <div class="table-responsive mb-2">
+                <table class="table table-sm table-bordered mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Cuenta</th>
+                      <th>Débito</th>
+                      <th>Crédito</th>
+                      <th>Descripción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (line of linkedEntry.lines; track line.idAccountingEntryLine) {
+                      <tr>
+                        <td>{{ line.codeAccount }} – {{ line.nameAccount }}</td>
+                        <td class="font-monospace">
+                          @if (line.debitAmount > 0) { {{ line.debitAmount | number:'1.2-2' }} }
+                          @else { — }
+                        </td>
+                        <td class="font-monospace">
+                          @if (line.creditAmount > 0) { {{ line.creditAmount | number:'1.2-2' }} }
+                          @else { — }
+                        </td>
+                        <td>{{ line.descriptionLine ?? '—' }}</td>
+                      </tr>
+                    }
+                    <tr class="table-active fw-bold">
+                      <td>Total</td>
+                      <td class="font-monospace">{{ getEntryTotalDebitInRow(linkedEntry) | number:'1.2-2' }}</td>
+                      <td class="font-monospace">{{ getEntryTotalCreditInRow(linkedEntry) | number:'1.2-2' }}</td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              @if (row.statusInvoice !== 'Anulado' && linkedEntry.statusEntry !== 'Anulado') {
+                <button class="btn btn-sm btn-outline-primary mb-2" (click)="openEditEntry(linkedEntry)">
+                  <i class="fa fa-pencil me-1"></i>Editar asiento
+                </button>
+              }
+            }
+
+            <div class="mt-2 text-muted small">
+              Período: {{ row.nameFiscalPeriod }} &bull;
+              T/C: {{ row.exchangeRateValue }} &bull;
+              Creado: {{ row.createdAt | date:'dd/MM/yyyy HH:mm' }}
+            </div>
+          </div>
+        </ng-template>
+      </ngx-datatable-row-detail>
+
     </ngx-datatable>
   }
 
 </panel>
 
-<!-- Modal formulario -->
+<!-- ── FORMULARIO EDITAR ASIENTO CONTABLE ──────────────────────── -->
+@if (showEntryForm()) {
+  <div class="card mb-3 mt-3">
+    <div class="card-header fw-bold">
+      <i class="fa fa-book me-2"></i>Editar Asiento Contable
+      <span class="ms-2 text-muted small">{{ entryFormNumber() }}</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Fila 1: Período / Moneda (readonly) / Número / Fecha / T/C -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <label class="form-label" for="efFiscalPeriod">Período fiscal <span class="text-danger">*</span></label>
+          <select id="efFiscalPeriod" class="form-select"
+            [value]="entryFormFiscalPeriod()"
+            (change)="entryFormFiscalPeriod.set(+$any($event.target).value)">
+            <option value="0">— Seleccione período —</option>
+            @for (fp of fiscalPeriods(); track fp.idFiscalPeriod) {
+              <option [value]="fp.idFiscalPeriod">{{ fp.namePeriod }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Moneda</label>
+          <input type="text" class="form-control" readonly [value]="entryFormCurrencyDisplay()" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="efNumber">Número <span class="text-danger">*</span></label>
+          <input id="efNumber" type="text" class="form-control" maxlength="50"
+            [value]="entryFormNumber()"
+            (input)="entryFormNumber.set($any($event.target).value)" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label" for="efDate">Fecha <span class="text-danger">*</span></label>
+          <input id="efDate" type="date" class="form-control"
+            [value]="entryFormDate()"
+            (change)="entryFormDate.set($any($event.target).value)" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label" for="efExchangeRate">T/C <span class="text-danger">*</span></label>
+          <input id="efExchangeRate" type="number" class="form-control" min="0.000001" step="0.01"
+            [value]="entryFormExchangeRate()"
+            (input)="entryFormExchangeRate.set(+$any($event.target).value)" />
+        </div>
+      </div>
+
+      <!-- Fila 2: Descripción / Estado / Referencia -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label" for="efDesc">Descripción <span class="text-danger">*</span></label>
+          <input id="efDesc" type="text" class="form-control" maxlength="500"
+            [value]="entryFormDescription()"
+            (input)="entryFormDescription.set($any($event.target).value)" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="efStatus">Estado <span class="text-danger">*</span></label>
+          <select id="efStatus" class="form-select"
+            [value]="entryFormStatus()"
+            (change)="entryFormStatus.set($any($event.target).value)">
+            @for (s of entryStatusOptions; track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="efRef">Referencia</label>
+          <input id="efRef" type="text" class="form-control" maxlength="200"
+            [value]="entryFormReference()"
+            (input)="entryFormReference.set($any($event.target).value)" />
+        </div>
+      </div>
+
+      <!-- Líneas del asiento -->
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong><i class="fa fa-list me-1"></i> Líneas del asiento</strong>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="addEntryLine()">
+            <i class="fa fa-plus me-1"></i> Agregar línea
+          </button>
+        </div>
+        @if (entryFormLines().length === 0) {
+          <p class="text-muted small mb-0">Sin líneas.</p>
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Cuenta</th>
+                  <th>Débito</th>
+                  <th>Crédito</th>
+                  <th>Descripción</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of entryFormLines(); track $index) {
+                  <tr>
+                    <td>
+                      <select class="form-select form-select-sm"
+                        [value]="line.idAccount"
+                        (change)="updateEntryLine($index, 'idAccount', +$any($event.target).value)">
+                        <option value="0">— Cuenta —</option>
+                        @for (a of movementAccounts(); track a.idAccount) {
+                          <option [value]="a.idAccount">{{ a.codeAccount }} – {{ a.nameAccount }}</option>
+                        }
+                      </select>
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm" min="0" step="0.01"
+                        [value]="line.debitAmount"
+                        (input)="updateEntryLine($index, 'debitAmount', +$any($event.target).value)" />
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm" min="0" step="0.01"
+                        [value]="line.creditAmount"
+                        (input)="updateEntryLine($index, 'creditAmount', +$any($event.target).value)" />
+                    </td>
+                    <td>
+                      <input type="text" class="form-control form-control-sm" maxlength="200"
+                        [value]="line.descriptionLine"
+                        (input)="updateEntryLine($index, 'descriptionLine', $any($event.target).value)" />
+                    </td>
+                    <td>
+                      <button type="button" class="btn btn-xs btn-outline-danger" (click)="removeEntryLine($index)">
+                        <i class="fa fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr class="table-active fw-bold">
+                  <td>Total</td>
+                  <td class="font-monospace">{{ entryTotalDebit() | number:'1.2-2' }}</td>
+                  <td class="font-monospace">{{ entryTotalCredit() | number:'1.2-2' }}</td>
+                  <td colspan="2">
+                    @if (!entryIsBalanced() && entryFormLines().length >= 2) {
+                      <span class="text-danger small"><i class="fa fa-exclamation-triangle me-1"></i>Desbalanceado</span>
+                    }
+                    @if (entryIsBalanced()) {
+                      <span class="text-success small"><i class="fa fa-check me-1"></i>Balanceado</span>
+                    }
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Botones -->
+      <div class="d-flex gap-2 justify-content-end">
+        <button type="button" class="btn btn-default" (click)="cancelEntryForm()">
+          <i class="fa fa-times me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-primary"
+          [disabled]="!entryIsFormValid()"
+          (click)="submitEntryForm()">
+          <i class="fa fa-save me-1"></i> Guardar asiento
+        </button>
+      </div>
+
+    </div>
+  </div>
+}
+
+<!-- Modal formulario factura -->
 @if (showForm()) {
   <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5)">
     <div class="modal-dialog modal-xl">
