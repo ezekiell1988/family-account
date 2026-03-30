@@ -8,13 +8,16 @@
     [currencies]="currencies()"
     [fiscalPeriods]="fiscalPeriods()"
     [bankAccounts]="bankAccounts()"
+    [entries]="entries()"
+    [accounts]="accounts()"
     (refresh)="loadAll()"
     (create)="onCreate($event)"
     (editSave)="onEditSave($event)"
     (remove)="onDelete($event)"
     (confirm)="onConfirm($event)"
     (cancel)="onCancel($event)"
-    (clearError)="clearError()">
+    (clearError)="clearError()"
+    (editEntrySave)="onEditEntrySave($event)">
   </app-purchase-invoices-mobile>
 } @else {
   <app-purchase-invoices-web

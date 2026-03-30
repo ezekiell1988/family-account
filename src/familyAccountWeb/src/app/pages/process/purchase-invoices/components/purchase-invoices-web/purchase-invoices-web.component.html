@@ -202,14 +202,8 @@
                     @for (line of linkedEntry.lines; track line.idAccountingEntryLine) {
                       <tr>
                         <td>{{ line.codeAccount }} – {{ line.nameAccount }}</td>
-                        <td class="font-monospace">
-                          @if (line.debitAmount > 0) { {{ line.debitAmount | number:'1.2-2' }} }
-                          @else { — }
-                        </td>
-                        <td class="font-monospace">
-                          @if (line.creditAmount > 0) { {{ line.creditAmount | number:'1.2-2' }} }
-                          @else { — }
-                        </td>
+                        <td class="font-monospace">{{ line.debitAmount | number:'1.2-2' }}</td>
+                        <td class="font-monospace">{{ line.creditAmount | number:'1.2-2' }}</td>
                         <td>{{ line.descriptionLine ?? '—' }}</td>
                       </tr>
                     }

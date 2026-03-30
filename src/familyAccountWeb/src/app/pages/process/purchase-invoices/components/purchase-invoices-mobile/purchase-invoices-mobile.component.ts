@@ -20,6 +20,8 @@ import {
   checkmarkOutline,
   banOutline,
   receiptOutline,
+  bookOutline,
+  listOutline,
 } from 'ionicons/icons';
 import {
   IonContent,
@@ -56,6 +58,10 @@ import {
   FiscalPeriodLookup,
   CurrencyDto,
   BankAccountDto,
+  AccountingEntryDto,
+  AccountingEntryLineRequest,
+  UpdateAccountingEntryRequest,
+  AccountDto,
 } from '../../../../../shared/models';
 import { HeaderComponent, FooterComponent } from '../../../../../components';
 
@@ -70,6 +76,13 @@ interface FormLine {
 
 function emptyLine(): FormLine {
   return { idProductSKU: null, descriptionLine: '', quantity: 1, unitPrice: 0, taxPercent: 13, totalLineAmount: 0 };
+}
+
+interface FormEntryLine {
+  idAccount:       number;
+  debitAmount:     number;
+  creditAmount:    number;
+  descriptionLine: string;
 }
 
 @Component({
@@ -119,14 +132,18 @@ export class PurchaseInvoicesMobileComponent {
   fiscalPeriods = input<FiscalPeriodLookup[]>([]);
   bankAccounts  = input<BankAccountDto[]>([]);
 
+  entries    = input<AccountingEntryDto[]>([]);
+  accounts   = input<AccountDto[]>([]);
+
   // ── Outputs ───────────────────────────────────────────────────────
-  refresh    = output<void>();
-  create     = output<CreatePurchaseInvoiceRequest>();
-  editSave   = output<UpdatePurchaseInvoiceRequest & { id: number }>();
-  remove     = output<number>();
-  confirm    = output<number>();
-  cancel     = output<number>();
-  clearError = output<void>();
+  refresh       = output<void>();
+  create        = output<CreatePurchaseInvoiceRequest>();
+  editSave      = output<UpdatePurchaseInvoiceRequest & { id: number }>();
+  remove        = output<number>();
+  confirm       = output<number>();
+  cancel        = output<number>();
+  clearError    = output<void>();
+  editEntrySave = output<UpdateAccountingEntryRequest & { id: number }>();
 
   // ── Estado expandir ───────────────────────────────────────────────
   expandedId = signal<number | null>(null);
@@ -165,7 +182,7 @@ export class PurchaseInvoicesMobileComponent {
     addIcons({
       warningOutline, closeOutline, pencilOutline, saveOutline,
       addOutline, trashOutline, chevronDownOutline, chevronForwardOutline,
-      checkmarkOutline, banOutline, receiptOutline,
+      checkmarkOutline, banOutline, receiptOutline, bookOutline, listOutline,
     });
   }
 
@@ -296,8 +313,119 @@ export class PurchaseInvoicesMobileComponent {
   canCancel(inv: PurchaseInvoiceDto): boolean  { return inv.statusInvoice === 'Confirmado'; }
   canDelete(inv: PurchaseInvoiceDto): boolean  { return inv.statusInvoice === 'Borrador';   }
 
-  doRefresh(event: CustomEvent): void {
+  async doRefresh(event: CustomEvent): Promise<void> {
     this.refresh.emit();
-    setTimeout(() => (event.target as HTMLIonRefresherElement).complete(), 1000);
+    await new Promise(r => setTimeout(r, 800));
+    (event.target as HTMLIonRefresherElement).complete();
+  }
+
+  // ── Asiento contable ──────────────────────────────────────────────
+  getLinkedEntry(inv: PurchaseInvoiceDto): AccountingEntryDto | undefined {
+    if (!inv.idAccountingEntry) return undefined;
+    return this.entries().find(e => e.idAccountingEntry === inv.idAccountingEntry);
+  }
+
+  getEntryTotalDebit(entry: AccountingEntryDto): number {
+    return entry.lines.reduce((s, l) => s + l.debitAmount, 0);
+  }
+
+  getEntryTotalCredit(entry: AccountingEntryDto): number {
+    return entry.lines.reduce((s, l) => s + l.creditAmount, 0);
+  }
+
+  movementAccounts = computed(() => this.accounts().filter(a => a.allowsMovements && a.isActive));
+
+  // ── Formulario editar asiento ─────────────────────────────────────
+  showEntryForm            = signal(false);
+  entryEditingId           = signal<number | null>(null);
+  entryFormFiscalPeriod    = signal(0);
+  entryFormCurrency        = signal(0);
+  entryFormCurrencyDisplay = signal('');
+  entryFormNumber          = signal('');
+  entryFormDate            = signal('');
+  entryFormDescription     = signal('');
+  entryFormStatus          = signal<string>('Borrador');
+  entryFormReference       = signal('');
+  entryFormExchangeRate    = signal(1);
+  entryFormLines           = signal<FormEntryLine[]>([]);
+
+  entryTotalDebit  = computed(() => this.entryFormLines().reduce((s, l) => s + (l.debitAmount || 0), 0));
+  entryTotalCredit = computed(() => this.entryFormLines().reduce((s, l) => s + (l.creditAmount || 0), 0));
+  entryIsBalanced  = computed(() => this.entryTotalDebit() > 0 && this.entryTotalDebit() === this.entryTotalCredit());
+
+  entryIsFormValid = computed(() =>
+    this.entryFormFiscalPeriod() > 0 &&
+    this.entryFormCurrency() > 0 &&
+    this.entryFormNumber().trim().length > 0 &&
+    this.entryFormDate().length > 0 &&
+    this.entryFormDescription().trim().length > 0 &&
+    this.entryFormExchangeRate() > 0 &&
+    this.entryFormLines().length >= 2 &&
+    this.entryIsBalanced(),
+  );
+
+  openEditEntry(entry: AccountingEntryDto): void {
+    this.entryEditingId.set(entry.idAccountingEntry);
+    this.entryFormFiscalPeriod.set(entry.idFiscalPeriod);
+    this.entryFormCurrency.set(entry.idCurrency);
+    this.entryFormCurrencyDisplay.set(`${entry.codeCurrency} – ${entry.nameCurrency}`);
+    this.entryFormNumber.set(entry.numberEntry);
+    this.entryFormDate.set(entry.dateEntry);
+    this.entryFormDescription.set(entry.descriptionEntry);
+    this.entryFormStatus.set(entry.statusEntry);
+    this.entryFormReference.set(entry.referenceEntry ?? '');
+    this.entryFormExchangeRate.set(entry.exchangeRateValue);
+    this.entryFormLines.set(entry.lines.map(l => ({
+      idAccount:       l.idAccount,
+      debitAmount:     l.debitAmount,
+      creditAmount:    l.creditAmount,
+      descriptionLine: l.descriptionLine ?? '',
+    })));
+    this.showEntryForm.set(true);
+  }
+
+  cancelEntryForm(): void {
+    this.showEntryForm.set(false);
+    this.entryEditingId.set(null);
+  }
+
+  addEntryLine(): void {
+    this.entryFormLines.update(ls => [
+      ...ls,
+      { idAccount: 0, debitAmount: 0, creditAmount: 0, descriptionLine: '' },
+    ]);
+  }
+
+  removeEntryLine(index: number): void {
+    this.entryFormLines.update(ls => ls.filter((_, i) => i !== index));
+  }
+
+  updateEntryLine<K extends keyof FormEntryLine>(index: number, key: K, value: FormEntryLine[K]): void {
+    this.entryFormLines.update(ls => ls.map((l, i) => i === index ? { ...l, [key]: value } : l));
+  }
+
+  submitEntryForm(): void {
+    if (!this.entryIsFormValid()) return;
+    const id = this.entryEditingId();
+    if (id === null) return;
+    const lines: AccountingEntryLineRequest[] = this.entryFormLines().map(l => ({
+      idAccount:       l.idAccount,
+      debitAmount:     l.debitAmount,
+      creditAmount:    l.creditAmount,
+      descriptionLine: l.descriptionLine.trim() || null,
+    }));
+    this.editEntrySave.emit({
+      id,
+      idFiscalPeriod:    this.entryFormFiscalPeriod(),
+      idCurrency:        this.entryFormCurrency(),
+      numberEntry:       this.entryFormNumber().trim(),
+      dateEntry:         this.entryFormDate(),
+      descriptionEntry:  this.entryFormDescription().trim(),
+      statusEntry:       this.entryFormStatus(),
+      referenceEntry:    this.entryFormReference().trim() || null,
+      exchangeRateValue: this.entryFormExchangeRate(),
+      lines,
+    });
+    this.cancelEntryForm();
   }
 }

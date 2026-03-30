@@ -1,4 +1,4 @@
-<header [title]="'Facturas de Compra'"></header>
+<header [pageTitle]="'Facturas de Compra'"></header>
 
 <ion-content>
   <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
@@ -8,11 +8,22 @@
   <!-- Error -->
   @if (errorMessage()) {
     <ion-card color="danger" class="ion-margin">
-      <ion-card-content class="d-flex align-items-center justify-content-between">
-        <ion-text color="light">{{ errorMessage() }}</ion-text>
-        <ion-button fill="clear" color="light" (click)="clearError.emit()">
-          <ion-icon slot="icon-only" name="close-outline"></ion-icon>
-        </ion-button>
+      <ion-card-content>
+        <ion-grid class="ion-no-padding">
+          <ion-row class="ion-align-items-center">
+            <ion-col>
+              <ion-text color="light">
+                <ion-icon name="warning-outline" class="ion-margin-end"></ion-icon>
+                {{ errorMessage() }}
+              </ion-text>
+            </ion-col>
+            <ion-col size="auto">
+              <ion-button fill="clear" color="light" (click)="clearError.emit()">
+                <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
       </ion-card-content>
     </ion-card>
   }
@@ -113,7 +124,7 @@
         </ion-grid>
 
         <!-- Líneas -->
-        <p class="ion-padding-start fw-semibold mt-2 mb-1">Líneas de Factura</p>
+        <p class="ion-padding-start ion-margin-top"><strong>Líneas de Factura</strong></p>
         @for (line of formLines(); track $index) {
           <ion-card>
             <ion-card-content>
@@ -172,7 +183,7 @@
         </ion-button>
 
         <!-- Totales -->
-        <ion-list inset class="mt-2">
+        <ion-list inset class="ion-margin-top">
           <ion-item>
             <ion-label>Subtotal</ion-label>
             <ion-note slot="end">{{ formSubTotal() | number:'1.2-2' }}</ion-note>
@@ -276,6 +287,87 @@
                   }
                 </ion-row>
               </ion-grid>
+
+              <!-- Sección: Líneas de factura -->
+              @if (inv.lines && inv.lines.length > 0) {
+                <p class="ion-margin-top"><strong><ion-icon name="list-outline" class="ion-margin-end"></ion-icon>Líneas de factura</strong></p>
+                @for (line of inv.lines; track line.idPurchaseInvoiceLine) {
+                  <ion-item lines="inset">
+                    <ion-label>
+                      <p>{{ line.descriptionLine }}</p>
+                      <p>
+                        <ion-note>{{ line.quantity }} × {{ line.unitPrice | number:'1.2-2' }} · IVA {{ line.taxPercent }}%</ion-note>
+                      </p>
+                    </ion-label>
+                    <ion-note slot="end">{{ line.totalLineAmount | number:'1.2-2' }}</ion-note>
+                  </ion-item>
+                }
+              }
+
+              <!-- Sección: Asiento contable -->
+              @let linkedEntry = getLinkedEntry(inv);
+              <p class="ion-margin-top"><strong><ion-icon name="book-outline" class="ion-margin-end"></ion-icon>Asiento contable</strong></p>
+              @if (!linkedEntry) {
+                <ion-note color="medium" class="ion-padding-start">Sin asiento contable vinculado.</ion-note>
+              } @else {
+                <ion-list inset>
+                  <ion-item lines="none">
+                    <ion-label>
+                      <p><strong>Número:</strong> {{ linkedEntry.numberEntry }}</p>
+                      <p><strong>Fecha:</strong> {{ linkedEntry.dateEntry | date:'dd/MM/yyyy' }}</p>
+                      <p><strong>Período:</strong> {{ linkedEntry.nameFiscalPeriod }}</p>
+                      <p><strong>Moneda:</strong> {{ linkedEntry.codeCurrency }} &ndash; {{ linkedEntry.nameCurrency }}</p>
+                      <p><strong>T/C:</strong> {{ linkedEntry.exchangeRateValue }}</p>
+                      <p><strong>Descripción:</strong> {{ linkedEntry.descriptionEntry }}</p>
+                      <p><strong>Estado:</strong>
+                        <ion-badge [color]="linkedEntry.statusEntry === 'Publicado' ? 'success' : linkedEntry.statusEntry === 'Anulado' ? 'danger' : 'medium'" class="ion-margin-start">
+                          {{ linkedEntry.statusEntry }}
+                        </ion-badge>
+                      </p>
+                    </ion-label>
+                  </ion-item>
+                </ion-list>
+
+                <!-- Líneas del asiento -->
+                @for (entryLine of linkedEntry.lines; track entryLine.idAccountingEntryLine) {
+                  <ion-item lines="inset">
+                    <ion-label>
+                      <p>{{ entryLine.codeAccount }} &ndash; {{ entryLine.nameAccount }}</p>
+                      <p><ion-note>{{ entryLine.descriptionLine ?? '—' }}</ion-note></p>
+                    </ion-label>
+                    <div slot="end" class="ion-text-end font-monospace">
+                      @if (entryLine.debitAmount > 0) {
+                        <div><ion-text color="primary">D: {{ entryLine.debitAmount | number:'1.2-2' }}</ion-text></div>
+                      } @else {
+                        <div><ion-text color="medium">D: 0.00</ion-text></div>
+                      }
+                      @if (entryLine.creditAmount > 0) {
+                        <div><ion-text color="success">C: {{ entryLine.creditAmount | number:'1.2-2' }}</ion-text></div>
+                      } @else {
+                        <div><ion-text color="medium">C: 0.00</ion-text></div>
+                      }
+                    </div>
+                  </ion-item>
+                }
+                <!-- Totales del asiento -->
+                <ion-item lines="none">
+                  <ion-label><strong>Total</strong></ion-label>
+                  <ion-note slot="end">
+                    <ion-text color="primary">D: {{ getEntryTotalDebit(linkedEntry) | number:'1.2-2' }}</ion-text>
+                    &nbsp;
+                    <ion-text color="success">C: {{ getEntryTotalCredit(linkedEntry) | number:'1.2-2' }}</ion-text>
+                  </ion-note>
+                </ion-item>
+
+                <!-- Botón editar asiento -->
+                @if (inv.statusInvoice !== 'Anulado' && linkedEntry.statusEntry !== 'Anulado') {
+                  <ion-button fill="outline" expand="block" color="primary" class="ion-margin" (click)="openEditEntry(linkedEntry)">
+                    <ion-icon slot="start" name="pencil-outline"></ion-icon>
+                    Editar asiento
+                  </ion-button>
+                }
+              }
+
             </ion-card-content>
           </ion-card>
         }
@@ -291,15 +383,171 @@
     </ion-list>
   }
 
+  <!-- FAB Nueva Factura -->
+  @if (!showForm() && !showEntryForm()) {
+    <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+      <ion-fab-button color="success" (click)="openCreate()" [attr.aria-label]="'Nueva Factura'">
+        <ion-icon name="add-outline"></ion-icon>
+      </ion-fab-button>
+    </ion-fab>
+  }
+
 </ion-content>
 
-<!-- FAB Nueva Factura -->
-@if (!showForm()) {
-  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-    <ion-fab-button color="primary" (click)="openCreate()">
-      <ion-icon name="add-outline"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
+<!-- Formulario edición asiento contable -->
+@if (showEntryForm()) {
+  <ion-content class="ion-padding">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="book-outline" class="ion-margin-end"></ion-icon>
+          Editar Asiento Contable
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+
+        <!-- Número / Fecha -->
+        <ion-grid class="ion-no-padding">
+          <ion-row>
+            <ion-col size="6">
+              <ion-input fill="outline" labelPlacement="floating" label="Número *"
+                [value]="entryFormNumber()"
+                (ionInput)="entryFormNumber.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+            <ion-col size="6">
+              <ion-input fill="outline" labelPlacement="floating" label="Fecha *" type="date"
+                [value]="entryFormDate()"
+                (ionInput)="entryFormDate.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-margin-top">
+            <ion-col size="12">
+              <ion-input fill="outline" labelPlacement="floating" label="Descripción *"
+                [value]="entryFormDescription()"
+                (ionInput)="entryFormDescription.set($any($event.target).value)">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-margin-top">
+            <ion-col size="6">
+              <ion-input fill="outline" labelPlacement="floating" label="T/C *" type="number"
+                [value]="entryFormExchangeRate()"
+                (ionInput)="entryFormExchangeRate.set(+$any($event.target).value)">
+              </ion-input>
+            </ion-col>
+            <ion-col size="6">
+              <ion-input fill="outline" labelPlacement="floating" label="Moneda"
+                readonly [value]="entryFormCurrencyDisplay()">
+              </ion-input>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+        <!-- Líneas del asiento -->
+        <p class="ion-margin-top"><strong>Líneas del asiento</strong></p>
+        @for (line of entryFormLines(); track $index) {
+          <ion-card>
+            <ion-card-content>
+              <ion-grid class="ion-no-padding">
+                <ion-row>
+                  <ion-col size="12">
+                    <ion-select fill="outline" labelPlacement="stacked" label="Cuenta *"
+                      [value]="line.idAccount"
+                      (ionChange)="updateEntryLine($index, 'idAccount', +$event.detail.value)">
+                      <ion-select-option [value]="0">— Cuenta —</ion-select-option>
+                      @for (a of movementAccounts(); track a.idAccount) {
+                        <ion-select-option [value]="a.idAccount">{{ a.codeAccount }} – {{ a.nameAccount }}</ion-select-option>
+                      }
+                    </ion-select>
+                  </ion-col>
+                  <ion-col size="6" class="ion-margin-top">
+                    <ion-input fill="outline" labelPlacement="floating" label="Débito" type="number"
+                      [value]="line.debitAmount"
+                      (ionInput)="updateEntryLine($index, 'debitAmount', +$any($event.target).value)">
+                    </ion-input>
+                  </ion-col>
+                  <ion-col size="6" class="ion-margin-top">
+                    <ion-input fill="outline" labelPlacement="floating" label="Crédito" type="number"
+                      [value]="line.creditAmount"
+                      (ionInput)="updateEntryLine($index, 'creditAmount', +$any($event.target).value)">
+                    </ion-input>
+                  </ion-col>
+                  <ion-col size="12" class="ion-margin-top">
+                    <ion-input fill="outline" labelPlacement="floating" label="Descripción línea"
+                      [value]="line.descriptionLine"
+                      (ionInput)="updateEntryLine($index, 'descriptionLine', $any($event.target).value)">
+                    </ion-input>
+                  </ion-col>
+                </ion-row>
+              </ion-grid>
+              @if (entryFormLines().length > 1) {
+                <ion-button fill="clear" color="danger" size="small" (click)="removeEntryLine($index)" class="ion-margin-top">
+                  <ion-icon slot="start" name="trash-outline"></ion-icon>
+                  Quitar línea
+                </ion-button>
+              }
+            </ion-card-content>
+          </ion-card>
+        }
+
+        <ion-button fill="outline" expand="block" (click)="addEntryLine()">
+          <ion-icon slot="start" name="add-outline"></ion-icon>
+          Agregar línea
+        </ion-button>
+
+        <!-- Totales asiento -->
+        <ion-list inset class="ion-margin-top">
+          <ion-item>
+            <ion-label>Total débito</ion-label>
+            <ion-note slot="end">
+              <ion-text color="primary">{{ entryTotalDebit() | number:'1.2-2' }}</ion-text>
+            </ion-note>
+          </ion-item>
+          <ion-item>
+            <ion-label>Total crédito</ion-label>
+            <ion-note slot="end">
+              <ion-text color="success">{{ entryTotalCredit() | number:'1.2-2' }}</ion-text>
+            </ion-note>
+          </ion-item>
+          <ion-item lines="none">
+            <ion-label></ion-label>
+            <ion-note slot="end">
+              @if (entryIsBalanced()) {
+                <ion-text color="success">
+                  <ion-icon name="checkmark-outline"></ion-icon> Balanceado
+                </ion-text>
+              } @else if (entryFormLines().length >= 2) {
+                <ion-text color="danger">
+                  <ion-icon name="warning-outline"></ion-icon> Desbalanceado
+                </ion-text>
+              }
+            </ion-note>
+          </ion-item>
+        </ion-list>
+
+        <!-- Botones asiento -->
+        <ion-grid class="ion-margin-top">
+          <ion-row>
+            <ion-col>
+              <ion-button fill="outline" color="medium" expand="block" (click)="cancelEntryForm()">
+                <ion-icon slot="start" name="close-outline"></ion-icon>
+                Cancelar
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button color="primary" expand="block" [disabled]="!entryIsFormValid()" (click)="submitEntryForm()">
+                <ion-icon slot="start" name="save-outline"></ion-icon>
+                Guardar asiento
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+      </ion-card-content>
+    </ion-card>
+  </ion-content>
 }
 
 <app-footer></app-footer>

@@ -335,8 +335,12 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         // Calcular total débito automático
         var totalDr = drLines.Sum(x => x.Line.DebitAmount);
 
-        // Si no hay líneas DR automáticas usar el total de la factura
-        if (totalDr == 0) totalDr = invoice.TotalAmount;
+        // Si no hay líneas DR, los productos no tienen cuentas contables configuradas
+        if (drLines.Count == 0)
+            return (false,
+                "Ninguna línea de factura tiene cuentas contables de gasto configuradas (ProductAccount). " +
+                "Configure la distribución contable de los productos antes de confirmar.",
+                null);
 
         // Línea CR (contrapartida)
         var crLine = new AccountingEntryLine
