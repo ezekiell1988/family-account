@@ -19,6 +19,7 @@ import {
   ProductService,
   ProductAccountService,
   CostCenterService,
+  ContactService,
   LoggerService,
 } from '../../../service';
 import { ResponsiveComponent } from '../../../shared';
@@ -50,6 +51,7 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
   private readonly productSvc     = inject(ProductService);
   private readonly productAccSvc  = inject(ProductAccountService);
   private readonly costCenterSvc  = inject(CostCenterService);
+  private readonly contactSvc     = inject(ContactService);
   private readonly logger         = inject(LoggerService).getLogger('PurchaseInvoicesPage');
 
   // ── Estado del servicio ──────────────────────────────────────────────────
@@ -68,6 +70,7 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
   products      = this.productSvc.items;
   productAccounts = this.productAccSvc.items;
   costCenters   = this.costCenterSvc.items;
+  providers     = this.contactSvc.providers;
 
   // ── Estado local ──────────────────────────────────────────────────
   deletingId = signal<number | null>(null);
@@ -99,6 +102,7 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
       this.productSvc.loadList(),
       this.productAccSvc.loadList(),
       this.costCenterSvc.loadList(),
+      this.contactSvc.loadProviders(),
     ]).pipe(
       finalize(() => this.logger.debug('Catálogos finalizados')),
     ).subscribe({
@@ -114,12 +118,25 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
   }
 
   onCreate(req: CreatePurchaseInvoiceRequest): void {
-    this.svc.create(req)
-      .pipe(finalize(() => {}))
-      .subscribe({
-        next: () => this.logger.success('✅ Factura creada'),
-        error: (e) => this.logger.error('❌ Error al crear factura:', e),
+    const nameExists = this.contactSvc.providers()
+      .some(p => p.name.toLowerCase() === req.providerName.trim().toLowerCase());
+
+    const doCreate = () =>
+      this.svc.create(req)
+        .pipe(finalize(() => {}))
+        .subscribe({
+          next: () => this.logger.success('✅ Factura creada'),
+          error: (e) => this.logger.error('❌ Error al crear factura:', e),
+        });
+
+    if (!nameExists && req.providerName.trim()) {
+      this.contactSvc.getOrCreate(req.providerName.trim()).subscribe({
+        next: () => doCreate(),
+        error: () => doCreate(), // igual crear la factura aunque falle el contacto
       });
+    } else {
+      doCreate();
+    }
   }
 
   onEditSave(req: UpdatePurchaseInvoiceRequest & { id: number }): void {

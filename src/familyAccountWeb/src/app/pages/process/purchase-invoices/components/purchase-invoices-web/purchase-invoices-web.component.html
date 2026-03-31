@@ -473,10 +473,27 @@
             </div>
             <div class="col-md-5">
               <label class="form-label fw-semibold">Proveedor</label>
-              <input type="text" class="form-control"
-                     [ngModel]="formProvider()"
-                     (ngModelChange)="formProvider.set($event)"
-                     placeholder="Nombre del proveedor" />
+              <div class="position-relative">
+                <input type="text" class="form-control"
+                       autocomplete="off"
+                       [ngModel]="formProvider()"
+                       (ngModelChange)="formProvider.set($event); showProviderSuggestions.set(true)"
+                       (focus)="showProviderSuggestions.set(true)"
+                       (blur)="showProviderSuggestions.set(false)"
+                       placeholder="Nombre del proveedor" />
+                @if (showProviderSuggestions() && providerSuggestions().length > 0) {
+                  <ul class="list-group position-absolute w-100 shadow-sm"
+                      style="z-index:1050; max-height:200px; overflow-y:auto; top:100%">
+                    @for (p of providerSuggestions(); track p.idContact) {
+                      <li class="list-group-item list-group-item-action py-1 px-2"
+                          style="cursor:pointer; font-size:.875rem"
+                          (mousedown)="selectProvider(p.name)">
+                        {{ p.name }}
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
             </div>
             <div class="col-md-2">
               <label class="form-label fw-semibold" for="modalDate">Fecha</label>

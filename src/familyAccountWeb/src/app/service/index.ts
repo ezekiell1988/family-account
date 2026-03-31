@@ -21,3 +21,4 @@ export { ProductSKUService } from './product-sku.service';
 export { ProductService } from './product.service';
 export { ProductAccountService } from './product-account.service';
 export { CostCenterService } from './cost-center.service';
+export { ContactService } from './contact.service';

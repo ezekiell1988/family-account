@@ -1,6 +1,7 @@
 using FamilyAccountApi.Features.AccountingEntries;
 using FamilyAccountApi.Features.Accounts;
 using FamilyAccountApi.Features.Auth;
+using FamilyAccountApi.Features.Contacts;
 using FamilyAccountApi.Features.BankAccounts;
 using FamilyAccountApi.Features.BankMovements;
 using FamilyAccountApi.Features.BankMovementTypes;
@@ -51,7 +52,8 @@ public static class FeaturesExtensions
             .AddBankStatementTransactionsModule()
             .AddProductAccountsModule()
             .AddPurchaseInvoiceTypesModule()
-            .AddPurchaseInvoicesModule();
+            .AddPurchaseInvoicesModule()
+            .AddContactsModule();
 
     public static WebApplication MapAllEndpoints(this WebApplication app)
     {
@@ -83,6 +85,7 @@ public static class FeaturesExtensions
         v1.MapProductAccountsEndpoints();
         v1.MapPurchaseInvoiceTypesEndpoints();
         v1.MapPurchaseInvoicesEndpoints();
+        v1.MapContactsEndpoints();
 
         return app;
     }

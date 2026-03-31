@@ -37,6 +37,7 @@ import {
   CreateProductAccountRequest,
   UpdateProductAccountRequest,
   CreateProductWithAccountsRequest,
+  ContactDto,
 } from '../../../../../shared/models';
 
 const STATUS_OPTIONS = ['Borrador', 'Confirmado', 'Anulado'] as const;
@@ -93,6 +94,7 @@ export class PurchaseInvoicesWebComponent {
   products      = input<ProductDto[]>([]);
   productAccounts = input<ProductAccountDto[]>([]);
   costCenters      = input<CostCenterDto[]>([]);
+  providers        = input<ContactDto[]>([]);
   lineAccountError  = input<string | null>(null);
 
   // ── Outputs ───────────────────────────────────────────────────────
@@ -152,6 +154,21 @@ export class PurchaseInvoicesWebComponent {
   formDescription    = signal('');
   formExchangeRate   = signal(1);
   formLines          = signal<FormLine[]>([emptyLine()]);
+
+  // ── Autocomplete proveedor ────────────────────────────────────────
+  showProviderSuggestions = signal(false);
+  providerSuggestions = computed(() => {
+    const typed = this.formProvider().trim().toLowerCase();
+    if (!typed) return this.providers().slice(0, 10);
+    return this.providers()
+      .filter(p => p.name.toLowerCase().includes(typed))
+      .slice(0, 10);
+  });
+
+  selectProvider(name: string): void {
+    this.formProvider.set(name);
+    this.showProviderSuggestions.set(false);
+  }
 
   needsBankAccount = computed(() =>
     this.invoiceTypes().find(t => t.idPurchaseInvoiceType === this.formInvoiceType())
