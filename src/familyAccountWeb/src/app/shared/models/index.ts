@@ -9,3 +9,4 @@ export * from './bank-movement-type.models';
 export * from './currency.models';
 export * from './bank-movement.models';
 export * from './purchase-invoice.models';
+export * from './product.models';

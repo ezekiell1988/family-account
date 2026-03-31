@@ -18,7 +18,7 @@ public sealed record CreateProductAccountRequest
     public int? IdCostCenter { get; init; }
 
     [Required]
-    [Range(typeof(decimal), "0.01", "100.00", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
+    [Range(typeof(decimal), "-100.00", "100.00", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     [Description("Porcentaje del total de la línea asignado a esta cuenta/centro de costo. La suma por producto debe ser 100.00.")]
     public required decimal PercentageAccount { get; init; }
 }

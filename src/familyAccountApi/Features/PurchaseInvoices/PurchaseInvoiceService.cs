@@ -98,11 +98,13 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
             DescriptionInvoice    = string.IsNullOrWhiteSpace(request.DescriptionInvoice) ? null : request.DescriptionInvoice.Trim(),
             ExchangeRateValue     = request.ExchangeRateValue,
             CreatedAt             = DateTime.UtcNow,
-            PurchaseInvoiceLines  = request.Lines.Select(l => MapLine(l)).ToList()
         };
 
+        var skuCodeToId = await UpsertSkusAsync(request.Lines, ct);
+        entity.PurchaseInvoiceLines = request.Lines.Select(l => MapLine(l, skuCodeToId)).ToList();
+
         db.PurchaseInvoice.Add(entity);
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         return (await GetByIdAsync(entity.IdPurchaseInvoice, ct))!;
     }
@@ -135,10 +137,11 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         db.PurchaseInvoiceLine.RemoveRange(entity.PurchaseInvoiceLines);
         entity.PurchaseInvoiceLines.Clear();
 
+        var skuCodeToId = await UpsertSkusAsync(request.Lines, ct);
         foreach (var l in request.Lines)
-            entity.PurchaseInvoiceLines.Add(MapLine(l));
+            entity.PurchaseInvoiceLines.Add(MapLine(l, skuCodeToId));
 
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         return await GetByIdAsync(idPurchaseInvoice, ct);
     }
@@ -156,7 +159,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
 
         var deleted = await db.PurchaseInvoice
             .Where(pi => pi.IdPurchaseInvoice == idPurchaseInvoice)
-            .ExecuteDeleteAsync(ct);
+            .ExecuteDeleteAsync(CancellationToken.None);
 
         return deleted > 0;
     }
@@ -257,7 +260,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
                 };
 
                 db.AccountingEntry.Add(bkEntry);
-                await db.SaveChangesAsync(ct);
+                await db.SaveChangesAsync(CancellationToken.None);
 
                 var newMovement = new BankMovement
                 {
@@ -276,7 +279,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
                 };
 
                 db.BankMovement.Add(newMovement);
-                await db.SaveChangesAsync(ct);
+                await db.SaveChangesAsync(CancellationToken.None);
 
                 var newDoc = new BankMovementDocument
                 {
@@ -290,7 +293,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
                 };
 
                 db.BankMovementDocument.Add(newDoc);
-                await db.SaveChangesAsync(ct);
+                await db.SaveChangesAsync(CancellationToken.None);
 
                 crAccountId = bankAccount.IdAccount;
             }
@@ -305,44 +308,64 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
 
         foreach (var invoiceLine in invoice.PurchaseInvoiceLines)
         {
-            if (invoiceLine.IdProductSKU is null) continue;
-
-            var productAccounts = await db.ProductAccount
-                .AsNoTracking()
-                .Where(pa => db.ProductProductSKU
-                    .Where(pps => pps.IdProductSKU == invoiceLine.IdProductSKU)
-                    .Select(pps => pps.IdProduct)
-                    .Contains(pa.IdProduct))
-                .ToListAsync(ct);
-
-            if (productAccounts.Count == 0) continue;
-
-            foreach (var pa in productAccounts)
+            if (invoiceLine.IdProductSKU is not null)
             {
-                var drAmount = Math.Round(invoiceLine.TotalLineAmount * pa.PercentageAccount / 100m, 2);
-                var drLine = new AccountingEntryLine
+                var productAccounts = await db.ProductAccount
+                    .AsNoTracking()
+                    .Where(pa => db.ProductProductSKU
+                        .Where(pps => pps.IdProductSKU == invoiceLine.IdProductSKU)
+                        .Select(pps => pps.IdProduct)
+                        .Contains(pa.IdProduct))
+                    .ToListAsync(ct);
+
+                if (productAccounts.Count > 0)
                 {
-                    IdAccount       = pa.IdAccount,
-                    DebitAmount     = drAmount,
+                    foreach (var pa in productAccounts)
+                    {
+                        var rawAmount = Math.Round(invoiceLine.TotalLineAmount * pa.PercentageAccount / 100m, 2);
+                        var absAmount = Math.Abs(rawAmount);
+                        // Porcentaje negativo = contrapartida interna (CR); positivo = gasto (DR)
+                        drLines.Add((new AccountingEntryLine
+                        {
+                            IdAccount       = pa.IdAccount,
+                            DebitAmount     = rawAmount >= 0 ? absAmount : 0,
+                            CreditAmount    = rawAmount <  0 ? absAmount : 0,
+                            DescriptionLine = invoiceLine.DescriptionLine,
+                            IdCostCenter    = pa.IdCostCenter
+                        }, invoiceLine));
+                    }
+                    continue;
+                }
+            }
+
+            // Fallback: sin ProductAccount → usar IdDefaultExpenseAccount del tipo de factura
+            if (invoiceType.IdDefaultExpenseAccount is not null)
+            {
+                drLines.Add((new AccountingEntryLine
+                {
+                    IdAccount       = invoiceType.IdDefaultExpenseAccount.Value,
+                    DebitAmount     = Math.Round(invoiceLine.TotalLineAmount, 2),
                     CreditAmount    = 0,
                     DescriptionLine = invoiceLine.DescriptionLine,
-                    IdCostCenter    = pa.IdCostCenter
-                };
-                drLines.Add((drLine, invoiceLine));
+                }, invoiceLine));
             }
         }
 
-        // Calcular total débito automático
-        var totalDr = drLines.Sum(x => x.Line.DebitAmount);
-
-        // Si no hay líneas DR, los productos no tienen cuentas contables configuradas
+        // Si no hay líneas, ni ProductAccount ni cuenta de gasto fallback configurada
         if (drLines.Count == 0)
             return (false,
-                "Ninguna línea de factura tiene cuentas contables de gasto configuradas (ProductAccount). " +
-                "Configure la distribución contable de los productos antes de confirmar.",
+                "No se pudo generar el asiento contable. Configure una cuenta de gasto fallback en el tipo de factura (IdDefaultExpenseAccount), o asigne distribución contable (ProductAccount) a los productos de las líneas.",
                 null);
 
-        // Línea CR (contrapartida)
+        // Calcular neto: DR positivos menos CR negativos (porcentajes negativos = contrapartidas internas)
+        var totalDr = drLines.Sum(x => x.Line.DebitAmount - x.Line.CreditAmount);
+
+        if (totalDr <= 0)
+            return (false,
+                $"El total neto del asiento es {totalDr:N2}. Los porcentajes de distribución deben resultar en un débito neto positivo.",
+                null);
+
+        // Línea CR (contrapartida — banco/caja)
         var crLine = new AccountingEntryLine
         {
             IdAccount       = crAccountId.Value,
@@ -350,13 +373,6 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
             CreditAmount    = totalDr,
             DescriptionLine = $"Factura {invoice.NumberInvoice} — {invoice.ProviderName}"
         };
-
-        // Validar balance
-        var totalCr = crLine.CreditAmount;
-        if (totalDr != totalCr)
-            return (false,
-                $"El asiento no balancea: débito {totalDr:N2} ≠ crédito {totalCr:N2}. Verifique que todos los productos tengan distribución contable y que los porcentajes sumen 100.",
-                null);
 
         // Crear el asiento contable (OriginModule = "PurchaseInvoice")
         var entry = new AccountingEntry
@@ -378,7 +394,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         entry.AccountingEntryLines.Add(crLine);
 
         db.AccountingEntry.Add(entry);
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         // Vincular asiento a la factura (PurchaseInvoiceEntry)
         db.PurchaseInvoiceEntry.Add(new PurchaseInvoiceEntry
@@ -401,7 +417,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         var invoiceToUpdate = await db.PurchaseInvoice.FindAsync([invoice.IdPurchaseInvoice], ct);
         invoiceToUpdate!.StatusInvoice = "Confirmado";
 
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         return (true, null, await GetByIdAsync(invoice.IdPurchaseInvoice, ct));
     }
@@ -419,15 +435,59 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
             throw new InvalidOperationException($"No se puede anular una factura en estado '{entity.StatusInvoice}'.");
 
         entity.StatusInvoice = "Anulado";
-        await db.SaveChangesAsync(ct);
+
+        // Anular asientos contables vinculados a la factura
+        var entryIds = await db.PurchaseInvoiceEntry
+            .Where(pie => pie.IdPurchaseInvoice == idPurchaseInvoice)
+            .Select(pie => pie.IdAccountingEntry)
+            .ToListAsync(CancellationToken.None);
+
+        if (entryIds.Count > 0)
+            await db.AccountingEntry
+                .Where(ae => entryIds.Contains(ae.IdAccountingEntry) && ae.StatusEntry != "Anulado")
+                .ExecuteUpdateAsync(s => s.SetProperty(ae => ae.StatusEntry, "Anulado"), CancellationToken.None);
+
+        await db.SaveChangesAsync(CancellationToken.None);
 
         return await GetByIdAsync(idPurchaseInvoice, ct);
     }
 
-    // ── Helper privado ────────────────────────────────────────────────────────
-    private static PurchaseInvoiceLine MapLine(PurchaseInvoiceLineRequest l) => new()
+    // ── Helpers privados ──────────────────────────────────────────────────────
+    private async Task<IReadOnlyDictionary<string, int>> UpsertSkusAsync(
+        IEnumerable<PurchaseInvoiceLineRequest> lines, CancellationToken ct)
     {
-        IdProductSKU    = l.IdProductSKU,
+        var result = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var l in lines.Where(l => !string.IsNullOrWhiteSpace(l.SkuCode)))
+        {
+            var code = l.SkuCode!.Trim();
+            if (result.ContainsKey(code)) continue;
+
+            var name = string.IsNullOrWhiteSpace(l.SkuName)
+                ? l.DescriptionLine.Trim()
+                : l.SkuName.Trim();
+
+            var sku = await db.ProductSKU.FirstOrDefaultAsync(s => s.CodeProductSKU == code, ct);
+            if (sku is null)
+            {
+                sku = new ProductSKU { CodeProductSKU = code, NameProductSKU = name };
+                db.ProductSKU.Add(sku);
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+            else if (sku.NameProductSKU != name)
+            {
+                sku.NameProductSKU = name;
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+            result[code] = sku.IdProductSKU;
+        }
+        return result;
+    }
+
+    private static PurchaseInvoiceLine MapLine(
+        PurchaseInvoiceLineRequest l, IReadOnlyDictionary<string, int> skuCodeToId) => new()
+    {
+        IdProductSKU    = !string.IsNullOrWhiteSpace(l.SkuCode)
+                          && skuCodeToId.TryGetValue(l.SkuCode.Trim(), out var id) ? id : null,
         DescriptionLine = l.DescriptionLine.Trim(),
         Quantity        = l.Quantity,
         UnitPrice       = l.UnitPrice,

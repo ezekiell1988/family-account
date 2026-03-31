@@ -257,7 +257,7 @@ export class BankMovementsWebComponent {
     this.formReference.set(row.referenceMovement ?? '');
     this.formExchangeRate.set(row.exchangeRateValue);
     this.formDocuments.set(row.documents
-      .filter((d: BankMovementDocumentDto) => d.typeDocument !== 'Asiento')
+      .filter((d: BankMovementDocumentDto) => d.idPurchaseInvoice == null)
       .map((d: BankMovementDocumentDto) => ({
         typeDocument:        d.typeDocument,
         numberDocument:      d.numberDocument ?? '',
@@ -336,6 +336,10 @@ export class BankMovementsWebComponent {
     return movement.documents.reduce((s, d) => s + d.amountDocument, 0);
   }
 
+  getDocTotal(docs: BankMovementDocumentDto[]): number {
+    return docs.reduce((s, d) => s + d.amountDocument, 0);
+  }
+
   getEntryTotalDebitInRow(entry: AccountingEntryDto): number {
     return entry.lines.reduce((s, l) => s + l.debitAmount, 0);
   }
@@ -346,9 +350,17 @@ export class BankMovementsWebComponent {
 
   // ── Helper: obtener asiento vinculado ────────────────────────────
   getLinkedEntry(movement: BankMovementDto): AccountingEntryDto | undefined {
-    const doc = movement.documents.find(d => d.idAccountingEntry != null);
-    if (!doc?.idAccountingEntry) return undefined;
-    return this.entries().find(e => e.idAccountingEntry === doc.idAccountingEntry);
+    if (!movement.idAccountingEntry) return undefined;
+    return this.entries().find(e => e.idAccountingEntry === movement.idAccountingEntry);
+  }
+
+  // ── Helpers: documentos propios vs. documentos desde facturas ────────
+  getOwnDocuments(movement: BankMovementDto): BankMovementDocumentDto[] {
+    return movement.documents.filter(d => d.idPurchaseInvoice == null);
+  }
+
+  getInvoiceDocuments(movement: BankMovementDto): BankMovementDocumentDto[] {
+    return movement.documents.filter(d => d.idPurchaseInvoice != null);
   }
 
   // ── Editor de asiento ────────────────────────────────────────────

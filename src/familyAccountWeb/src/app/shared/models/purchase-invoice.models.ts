@@ -1,3 +1,13 @@
+// ── Producto SKU ──────────────────────────────────────────────────────────────
+export interface ProductSKUDto {
+  idProductSKU:          number;
+  codeProductSKU:        string;
+  nameProductSKU:        string;
+  brandProductSKU:       string | null;
+  descriptionProductSKU: string | null;
+  netContent:            string | null;
+}
+
 // ── Tipo de factura de compra ─────────────────────────────────────────────────
 export interface PurchaseInvoiceTypeDto {
   idPurchaseInvoiceType:       number;
@@ -50,7 +60,8 @@ export interface PurchaseInvoiceDto {
 
 // ── Requests ──────────────────────────────────────────────────────────────────
 export interface PurchaseInvoiceLineRequest {
-  idProductSKU:    number | null;
+  skuCode:         string | null;
+  skuName:         string | null;
   descriptionLine: string;
   quantity:        number;
   unitPrice:       number;

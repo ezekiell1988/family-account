@@ -178,6 +178,7 @@
                   <tr>
                     <td>
                       <select class="form-select form-select-sm"
+                        aria-label="Tipo de documento"
                         [value]="doc.typeDocument"
                         (change)="updateDoc($index, 'typeDocument', $any($event.target).value)">
                         @for (dt of docTypeOptions; track dt) {
@@ -187,21 +188,25 @@
                     </td>
                     <td>
                       <input type="text" class="form-control form-control-sm" maxlength="100"
+                        aria-label="Número de documento"
                         [value]="doc.numberDocument"
                         (input)="updateDoc($index, 'numberDocument', $any($event.target).value)" />
                     </td>
                     <td>
                       <input type="date" class="form-control form-control-sm"
+                        aria-label="Fecha del documento"
                         [value]="doc.dateDocument"
                         (change)="updateDoc($index, 'dateDocument', $any($event.target).value)" />
                     </td>
                     <td>
                       <input type="number" class="form-control form-control-sm" min="0.01" step="0.01"
+                        aria-label="Monto del documento"
                         [value]="doc.amountDocument"
                         (input)="updateDoc($index, 'amountDocument', +$any($event.target).value)" />
                     </td>
                     <td>
                       <input type="text" class="form-control form-control-sm" maxlength="500"
+                        aria-label="Descripción del documento"
                         [value]="doc.descriptionDocument"
                         (input)="updateDoc($index, 'descriptionDocument', $any($event.target).value)" />
                     </td>
@@ -259,8 +264,8 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label">Moneda</label>
-          <input type="text" class="form-control" readonly [value]="entryFormCurrencyDisplay()" />
+          <label class="form-label" for="efCurrency">Moneda</label>
+          <input id="efCurrency" type="text" class="form-control" readonly [value]="entryFormCurrencyDisplay()" />
         </div>
         <div class="col-md-3">
           <label class="form-label" for="efNumber">Número <span class="text-danger">*</span></label>
@@ -335,6 +340,7 @@
                   <tr>
                     <td>
                       <select class="form-select form-select-sm"
+                        aria-label="Cuenta contable"
                         [value]="line.idAccount"
                         (change)="updateEntryLine($index, 'idAccount', +$any($event.target).value)">
                         <option value="0">— Cuenta —</option>
@@ -345,21 +351,26 @@
                     </td>
                     <td>
                       <input type="number" class="form-control form-control-sm" min="0" step="0.01"
+                        aria-label="Débito"
                         [value]="line.debitAmount"
                         (input)="updateEntryLine($index, 'debitAmount', +$any($event.target).value)" />
                     </td>
                     <td>
                       <input type="number" class="form-control form-control-sm" min="0" step="0.01"
+                        aria-label="Crédito"
                         [value]="line.creditAmount"
                         (input)="updateEntryLine($index, 'creditAmount', +$any($event.target).value)" />
                     </td>
                     <td>
                       <input type="text" class="form-control form-control-sm" maxlength="200"
+                        aria-label="Descripción de línea"
                         [value]="line.descriptionLine"
                         (input)="updateEntryLine($index, 'descriptionLine', $any($event.target).value)" />
                     </td>
                     <td>
-                      <button type="button" class="btn btn-xs btn-outline-danger" (click)="removeEntryLine($index)">
+                      <button type="button" class="btn btn-xs btn-outline-danger"
+                        (click)="removeEntryLine($index)"
+                        aria-label="Eliminar línea">
                         <i class="fa fa-trash"></i>
                       </button>
                     </td>
@@ -474,15 +485,18 @@
       [limit]="15"
       [rowDetail]="rowDetailTpl"
       (detailToggle)="toggleExpand($event.value)"
-      role="grid"
       aria-label="Tabla de movimientos bancarios">
 
       <!-- Expand toggle -->
       <ngx-datatable-column [width]="30" [resizeable]="false" [sortable]="false" [draggable]="false" [canAutoResize]="false">
         <ng-template ngx-datatable-cell-template let-row="row">
-          <a href="javascript:;" (click)="toggleExpand(row)" [attr.aria-label]="'Expandir movimiento ' + row.numberMovement">
-            <i class="fa" [class.fa-chevron-down]="expandedId() === row.idBankMovement"
+          <a href="javascript:;" (click)="toggleExpand(row)"
+            [attr.aria-label]="'Expandir movimiento ' + row.numberMovement"
+            [attr.title]="'Expandir movimiento ' + row.numberMovement">
+            <i class="fa" aria-hidden="true"
+               [class.fa-chevron-down]="expandedId() === row.idBankMovement"
                [class.fa-chevron-right]="expandedId() !== row.idBankMovement"></i>
+            <span class="visually-hidden">Expandir {{ row.numberMovement }}</span>
           </a>
         </ng-template>
       </ngx-datatable-column>
@@ -537,8 +551,10 @@
             @if (canEdit(row.statusMovement)) {
               <button type="button" class="btn btn-xs btn-outline-primary"
                 (click)="openEdit(row)"
-                [attr.aria-label]="'Editar ' + row.numberMovement">
-                <i class="fa fa-pencil"></i>
+                [attr.aria-label]="'Editar ' + row.numberMovement"
+                [attr.title]="'Editar ' + row.numberMovement">
+                <i class="fa fa-pencil" aria-hidden="true"></i>
+                <span class="visually-hidden">Editar {{ row.numberMovement }}</span>
               </button>
             }
             @if (canConfirm(row.statusMovement)) {
@@ -546,22 +562,27 @@
                 (click)="askAction(row.idBankMovement, 'confirm')"
                 [attr.aria-label]="'Confirmar ' + row.numberMovement"
                 title="Confirmar — genera asiento contable">
-                <i class="fa fa-check"></i>
+                <i class="fa fa-check" aria-hidden="true"></i>
+                <span class="visually-hidden">Confirmar {{ row.numberMovement }}</span>
               </button>
             }
             @if (canCancel(row.statusMovement)) {
               <button type="button" class="btn btn-xs btn-outline-warning"
                 (click)="askAction(row.idBankMovement, 'cancel')"
-                [attr.aria-label]="'Anular ' + row.numberMovement">
-                <i class="fa fa-ban"></i>
+                [attr.aria-label]="'Anular ' + row.numberMovement"
+                [attr.title]="'Anular ' + row.numberMovement">
+                <i class="fa fa-ban" aria-hidden="true"></i>
+                <span class="visually-hidden">Anular {{ row.numberMovement }}</span>
               </button>
             }
             @if (canDelete(row.statusMovement)) {
               <button type="button" class="btn btn-xs btn-outline-danger"
                 [disabled]="deletingId() === row.idBankMovement"
                 (click)="askDelete(row.idBankMovement)"
-                [attr.aria-label]="'Eliminar ' + row.numberMovement">
-                <i class="fa fa-trash"></i>
+                [attr.aria-label]="'Eliminar ' + row.numberMovement"
+                [attr.title]="'Eliminar ' + row.numberMovement">
+                <i class="fa fa-trash" aria-hidden="true"></i>
+                <span class="visually-hidden">Eliminar {{ row.numberMovement }}</span>
               </button>
             }
           </div>
@@ -573,10 +594,11 @@
       <ng-template ngx-datatable-row-detail-template let-row="row">
         <div class="p-3 bg-light">
 
-          <!-- Sección 1: Documentos bancarios -->
-          <strong class="d-block mb-2"><i class="fa fa-folder-open me-1"></i> Documentos bancarios</strong>
-          @if (!row.documents || row.documents.length === 0) {
-            <p class="text-muted small mb-2">Sin documentos bancarios adjuntos.</p>
+          <!-- Sección 1: Documentos propios del movimiento -->
+          <strong class="d-block mb-2"><i class="fa fa-folder-open me-1"></i> Documentos propios</strong>
+          @let ownDocs = getOwnDocuments(row);
+          @if (ownDocs.length === 0) {
+            <p class="text-muted small mb-2">Sin documentos propios adjuntos.</p>
           } @else {
             <div class="table-responsive mb-3">
               <table class="table table-sm table-bordered mb-0">
@@ -590,20 +612,18 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (doc of row.documents; track doc.idBankMovementDocument) {
-                    @if (doc.typeDocument !== 'Asiento') {
-                      <tr>
-                        <td><span class="badge bg-secondary">{{ doc.typeDocument }}</span></td>
-                        <td>{{ doc.numberDocument ?? '—' }}</td>
-                        <td>{{ doc.dateDocument }}</td>
-                        <td class="font-monospace">{{ formatAmount(doc.amountDocument) }}</td>
-                        <td>{{ doc.descriptionDocument ?? '—' }}</td>
-                      </tr>
-                    }
+                  @for (doc of ownDocs; track doc.idBankMovementDocument) {
+                    <tr>
+                      <td><span class="badge bg-secondary">{{ doc.typeDocument }}</span></td>
+                      <td>{{ doc.numberDocument ?? '—' }}</td>
+                      <td>{{ doc.dateDocument }}</td>
+                      <td class="font-monospace">{{ formatAmount(doc.amountDocument) }}</td>
+                      <td>{{ doc.descriptionDocument ?? '—' }}</td>
+                    </tr>
                   }
                   <tr class="table-active fw-bold">
-                    <td colspan="3">Total documentos</td>
-                    <td class="font-monospace">{{ formatAmount(getMovementDocTotal(row)) }}</td>
+                    <td colspan="3">Total</td>
+                    <td class="font-monospace">{{ formatAmount(getDocTotal(ownDocs)) }}</td>
                     <td></td>
                   </tr>
                 </tbody>
@@ -611,8 +631,44 @@
             </div>
           }
 
-          <!-- Sección 2: Asiento contable -->
-          <strong class="d-block mb-2"><i class="fa fa-book me-1"></i> Asiento contable</strong>
+          <!-- Sección 2: Documentos generados desde facturas de compra -->
+          @let invoiceDocs = getInvoiceDocuments(row);
+          @if (invoiceDocs.length > 0) {
+            <strong class="d-block mb-2"><i class="fa fa-file-text me-1 text-warning"></i> Documentos desde facturas de compra</strong>
+            <div class="table-responsive mb-3">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Factura</th>
+                    <th>Tipo</th>
+                    <th>Número doc.</th>
+                    <th>Fecha</th>
+                    <th>Monto</th>
+                    <th>Descripción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (doc of invoiceDocs; track doc.idBankMovementDocument) {
+                    <tr>
+                      <td>
+                        <span class="badge bg-warning text-dark">
+                          <i class="fa fa-link me-1"></i>{{ doc.numberPurchaseInvoice ?? '#' + doc.idPurchaseInvoice }}
+                        </span>
+                      </td>
+                      <td><span class="badge bg-secondary">{{ doc.typeDocument }}</span></td>
+                      <td>{{ doc.numberDocument ?? '—' }}</td>
+                      <td>{{ doc.dateDocument }}</td>
+                      <td class="font-monospace">{{ formatAmount(doc.amountDocument) }}</td>
+                      <td>{{ doc.descriptionDocument ?? '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <!-- Sección 3: Asiento contable del movimiento bancario -->
+          <strong class="d-block mb-2"><i class="fa fa-book me-1"></i> Asiento contable del movimiento</strong>
           @let linkedEntry = getLinkedEntry(row);
           @if (!linkedEntry) {
             <p class="text-muted small">Sin asiento contable vinculado.</p>

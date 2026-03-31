@@ -506,17 +506,34 @@
             <table class="table table-sm table-bordered">
               <thead class="table-light">
                 <tr>
+                  <th style="width:180px">SKU / Producto</th>
                   <th>Descripción</th>
                   <th style="width:90px">Cantidad</th>
                   <th style="width:110px">Precio Unit.</th>
                   <th style="width:90px">IVA %</th>
                   <th style="width:120px">Total línea</th>
-                  <th style="width:50px"></th>
+                  <th style="width:70px" title="Cuentas contables y acciones">
+                    <i class="fa fa-book me-1 text-muted" aria-hidden="true"></i>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 @for (line of formLines(); track $index) {
                   <tr>
+                    <td>
+                      <input type="text"
+                             class="form-control form-control-sm"
+                             aria-label="Código SKU"
+                             placeholder="Ej. 7501055300427"
+                             [attr.list]="'sku-list-' + $index"
+                             [ngModel]="line.skuCode"
+                             (change)="updateLine($index, 'skuCode', $any($event.target).value)" />
+                      <datalist [id]="'sku-list-' + $index">
+                        @for (sku of productSKUs(); track sku.idProductSKU) {
+                          <option [value]="sku.codeProductSKU">{{ sku.nameProductSKU }}</option>
+                        }
+                      </datalist>
+                    </td>
                     <td>
                       <input type="text" class="form-control form-control-sm"
                              [ngModel]="line.descriptionLine"
@@ -541,17 +558,166 @@
                              (ngModelChange)="updateLine($index, 'taxPercent', +$event)"
                              min="0" max="100" step="0.01" />
                     </td>
-                    <td class="text-end">
+                    <td class="text-end font-monospace">
                       {{ line.totalLineAmount | number:'1.2-2' }}
                     </td>
                     <td class="text-center">
-                      @if (formLines().length > 1) {
-                        <button class="btn btn-xs btn-danger" aria-label="Eliminar línea" (click)="removeLine($index)">
-                          <i class="fa fa-times" aria-hidden="true"></i>
+                      <div class="d-flex gap-1 justify-content-center">
+                        <button type="button"
+                                class="btn btn-xs btn-outline-info"
+                                title="Cuentas contables / centro de costo"
+                                [class.active]="expandedLineAccountIndex() === $index"
+                                (click)="toggleLineAccounts($index)">
+                          <i class="fa fa-book" aria-hidden="true"></i>
                         </button>
-                      }
+                        @if (formLines().length > 1) {
+                          <button class="btn btn-xs btn-danger" aria-label="Eliminar línea" (click)="removeLine($index)">
+                            <i class="fa fa-times" aria-hidden="true"></i>
+                          </button>
+                        }
+                      </div>
                     </td>
                   </tr>
+                  <!-- Panel expandible de distribución contable -->
+                  @if (expandedLineAccountIndex() === $index) {
+                    <tr>
+                      <td colspan="7" class="p-0">
+                        <div class="bg-light border-top border-bottom px-3 py-2">
+                          <!-- Encabezado del panel (común para SKU nuevo y existente) -->
+                          <div class="d-flex align-items-center justify-content-between mb-2">
+                            <strong class="small">
+                              <i class="fa fa-book me-1 text-primary"></i>
+                              Distribución contable
+                              @if (line.skuCode) { <span>— {{ line.skuCode }}</span> }
+                              @if (getProductIdForSkuCode(line.skuCode) === null) {
+                                <span class="badge bg-warning text-dark ms-1">Producto nuevo</span>
+                              }
+                            </strong>
+                            <button type="button" class="btn btn-xs btn-outline-secondary" (click)="addLineAccount()">
+                              <i class="fa fa-plus me-1"></i> Agregar cuenta
+                            </button>
+                          </div>
+
+                          <!-- Aviso cuando el SKU no tiene código -->
+                          @if (!line.skuCode.trim()) {
+                            <div class="alert alert-warning py-2 small mb-2">
+                              <i class="fa fa-exclamation-triangle me-1"></i>
+                              Ingrese un código SKU en la línea para poder guardar la distribución contable.
+                            </div>
+                          }
+
+                          <!-- Aviso cuando el SKU es nuevo (no existe en catálogo) -->
+                          @if (line.skuCode.trim() && getProductIdForSkuCode(line.skuCode) === null) {
+                            <div class="alert alert-info py-2 small mb-2">
+                              <i class="fa fa-info-circle me-1"></i>
+                              El código <strong>{{ line.skuCode }}</strong> no existe en el catálogo.
+                              Al guardar se creará automáticamente el producto y sus cuentas contables.
+                            </div>
+                          }
+
+                          <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-2">
+                              <thead class="table-light">
+                                <tr>
+                                  <th>Cuenta contable</th>
+                                  <th style="width:200px">Centro de costo</th>
+                                  <th style="width:110px">% asignación</th>
+                                  <th style="width:40px"></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (accRow of lineAccountRows(); track $index) {
+                                  <tr>
+                                    <td>
+                                      <select class="form-select form-select-sm"
+                                              aria-label="Cuenta contable"
+                                              [value]="accRow.idAccount"
+                                              (change)="updateLineAccount($index, 'idAccount', +$any($event.target).value)">
+                                        <option value="0">— Cuenta —</option>
+                                        @for (a of movementAccountsForLine(); track a.idAccount) {
+                                          <option [value]="a.idAccount">{{ a.codeAccount }} – {{ a.nameAccount }}</option>
+                                        }
+                                      </select>
+                                    </td>
+                                    <td>
+                                      <select class="form-select form-select-sm"
+                                              aria-label="Centro de costo"
+                                              [value]="accRow.idCostCenter ?? ''"
+                                              (change)="updateLineAccount($index, 'idCostCenter', $any($event.target).value ? +$any($event.target).value : null)">
+                                        <option value="">— Sin C.Costo —</option>
+                                        @for (cc of costCenters(); track cc.idCostCenter) {
+                                          <option [value]="cc.idCostCenter">{{ cc.codeCostCenter }} – {{ cc.nameCostCenter }}</option>
+                                        }
+                                      </select>
+                                    </td>
+                                    <td>
+                                      <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control form-control-sm"
+                                               aria-label="Porcentaje"
+                                               step="0.01"
+                                               [value]="accRow.percentageAccount"
+                                               (input)="updateLineAccount($index, 'percentageAccount', +$any($event.target).value)" />
+                                        <span class="input-group-text">%</span>
+                                      </div>
+                                    </td>
+                                    <td class="text-center">
+                                      <button type="button" class="btn btn-xs btn-outline-danger"
+                                              aria-label="Eliminar cuenta"
+                                              (click)="removeLineAccount($index)">
+                                        <i class="fa fa-trash" aria-hidden="true"></i>
+                                      </button>
+                                    </td>
+                                  </tr>
+                                }
+                              </tbody>
+                              <tfoot>
+                                <tr class="table-active">
+                                  <td colspan="2" class="fw-semibold small text-end">Total asignado:</td>
+                                  <td class="font-monospace fw-bold"
+                                      [class.text-success]="lineAccountValid()"
+                                      [class.text-danger]="!lineAccountValid()">
+                                    {{ lineAccountTotal() | number:'1.2-2' }}%
+                                  </td>
+                                  <td></td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                          @if (lineAccountMissingAccount()) {
+                            <p class="text-danger small mb-2">
+                              <i class="fa fa-exclamation-triangle me-1"></i>
+                              Todas las filas deben tener una cuenta contable seleccionada.
+                            </p>
+                          }
+                          @if (!lineAccountMissingAccount() && !lineAccountValid()) {
+                            <p class="text-danger small mb-2">
+                              <i class="fa fa-exclamation-triangle me-1"></i>
+                              La suma debe ser exactamente 100%.
+                            </p>
+                          }
+                          @if (lineAccountError()) {
+                            <div class="alert alert-danger py-2 px-3 mb-2 small" role="alert">
+                              <i class="fa fa-times-circle me-1"></i>
+                              {{ lineAccountError() }}
+                            </div>
+                          }
+                          <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-primary"
+                                    [disabled]="!lineAccountValid() || !line.skuCode.trim()"
+                                    (click)="saveLineAccounts($index)">
+                              <i class="fa fa-save me-1"></i>
+                              @if (getProductIdForSkuCode(line.skuCode) === null) { Crear producto y distribución }
+                              @else { Guardar distribución }
+                            </button>
+                            <button type="button" class="btn btn-sm btn-default"
+                                    (click)="toggleLineAccounts($index)">
+                              <i class="fa fa-times me-1"></i> Cerrar
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  }
                 }
               </tbody>
             </table>

@@ -80,9 +80,9 @@ public sealed class ProductAccountService(AppDbContext db) : IProductAccountServ
         };
 
         db.ProductAccount.Add(entity);
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
-        return (await GetByIdAsync(entity.IdProductAccount, ct))!;
+        return (await GetByIdAsync(entity.IdProductAccount, CancellationToken.None))!;
     }
 
     public async Task<ProductAccountResponse?> UpdateAsync(int idProductAccount, UpdateProductAccountRequest request, CancellationToken ct = default)
@@ -94,16 +94,16 @@ public sealed class ProductAccountService(AppDbContext db) : IProductAccountServ
         entity.IdCostCenter      = request.IdCostCenter;
         entity.PercentageAccount = request.PercentageAccount;
 
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
-        return await GetByIdAsync(idProductAccount, ct);
+        return await GetByIdAsync(idProductAccount, CancellationToken.None);
     }
 
     public async Task<bool> DeleteAsync(int idProductAccount, CancellationToken ct = default)
     {
         var deleted = await db.ProductAccount
             .Where(pa => pa.IdProductAccount == idProductAccount)
-            .ExecuteDeleteAsync(ct);
+            .ExecuteDeleteAsync(CancellationToken.None);
 
         return deleted > 0;
     }

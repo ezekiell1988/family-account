@@ -3230,6 +3230,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("idBankMovementType")
                         .HasComment("FK al tipo de movimiento bancario usado para auto-crear el BankMovement al confirmar. Solo aplica cuando CounterpartFromBankMovement = true (DEBITO, TC).");
 
+                    b.Property<int?>("IdDefaultExpenseAccount")
+                        .HasColumnType("int")
+                        .HasColumnName("idDefaultExpenseAccount")
+                        .HasComment("FK a la cuenta contable de gasto usada como fallback cuando el SKU de la línea no tiene ProductAccount configurado. Permite confirmar facturas aunque los productos no tengan distribución contable.");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit")
                         .HasColumnName("isActive")
@@ -3260,6 +3265,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasDatabaseName("IX_purchaseInvoiceType_idBankMovementType")
                         .HasFilter("[idBankMovementType] IS NOT NULL");
 
+                    b.HasIndex("IdDefaultExpenseAccount")
+                        .HasDatabaseName("IX_purchaseInvoiceType_idDefaultExpenseAccount")
+                        .HasFilter("[idDefaultExpenseAccount] IS NOT NULL");
+
                     b.ToTable("purchaseInvoiceType", t =>
                         {
                             t.HasComment("Catálogo de tipos de factura de compra. Define si la contrapartida contable (CR) proviene del BankMovement vinculado o de una cuenta Caja fija por moneda.");
@@ -3273,6 +3282,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             CounterpartFromBankMovement = false,
                             IdAccountCounterpartCRC = 106,
                             IdAccountCounterpartUSD = 107,
+                            IdDefaultExpenseAccount = 75,
                             IsActive = true,
                             NamePurchaseInvoiceType = "Pago en Efectivo"
                         },
@@ -3282,6 +3292,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             CodePurchaseInvoiceType = "DEBITO",
                             CounterpartFromBankMovement = true,
                             IdBankMovementType = 4,
+                            IdDefaultExpenseAccount = 75,
                             IsActive = true,
                             NamePurchaseInvoiceType = "Tarjeta de Débito / Transferencia"
                         },
@@ -3291,6 +3302,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             CodePurchaseInvoiceType = "TC",
                             CounterpartFromBankMovement = true,
                             IdBankMovementType = 6,
+                            IdDefaultExpenseAccount = 75,
                             IsActive = true,
                             NamePurchaseInvoiceType = "Tarjeta de Crédito"
                         });
@@ -3964,11 +3976,18 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasForeignKey("IdBankMovementType")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdDefaultExpenseAccountNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdDefaultExpenseAccount")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("IdAccountCounterpartCRCNavigation");
 
                     b.Navigation("IdAccountCounterpartUSDNavigation");
 
                     b.Navigation("IdBankMovementTypeNavigation");
+
+                    b.Navigation("IdDefaultExpenseAccountNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UserPin", b =>

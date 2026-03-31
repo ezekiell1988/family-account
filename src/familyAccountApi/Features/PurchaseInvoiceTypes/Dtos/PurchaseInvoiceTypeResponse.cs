@@ -11,4 +11,7 @@ public sealed record PurchaseInvoiceTypeResponse(
     int?    IdAccountCounterpartUSD,
     string? CodeAccountCounterpartUSD,
     string? NameAccountCounterpartUSD,
+    int?    IdDefaultExpenseAccount,
+    string? CodeDefaultExpenseAccount,
+    string? NameDefaultExpenseAccount,
     bool    IsActive);

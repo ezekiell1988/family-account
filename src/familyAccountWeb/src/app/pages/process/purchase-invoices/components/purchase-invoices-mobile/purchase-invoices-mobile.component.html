@@ -132,6 +132,17 @@
                 <ion-row>
                   <ion-col size="12">
                     <ion-item>
+                      <ion-label position="stacked">Código SKU</ion-label>
+                      <ion-input [value]="line.skuCode"
+                                 (ionChange)="updateLineField($index, 'skuCode', $event.detail.value!)"
+                                 placeholder="Ej. 7501055300427"
+                                 inputmode="text"
+                                 autocomplete="off">
+                      </ion-input>
+                    </ion-item>
+                  </ion-col>
+                  <ion-col size="12">
+                    <ion-item>
                       <ion-label position="stacked">Descripción</ion-label>
                       <ion-input [value]="line.descriptionLine"
                                  (ionInput)="updateLineField($index, 'descriptionLine', $event.detail.value!)">
@@ -167,14 +178,169 @@
                   </ion-col>
                 </ion-row>
               </ion-grid>
-              @if (formLines().length > 1) {
-                <ion-button fill="clear" color="danger" size="small" (click)="removeLine($index)">
-                  <ion-icon slot="start" name="trash-outline"></ion-icon>
-                  Quitar línea
-                </ion-button>
-              }
+
+              <!-- Acciones de línea -->
+              <ion-grid class="ion-no-padding ion-margin-top">
+                <ion-row>
+                  <ion-col>
+                    <ion-button fill="outline" color="tertiary" size="small"
+                                (click)="toggleLineAccounts($index)">
+                      <ion-icon slot="start" name="book-outline"></ion-icon>
+                      {{ expandedLineAccountIndex() === $index ? 'Cerrar cuentas' : 'Cuentas contables' }}
+                    </ion-button>
+                  </ion-col>
+                  @if (formLines().length > 1) {
+                    <ion-col size="auto">
+                      <ion-button fill="clear" color="danger" size="small" (click)="removeLine($index)">
+                        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                      </ion-button>
+                    </ion-col>
+                  }
+                </ion-row>
+              </ion-grid>
             </ion-card-content>
           </ion-card>
+
+          <!-- Panel de distribución contable (expandido) -->
+          @if (expandedLineAccountIndex() === $index) {
+            <ion-card color="light" class="ion-margin-start ion-margin-end ion-margin-bottom">
+              <ion-card-header>
+                <ion-card-title style="font-size: 0.95rem">
+                  <ion-icon name="book-outline" class="ion-margin-end"></ion-icon>
+                  Distribución contable
+                  @if (!line.skuCode.trim()) {
+                    <ion-badge color="medium" class="ion-margin-start">Sin SKU</ion-badge>
+                  } @else if (getProductIdForSkuCode(line.skuCode) === null) {
+                    <ion-badge color="warning" class="ion-margin-start">Producto nuevo</ion-badge>
+                  }
+                </ion-card-title>
+              </ion-card-header>
+              <ion-card-content>
+
+                @if (!line.skuCode.trim()) {
+                  <!-- Sin SKU ingresado -->
+                  <ion-item color="warning" lines="none" class="ion-margin-bottom" style="border-radius:6px">
+                    <ion-icon name="warning-outline" slot="start"></ion-icon>
+                    <ion-label class="ion-text-wrap" style="font-size:0.85rem">
+                      Ingrese un código SKU antes de configurar las cuentas contables.
+                    </ion-label>
+                  </ion-item>
+                } @else {
+                  @if (getProductIdForSkuCode(line.skuCode) === null) {
+                    <!-- SKU nuevo -->
+                    <ion-item color="primary" lines="none" class="ion-margin-bottom" style="border-radius:6px">
+                      <ion-icon name="warning-outline" slot="start"></ion-icon>
+                      <ion-label class="ion-text-wrap" style="font-size:0.85rem">
+                        SKU no encontrado en el catálogo. Configure las cuentas y se creará el producto automáticamente.
+                      </ion-label>
+                    </ion-item>
+                  }
+
+                  <!-- Filas de distribución -->
+                  @for (row of lineAccountRows(); track $index; let ri = $index) {
+                    <ion-card class="ion-no-margin ion-margin-bottom" style="box-shadow:none;border:1px solid var(--ion-color-medium-tint)">
+                      <ion-card-content class="ion-no-padding" style="padding:8px">
+                        <ion-grid class="ion-no-padding">
+                          <ion-row>
+                            <ion-col size="12">
+                              <ion-item lines="none">
+                                <ion-label position="stacked" style="font-size:0.8rem">Cuenta contable *</ion-label>
+                                <ion-select [value]="row.idAccount"
+                                            (ionChange)="updateLineAccount(ri, 'idAccount', +$event.detail.value)"
+                                            interface="action-sheet"
+                                            placeholder="Seleccionar cuenta">
+                                  @for (acc of movementAccountsForLine(); track acc.idAccount) {
+                                    <ion-select-option [value]="acc.idAccount">
+                                      {{ acc.codeAccount }} – {{ acc.nameAccount }}
+                                    </ion-select-option>
+                                  }
+                                </ion-select>
+                              </ion-item>
+                            </ion-col>
+                            <ion-col size="12">
+                              <ion-item lines="none">
+                                <ion-label position="stacked" style="font-size:0.8rem">Centro de costo</ion-label>
+                                <ion-select [value]="row.idCostCenter"
+                                            (ionChange)="updateLineAccount(ri, 'idCostCenter', $event.detail.value ? +$event.detail.value : null)"
+                                            interface="action-sheet"
+                                            placeholder="(Ninguno)">
+                                  <ion-select-option [value]="null">(Ninguno)</ion-select-option>
+                                  @for (cc of costCenters(); track cc.idCostCenter) {
+                                    <ion-select-option [value]="cc.idCostCenter">
+                                      {{ cc.codeCostCenter }} – {{ cc.nameCostCenter }}
+                                    </ion-select-option>
+                                  }
+                                </ion-select>
+                              </ion-item>
+                            </ion-col>
+                            <ion-col size="8">
+                              <ion-item lines="none">
+                                <ion-label position="stacked" style="font-size:0.8rem">% Asignación *</ion-label>
+                                <ion-input type="number" [value]="row.percentageAccount"
+                                           (ionInput)="updateLineAccount(ri, 'percentageAccount', +$event.detail.value!)"
+                                           step="0.01">
+                                </ion-input>
+                              </ion-item>
+                            </ion-col>
+                            <ion-col size="4" class="ion-align-self-center ion-text-end">
+                              @if (lineAccountRows().length > 1) {
+                                <ion-button fill="clear" color="danger" size="small"
+                                            (click)="removeLineAccount(ri)">
+                                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                                </ion-button>
+                              }
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                      </ion-card-content>
+                    </ion-card>
+                  }
+
+                  <!-- Total % -->
+                  <ion-item lines="none" class="ion-margin-top"
+                            [color]="lineAccountValid() ? 'success' : 'danger'"
+                            style="border-radius:6px">
+                    <ion-label>
+                      <strong>Total asignado: {{ lineAccountTotal() | number:'1.2-2' }}%</strong>
+                      @if (lineAccountMissingAccount()) {
+                        &nbsp;— Selecciona cuenta en todas las filas
+                      } @else if (!lineAccountValid()) {
+                        &nbsp;— La suma debe ser exactamente 100%
+                      }
+                    </ion-label>
+                  </ion-item>
+
+                  @if (lineAccountError()) {
+                    <ion-item lines="none" color="danger" class="ion-margin-top" style="border-radius:6px;--min-height:40px">
+                      <ion-icon slot="start" name="alert-circle-outline"></ion-icon>
+                      <ion-label class="ion-text-wrap" style="font-size:0.85rem">{{ lineAccountError() }}</ion-label>
+                    </ion-item>
+                  }
+
+                  <!-- Botones de acción -->
+                  <ion-grid class="ion-no-padding ion-margin-top">
+                    <ion-row>
+                      <ion-col>
+                        <ion-button fill="outline" size="small" (click)="addLineAccount()">
+                          <ion-icon slot="start" name="add-outline"></ion-icon>
+                          Agregar cuenta
+                        </ion-button>
+                      </ion-col>
+                      <ion-col size="auto">
+                        <ion-button size="small"
+                                    [disabled]="!lineAccountValid()"
+                                    (click)="saveLineAccounts($index)">
+                          <ion-icon slot="start" name="save-outline"></ion-icon>
+                          {{ getProductIdForSkuCode(line.skuCode) === null ? 'Crear producto' : 'Guardar' }}
+                        </ion-button>
+                      </ion-col>
+                    </ion-row>
+                  </ion-grid>
+                }
+
+              </ion-card-content>
+            </ion-card>
+          }
         }
 
         <ion-button fill="outline" expand="block" (click)="addLine()">

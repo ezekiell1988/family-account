@@ -11,4 +11,4 @@ public sealed record ProductResponse(
     int    IdProduct,
     string CodeProduct,
     string NameProduct,
-    IReadOnlyList<ProductSKUSummary> SKUs);
+    IReadOnlyList<ProductSKUSummary> Skus);

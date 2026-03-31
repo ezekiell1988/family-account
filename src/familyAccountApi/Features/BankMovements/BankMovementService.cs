@@ -193,6 +193,13 @@ public sealed class BankMovementService(AppDbContext db) : IBankMovementService
             throw new InvalidOperationException("El movimiento ya está anulado.");
 
         entity.StatusMovement = "Anulado";
+
+        // Anular asiento contable vinculado al movimiento bancario
+        if (entity.IdAccountingEntry.HasValue)
+            await db.AccountingEntry
+                .Where(ae => ae.IdAccountingEntry == entity.IdAccountingEntry.Value && ae.StatusEntry != "Anulado")
+                .ExecuteUpdateAsync(s => s.SetProperty(ae => ae.StatusEntry, "Anulado"), ct);
+
         await db.SaveChangesAsync(ct);
 
         return await GetByIdAsync(idBankMovement, ct);
@@ -205,7 +212,8 @@ public sealed class BankMovementService(AppDbContext db) : IBankMovementService
             .Include(bm => bm.IdBankAccountNavigation)
             .Include(bm => bm.IdBankMovementTypeNavigation)
             .Include(bm => bm.IdFiscalPeriodNavigation)
-            .Include(bm => bm.BankMovementDocuments);
+            .Include(bm => bm.BankMovementDocuments)
+                .ThenInclude(d => d.IdPurchaseInvoiceNavigation);
     }
 
     private static System.Linq.Expressions.Expression<Func<BankMovement, BankMovementResponse>> MapResponse()
@@ -229,10 +237,12 @@ public sealed class BankMovementService(AppDbContext db) : IBankMovementService
             bm.ReferenceMovement,
             bm.ExchangeRateValue,
             bm.CreatedAt,
+            bm.IdAccountingEntry,
             bm.BankMovementDocuments
                 .Select(d => new BankMovementDocumentResponse(
                     d.IdBankMovementDocument,
                     d.IdPurchaseInvoice,
+                    d.IdPurchaseInvoiceNavigation != null ? d.IdPurchaseInvoiceNavigation.NumberInvoice : null,
                     d.TypeDocument,
                     d.NumberDocument,
                     d.DateDocument,

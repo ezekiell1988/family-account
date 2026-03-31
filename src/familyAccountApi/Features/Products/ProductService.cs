@@ -51,7 +51,7 @@ public sealed class ProductService(AppDbContext db) : IProductService
         };
 
         db.Product.Add(product);
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         return new ProductResponse(product.IdProduct, product.CodeProduct, product.NameProduct, []);
     }
@@ -68,7 +68,7 @@ public sealed class ProductService(AppDbContext db) : IProductService
         product.CodeProduct = request.CodeProduct;
         product.NameProduct = request.NameProduct;
 
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         return ToResponse(product);
     }
@@ -77,7 +77,7 @@ public sealed class ProductService(AppDbContext db) : IProductService
     {
         var deleted = await db.Product
             .Where(p => p.IdProduct == idProduct)
-            .ExecuteDeleteAsync(ct);
+            .ExecuteDeleteAsync(CancellationToken.None);
 
         return deleted > 0;
     }
@@ -100,7 +100,7 @@ public sealed class ProductService(AppDbContext db) : IProductService
             IdProductSKU = idProductSKU
         });
 
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
         return true;
     }
 
@@ -108,7 +108,7 @@ public sealed class ProductService(AppDbContext db) : IProductService
     {
         var deleted = await db.ProductProductSKU
             .Where(pp => pp.IdProduct == idProduct && pp.IdProductSKU == idProductSKU)
-            .ExecuteDeleteAsync(ct);
+            .ExecuteDeleteAsync(CancellationToken.None);
 
         return deleted > 0;
     }

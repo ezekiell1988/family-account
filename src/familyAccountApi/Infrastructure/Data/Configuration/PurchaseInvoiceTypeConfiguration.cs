@@ -74,9 +74,22 @@ public sealed class PurchaseInvoiceTypeConfiguration : IEntityTypeConfiguration<
             .HasForeignKey(pit => pit.IdBankMovementType)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Property(pit => pit.IdDefaultExpenseAccount)
+            .HasComment("FK a la cuenta contable de gasto usada como fallback cuando el SKU de la línea no tiene ProductAccount configurado. Permite confirmar facturas aunque los productos no tengan distribución contable.");
+
+        builder.HasIndex(pit => pit.IdDefaultExpenseAccount)
+            .HasDatabaseName("IX_purchaseInvoiceType_idDefaultExpenseAccount")
+            .HasFilter("[idDefaultExpenseAccount] IS NOT NULL");
+
+        builder.HasOne(pit => pit.IdDefaultExpenseAccountNavigation)
+            .WithMany()
+            .HasForeignKey(pit => pit.IdDefaultExpenseAccount)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // Seed inicial
         // EFECTIVO: CR fija → Caja CRC (IdAccount=106) o Caja USD (IdAccount=107) según moneda
         // DEBITO/TC: CR dinámica → BankAccount.IdAccount del BankMovement vinculado (FK nula por diseño)
+        // IdDefaultExpenseAccount = 75 (5.12.01 Gastos en Pareja) → fallback cuando la línea no tiene ProductAccount
         builder.HasData(
             new PurchaseInvoiceType
             {
@@ -86,6 +99,7 @@ public sealed class PurchaseInvoiceTypeConfiguration : IEntityTypeConfiguration<
                 CounterpartFromBankMovement = false,
                 IdAccountCounterpartCRC     = 106,  // Caja CRC (₡) — 1.1.06.01
                 IdAccountCounterpartUSD     = 107,  // Caja USD ($) — 1.1.06.02
+                IdDefaultExpenseAccount     = 75,   // 5.12.01 Gastos en Pareja (Gasto, allowsMovements=true)
                 IsActive                    = true
             },
             new PurchaseInvoiceType
@@ -96,7 +110,8 @@ public sealed class PurchaseInvoiceTypeConfiguration : IEntityTypeConfiguration<
                 CounterpartFromBankMovement = true,
                 IdAccountCounterpartCRC     = null,
                 IdAccountCounterpartUSD     = null,
-                IdBankMovementType          = 4,   // GASTO — Gasto General (Cargo)
+                IdBankMovementType          = 4,    // GASTO — Gasto General (Cargo)
+                IdDefaultExpenseAccount     = 75,   // 5.12.01 Gastos en Pareja (Gasto, allowsMovements=true)
                 IsActive                    = true
             },
             new PurchaseInvoiceType
@@ -107,7 +122,8 @@ public sealed class PurchaseInvoiceTypeConfiguration : IEntityTypeConfiguration<
                 CounterpartFromBankMovement = true,
                 IdAccountCounterpartCRC     = null,
                 IdAccountCounterpartUSD     = null,
-                IdBankMovementType          = 6,   // PAGO-TC — Pago Tarjeta de Crédito (Cargo)
+                IdBankMovementType          = 6,    // PAGO-TC — Pago Tarjeta de Crédito (Cargo)
+                IdDefaultExpenseAccount     = 75,   // 5.12.01 Gastos en Pareja (Gasto, allowsMovements=true)
                 IsActive                    = true
             });
     }

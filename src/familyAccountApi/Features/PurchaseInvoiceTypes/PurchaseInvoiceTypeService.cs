@@ -10,7 +10,8 @@ public sealed class PurchaseInvoiceTypeService(AppDbContext db) : IPurchaseInvoi
     private IQueryable<PurchaseInvoiceType> WithIncludes() =>
         db.PurchaseInvoiceType.AsNoTracking()
             .Include(pit => pit.IdAccountCounterpartCRCNavigation)
-            .Include(pit => pit.IdAccountCounterpartUSDNavigation);
+            .Include(pit => pit.IdAccountCounterpartUSDNavigation)
+            .Include(pit => pit.IdDefaultExpenseAccountNavigation);
 
     private static PurchaseInvoiceTypeResponse ToResponse(PurchaseInvoiceType pit) => new(
         pit.IdPurchaseInvoiceType,
@@ -23,6 +24,9 @@ public sealed class PurchaseInvoiceTypeService(AppDbContext db) : IPurchaseInvoi
         pit.IdAccountCounterpartUSD,
         pit.IdAccountCounterpartUSDNavigation?.CodeAccount,
         pit.IdAccountCounterpartUSDNavigation?.NameAccount,
+        pit.IdDefaultExpenseAccount,
+        pit.IdDefaultExpenseAccountNavigation?.CodeAccount,
+        pit.IdDefaultExpenseAccountNavigation?.NameAccount,
         pit.IsActive);
 
     public async Task<IReadOnlyList<PurchaseInvoiceTypeResponse>> GetAllAsync(CancellationToken ct = default) =>
@@ -47,6 +51,7 @@ public sealed class PurchaseInvoiceTypeService(AppDbContext db) : IPurchaseInvoi
             CounterpartFromBankMovement = request.CounterpartFromBankMovement,
             IdAccountCounterpartCRC     = request.IdAccountCounterpartCRC,
             IdAccountCounterpartUSD     = request.IdAccountCounterpartUSD,
+            IdDefaultExpenseAccount     = request.IdDefaultExpenseAccount,
             IsActive                    = request.IsActive
         };
 
@@ -65,6 +70,7 @@ public sealed class PurchaseInvoiceTypeService(AppDbContext db) : IPurchaseInvoi
         entity.CounterpartFromBankMovement = request.CounterpartFromBankMovement;
         entity.IdAccountCounterpartCRC     = request.IdAccountCounterpartCRC;
         entity.IdAccountCounterpartUSD     = request.IdAccountCounterpartUSD;
+        entity.IdDefaultExpenseAccount     = request.IdDefaultExpenseAccount;
         entity.IsActive                    = request.IsActive;
 
         await db.SaveChangesAsync(ct);

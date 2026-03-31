@@ -17,3 +17,7 @@ export { CurrencyService } from './currency.service';
 export { BankMovementService } from './bank-movement.service';
 export { PurchaseInvoiceTypeService } from './purchase-invoice-type.service';
 export { PurchaseInvoiceService } from './purchase-invoice.service';
+export { ProductSKUService } from './product-sku.service';
+export { ProductService } from './product.service';
+export { ProductAccountService } from './product-account.service';
+export { CostCenterService } from './cost-center.service';

@@ -48,7 +48,7 @@ public sealed class ProductSKUService(AppDbContext db) : IProductSKUService
         };
 
         db.ProductSKU.Add(product);
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         return new ProductSKUResponse(
             product.IdProductSKU,
@@ -70,7 +70,7 @@ public sealed class ProductSKUService(AppDbContext db) : IProductSKUService
         product.DescriptionProductSKU = request.DescriptionProductSKU;
         product.NetContent            = request.NetContent;
 
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(CancellationToken.None);
 
         return new ProductSKUResponse(
             product.IdProductSKU,
@@ -85,7 +85,7 @@ public sealed class ProductSKUService(AppDbContext db) : IProductSKUService
     {
         var deleted = await db.ProductSKU
             .Where(p => p.IdProductSKU == idProductSKU)
-            .ExecuteDeleteAsync(ct);
+            .ExecuteDeleteAsync(CancellationToken.None);
 
         return deleted > 0;
     }

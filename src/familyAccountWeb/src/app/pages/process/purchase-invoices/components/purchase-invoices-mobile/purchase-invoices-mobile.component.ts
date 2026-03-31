@@ -62,11 +62,25 @@ import {
   AccountingEntryLineRequest,
   UpdateAccountingEntryRequest,
   AccountDto,
+  ProductSKUDto,
+  ProductDto,
+  ProductAccountDto,
+  CostCenterDto,
+  CreateProductAccountRequest,
+  UpdateProductAccountRequest,
+  CreateProductWithAccountsRequest,
 } from '../../../../../shared/models';
 import { HeaderComponent, FooterComponent } from '../../../../../components';
 
+interface FormLineAccount {
+  idProductAccount:  number | null;
+  idAccount:         number;
+  idCostCenter:      number | null;
+  percentageAccount: number;
+}
+
 interface FormLine {
-  idProductSKU:    number | null;
+  skuCode:         string;
   descriptionLine: string;
   quantity:        number;
   unitPrice:       number;
@@ -75,7 +89,7 @@ interface FormLine {
 }
 
 function emptyLine(): FormLine {
-  return { idProductSKU: null, descriptionLine: '', quantity: 1, unitPrice: 0, taxPercent: 13, totalLineAmount: 0 };
+  return { skuCode: '', descriptionLine: '', quantity: 1, unitPrice: 0, taxPercent: 13, totalLineAmount: 0 };
 }
 
 interface FormEntryLine {
@@ -132,8 +146,13 @@ export class PurchaseInvoicesMobileComponent {
   fiscalPeriods = input<FiscalPeriodLookup[]>([]);
   bankAccounts  = input<BankAccountDto[]>([]);
 
-  entries    = input<AccountingEntryDto[]>([]);
-  accounts   = input<AccountDto[]>([]);
+  entries       = input<AccountingEntryDto[]>([]);
+  accounts      = input<AccountDto[]>([]);
+  productSKUs   = input<ProductSKUDto[]>([]);
+  products      = input<ProductDto[]>([]);
+  productAccounts = input<ProductAccountDto[]>([]);
+  costCenters      = input<CostCenterDto[]>([]);
+  lineAccountError  = input<string | null>(null);
 
   // ── Outputs ───────────────────────────────────────────────────────
   refresh       = output<void>();
@@ -144,12 +163,138 @@ export class PurchaseInvoicesMobileComponent {
   cancel        = output<number>();
   clearError    = output<void>();
   editEntrySave = output<UpdateAccountingEntryRequest & { id: number }>();
+  createProductAccount       = output<CreateProductAccountRequest>();
+  updateProductAccount       = output<UpdateProductAccountRequest & { id: number }>();
+  deleteProductAccount       = output<number>();
+  createProductWithAccounts  = output<CreateProductWithAccountsRequest>();
 
   // ── Estado expandir ───────────────────────────────────────────────
   expandedId = signal<number | null>(null);
 
   toggleExpand(id: number): void {
     this.expandedId.update(cur => (cur === id ? null : id));
+  }
+
+  // ── Panel de distribución contable por línea ──────────────────────
+  expandedLineAccountIndex = signal<number | null>(null);
+  lineAccountRows          = signal<FormLineAccount[]>([]);
+
+  lineAccountTotal = computed(() =>
+    this.lineAccountRows().reduce((s, r) => s + (r.percentageAccount || 0), 0)
+  );
+  lineAccountValid = computed(() =>
+    this.lineAccountRows().length > 0 &&
+    this.lineAccountRows().every(r => r.idAccount > 0) &&
+    Math.abs(this.lineAccountTotal() - 100) < 0.01
+  );
+
+  lineAccountMissingAccount = computed(() =>
+    this.lineAccountRows().some(r => r.idAccount === 0)
+  );
+
+  movementAccountsForLine = computed(() =>
+    this.accounts().filter(a => a.allowsMovements && a.isActive)
+  );
+
+  getProductIdForSkuCode(skuCode: string): number | null {
+    if (!skuCode?.trim()) return null;
+    const code = skuCode.trim().toLowerCase();
+    const sku  = this.productSKUs().find(s => s.codeProductSKU.toLowerCase() === code);
+    if (sku) {
+      const prod = this.products().find(p => p.skus?.some(s => s.idProductSKU === sku.idProductSKU));
+      if (prod) return prod.idProduct;
+    }
+    const fromAccount = this.productAccounts().find(pa => pa.codeProduct.toLowerCase() === code);
+    return fromAccount?.idProduct ?? null;
+  }
+
+  toggleLineAccounts(lineIndex: number): void {
+    if (this.expandedLineAccountIndex() === lineIndex) {
+      this.expandedLineAccountIndex.set(null);
+      this.lineAccountRows.set([]);
+      return;
+    }
+    const line      = this.formLines()[lineIndex];
+    const idProduct = this.getProductIdForSkuCode(line.skuCode);
+    if (idProduct === null) {
+      this.lineAccountRows.set([]);
+      this.expandedLineAccountIndex.set(lineIndex);
+      return;
+    }
+    const existing = this.productAccounts()
+      .filter(pa => pa.idProduct === idProduct)
+      .map(pa => ({
+        idProductAccount:  pa.idProductAccount,
+        idAccount:         pa.idAccount,
+        idCostCenter:      pa.idCostCenter,
+        percentageAccount: pa.percentageAccount,
+      }));
+    this.lineAccountRows.set(existing.length ? existing : [this.emptyLineAccount()]);
+    this.expandedLineAccountIndex.set(lineIndex);
+  }
+
+  private emptyLineAccount(): FormLineAccount {
+    return { idProductAccount: null, idAccount: 0, idCostCenter: null, percentageAccount: 100 };
+  }
+
+  addLineAccount(): void {
+    this.lineAccountRows.update(rows => [...rows, this.emptyLineAccount()]);
+  }
+
+  removeLineAccount(i: number): void {
+    this.lineAccountRows.update(rows => rows.filter((_, idx) => idx !== i));
+  }
+
+  updateLineAccount<K extends keyof FormLineAccount>(i: number, key: K, value: FormLineAccount[K]): void {
+    this.lineAccountRows.update(rows => rows.map((r, idx) => idx === i ? { ...r, [key]: value } : r));
+  }
+
+  saveLineAccounts(lineIndex: number): void {
+    const line      = this.formLines()[lineIndex];
+    const idProduct = this.getProductIdForSkuCode(line.skuCode);
+
+    if (idProduct === null) {
+      this.createProductWithAccounts.emit({
+        skuCode: line.skuCode.trim(),
+        skuName: line.descriptionLine.trim() || line.skuCode.trim(),
+        accounts: this.lineAccountRows().map(r => ({
+          idAccount:         r.idAccount,
+          idCostCenter:      r.idCostCenter,
+          percentageAccount: r.percentageAccount,
+        })),
+      });
+      this.expandedLineAccountIndex.set(null);
+      this.lineAccountRows.set([]);
+      return;
+    }
+
+    const rows     = this.lineAccountRows();
+    const existing = this.productAccounts().filter(pa => pa.idProduct === idProduct);
+    const rowIds   = new Set(rows.filter(r => r.idProductAccount !== null).map(r => r.idProductAccount!));
+    existing
+      .filter(pa => !rowIds.has(pa.idProductAccount))
+      .forEach(pa => this.deleteProductAccount.emit(pa.idProductAccount));
+
+    rows.forEach(row => {
+      if (row.idProductAccount === null) {
+        this.createProductAccount.emit({
+          idProduct,
+          idAccount:         row.idAccount,
+          idCostCenter:      row.idCostCenter,
+          percentageAccount: row.percentageAccount,
+        });
+      } else {
+        this.updateProductAccount.emit({
+          id:                row.idProductAccount,
+          idAccount:         row.idAccount,
+          idCostCenter:      row.idCostCenter,
+          percentageAccount: row.percentageAccount,
+        });
+      }
+    });
+
+    this.expandedLineAccountIndex.set(null);
+    this.lineAccountRows.set([]);
   }
 
   // ── Formulario ────────────────────────────────────────────────────
@@ -174,9 +319,16 @@ export class PurchaseInvoicesMobileComponent {
       ?.counterpartFromBankMovement ?? false
   );
 
-  filteredBankAccounts = computed(() =>
-    this.bankAccounts().filter(b => b.idCurrency === this.formCurrency())
-  );
+  filteredBankAccounts = computed(() => {
+    const currency    = this.formCurrency();
+    const invType     = this.invoiceTypes().find(t => t.idPurchaseInvoiceType === this.formInvoiceType());
+    const isTc        = invType?.codePurchaseInvoiceType === 'TC';
+    const expectedType = isTc ? 'Pasivo' : 'Activo';
+    const validIds    = new Set(
+      this.accounts().filter(a => a.typeAccount === expectedType).map(a => a.idAccount)
+    );
+    return this.bankAccounts().filter(b => b.idCurrency === currency && validIds.has(b.idAccount));
+  });
 
   constructor() {
     addIcons({
@@ -194,11 +346,21 @@ export class PurchaseInvoicesMobileComponent {
     this.formLines.update(ls => ls.filter((_, i) => i !== index));
   }
 
-  updateLineField(index: number, field: keyof FormLine, value: string | number): void {
+  updateLineField(index: number, field: keyof FormLine, value: string | number | null): void {
     this.formLines.update(ls => {
       const updated = [...ls];
       (updated[index] as unknown as Record<string, unknown>)[field] = value;
       const l = updated[index];
+      // Auto-rellenar descripción cuando se ingresa un código SKU conocido
+      if (field === 'skuCode' && typeof value === 'string') {
+        const code = value.trim();
+        const match = this.productSKUs().find(
+          s => s.codeProductSKU.toLowerCase() === code.toLowerCase()
+        );
+        if (match) {
+          updated[index].descriptionLine = match.nameProductSKU;
+        }
+      }
       if (field === 'quantity' || field === 'unitPrice' || field === 'taxPercent') {
         const base = l.quantity * l.unitPrice;
         l.totalLineAmount = Math.round(base * (1 + l.taxPercent / 100) * 100) / 100;
@@ -250,7 +412,7 @@ export class PurchaseInvoicesMobileComponent {
     this.formDescription.set(inv.descriptionInvoice ?? '');
     this.formExchangeRate.set(inv.exchangeRateValue);
     this.formLines.set(inv.lines.map(l => ({
-      idProductSKU:    l.idProductSKU,
+      skuCode:         l.codeProductSKU ?? '',
       descriptionLine: l.descriptionLine,
       quantity:        l.quantity,
       unitPrice:       l.unitPrice,
@@ -267,7 +429,8 @@ export class PurchaseInvoicesMobileComponent {
 
   saveForm(): void {
     const lines: PurchaseInvoiceLineRequest[] = this.formLines().map(l => ({
-      idProductSKU:    l.idProductSKU,
+      skuCode:         l.skuCode.trim() || null,
+      skuName:         l.skuCode.trim() ? l.descriptionLine : null,
       descriptionLine: l.descriptionLine,
       quantity:        l.quantity,
       unitPrice:       l.unitPrice,

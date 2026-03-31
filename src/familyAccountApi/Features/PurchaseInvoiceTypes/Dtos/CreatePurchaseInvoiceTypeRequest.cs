@@ -25,6 +25,10 @@ public sealed record CreatePurchaseInvoiceTypeRequest
     [Description("FK a la cuenta Caja USD (solo para tipo EFECTIVO)")]
     public int? IdAccountCounterpartUSD { get; init; }
 
+    [Range(1, int.MaxValue)]
+    [Description("FK a la cuenta de gasto fallback usada cuando el SKU no tiene ProductAccount. Requerida para poder confirmar facturas.")]
+    public int? IdDefaultExpenseAccount { get; init; }
+
     [Required]
     [Description("Indica si el tipo está activo")]
     public required bool IsActive { get; init; }

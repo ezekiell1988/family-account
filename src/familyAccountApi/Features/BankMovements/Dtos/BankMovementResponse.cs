@@ -19,4 +19,5 @@ public sealed record BankMovementResponse(
     string?  ReferenceMovement,
     decimal  ExchangeRateValue,
     DateTime CreatedAt,
+    int?     IdAccountingEntry,
     IReadOnlyList<BankMovementDocumentResponse> Documents);

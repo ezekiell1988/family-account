@@ -1,7 +1,8 @@
 // ── Documento de soporte ─────────────────────────────────────────────────────
 export interface BankMovementDocumentDto {
   idBankMovementDocument: number;
-  idAccountingEntry:      number | null;
+  idPurchaseInvoice:      number | null;
+  numberPurchaseInvoice:  string | null;
   typeDocument:           string;
   numberDocument:         string | null;
   dateDocument:           string;
@@ -39,6 +40,7 @@ export interface BankMovementDto {
   referenceMovement:   string | null;
   exchangeRateValue:   number;
   createdAt:           string;
+  idAccountingEntry:   number | null;
   documents:           BankMovementDocumentDto[];
 }
 

@@ -298,6 +298,7 @@ public sealed class BankStatementTransactionService(AppDbContext db) : IBankStat
             movement.ReferenceMovement,
             movement.ExchangeRateValue,
             movement.CreatedAt,
+            movement.IdAccountingEntry,
             []);
     }
 }

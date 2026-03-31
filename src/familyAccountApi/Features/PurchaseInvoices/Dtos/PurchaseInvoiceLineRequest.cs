@@ -5,9 +5,13 @@ namespace FamilyAccountApi.Features.PurchaseInvoices.Dtos;
 
 public sealed record PurchaseInvoiceLineRequest
 {
-    [Range(1, int.MaxValue)]
-    [Description("ID del SKU del producto escaneado (opcional)")]
-    public int? IdProductSKU { get; init; }
+    [StringLength(100)]
+    [Description("Código del SKU (código de barras, código interno, etc.). Si existe se actualiza el nombre; si no existe se crea.")]
+    public string? SkuCode { get; init; }
+
+    [StringLength(300)]
+    [Description("Nombre del SKU para crear/actualizar en catálogo. Si no se provee se usa DescriptionLine.")]
+    public string? SkuName { get; init; }
 
     [Required, StringLength(300, MinimumLength = 1)]
     [Description("Descripción de la línea tal como aparece en la factura del proveedor")]
