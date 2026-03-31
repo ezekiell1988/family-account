@@ -92,6 +92,54 @@ comunes a evitar.
 
 > Omitir `alt` por completo es siempre un error (WCAG 2.1 AA, regla axe `image-alt`).
 
+### Controles dentro de celdas de tabla (`@for` loop)
+
+Los encabezados `<th>` **no** proveen nombre accesible a los controles de la fila — axe lo reporta como `axe/forms`.
+Cada `<input>` o `<select>` dentro de `<td>` debe tener su propio `aria-label`.
+
+```html
+<!-- ❌ Incorrecto: el <th>Débito</th> no le da nombre accesible al input -->
+<td>
+  <input type="number" class="form-control form-control-sm"
+    [value]="line.debitAmount" />
+</td>
+
+<!-- ✅ Correcto -->
+<td>
+  <input type="number" class="form-control form-control-sm"
+    aria-label="Débito"
+    [value]="line.debitAmount" />
+</td>
+
+<!-- ✅ Select en celda -->
+<td>
+  <select class="form-select form-select-sm"
+    aria-label="Cuenta contable"
+    [value]="line.idAccount">
+    ...
+  </select>
+</td>
+```
+
+> Aplica a **todos** los controles repetidos en `@for` dentro de `<tbody>`.
+> El índice `$index` nunca debe usarse en `aria-label` — el tipo de campo sí ("Débito", "Proveedor", etc.).
+
+### Inputs `readonly` sin `id` cuando tienen `<label>`
+
+```html
+<!-- ❌ Incorrecto: la label no tiene for y el input no tiene id -->
+<label class="form-label">Moneda</label>
+<input type="text" class="form-control" readonly [value]="currency()" />
+
+<!-- ✅ Correcto -->
+<label class="form-label" for="efCurrency">Moneda</label>
+<input id="efCurrency" type="text" class="form-control" readonly [value]="currency()" />
+```
+
+> Los inputs `readonly` **también** necesitan `id` si tienen `<label for>`. axe no hace excepciones por `readonly`.
+
+---
+
 ### Estilos inline prohibidos
 
 ```html
@@ -134,6 +182,8 @@ comunes a evitar.
 | `placeholder` como único nombre accesible | `aria-label` **además** del placeholder |
 | Botón de icono sin texto accesible | Agregar `aria-label` o `title` al botón |
 | `<button class="btn-close">` sin `aria-label` | Siempre `aria-label="Cerrar"` — Bootstrap `btn-close` no tiene texto interno |
+| `<input>`/`<select>` dentro de `<td>` en `@for` sin `aria-label` | El `<th>` NO da nombre accesible al control — agregar `aria-label` en cada control de tabla |
+| `<input readonly>` sin `id` cuando tiene `<label for>` | Los readonly también necesitan `id` — axe no hace excepciones por `readonly` |
 | Estilos `style="…"` inline en el template | CSS class en el template + regla en el `.component.scss` |
 | `<a>` con solo icono sin `aria-label` | `[attr.aria-label]` dinámico o `aria-label` estático descriptivo |
 | `<a>` vacío (backdrop/stretched-link) | `aria-label="Cerrar menú lateral"` u otro texto descriptivo |
