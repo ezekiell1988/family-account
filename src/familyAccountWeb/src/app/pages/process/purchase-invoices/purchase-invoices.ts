@@ -161,7 +161,10 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
 
   onConfirm(id: number): void {
     this.svc.confirm(id)
-      .pipe(finalize(() => {}))
+      .pipe(
+        switchMap(() => this.entrySvc.loadList()),
+        finalize(() => {}),
+      )
       .subscribe({
         next: () => this.logger.success('✅ Factura confirmada'),
         error: (e) => this.logger.error('❌ Error al confirmar factura:', e),

@@ -154,6 +154,7 @@ export class PurchaseInvoicesWebComponent {
   formDescription    = signal('');
   formExchangeRate   = signal(1);
   formLines          = signal<FormLine[]>([emptyLine()]);
+  formError          = signal<string | null>(null);
 
   // ── Autocomplete proveedor ────────────────────────────────────────
   showProviderSuggestions = signal(false);
@@ -231,6 +232,7 @@ export class PurchaseInvoicesWebComponent {
 
   openCreate(): void {
     this.editingId.set(null);
+    this.formError.set(null);
     this.formInvoiceType.set(this.invoiceTypes()[0]?.idPurchaseInvoiceType ?? 0);
     this.formFiscalPeriod.set(this.fiscalPeriods()[0]?.idFiscalPeriod ?? 0);
     this.formCurrency.set(this.currencies()[0]?.idCurrency ?? 0);
@@ -249,6 +251,7 @@ export class PurchaseInvoicesWebComponent {
 
   openEdit(inv: PurchaseInvoiceDto): void {
     this.editingId.set(inv.idPurchaseInvoice);
+    this.formError.set(null);
     this.formInvoiceType.set(inv.idPurchaseInvoiceType);
     this.formFiscalPeriod.set(inv.idFiscalPeriod);
     this.formCurrency.set(inv.idCurrency);
@@ -275,10 +278,65 @@ export class PurchaseInvoicesWebComponent {
   cancelForm(): void {
     this.showForm.set(false);
     this.editingId.set(null);
+    this.formError.set(null);
   }
 
   saveForm(): void {
-    const lines: PurchaseInvoiceLineRequest[] = this.formLines().map(l => ({
+    this.formError.set(null);
+
+    // ── Validación de cabecera ────────────────────────────────────────────────
+    if (this.formInvoiceType() <= 0 || this.formFiscalPeriod() <= 0 || this.formCurrency() <= 0) {
+      this.formError.set('Seleccione el tipo de factura, período fiscal y moneda.');
+      return;
+    }
+    if (!this.formNumber().trim()) {
+      this.formError.set('El número de factura es obligatorio.');
+      return;
+    }
+    if (!this.formProvider().trim()) {
+      this.formError.set('El proveedor es obligatorio.');
+      return;
+    }
+    if (!this.formDate()) {
+      this.formError.set('La fecha de la factura es obligatoria.');
+      return;
+    }
+    if (this.formExchangeRate() <= 0) {
+      this.formError.set('El tipo de cambio debe ser mayor a 0.');
+      return;
+    }
+    if (this.needsBankAccount() && !this.formBankAccount()) {
+      this.formError.set('Seleccione una cuenta bancaria para este tipo de factura.');
+      return;
+    }
+
+    // ── Filtrar líneas en blanco (sin descripción ni precio) ─────────────────
+    const nonEmptyLines = this.formLines().filter(
+      l => l.descriptionLine.trim().length > 0 || l.unitPrice > 0,
+    );
+
+    // ── Validación de líneas ─────────────────────────────────────────────────
+    if (nonEmptyLines.length === 0) {
+      this.formError.set('Debe agregar al menos una línea de factura con descripción y precio unitario.');
+      return;
+    }
+    for (let i = 0; i < nonEmptyLines.length; i++) {
+      const l = nonEmptyLines[i];
+      if (!l.descriptionLine.trim()) {
+        this.formError.set(`La línea ${i + 1} requiere descripción.`);
+        return;
+      }
+      if (l.unitPrice <= 0) {
+        this.formError.set(`La línea ${i + 1} requiere precio unitario mayor a 0.`);
+        return;
+      }
+      if (l.quantity <= 0) {
+        this.formError.set(`La línea ${i + 1} requiere cantidad mayor a 0.`);
+        return;
+      }
+    }
+
+    const lines: PurchaseInvoiceLineRequest[] = nonEmptyLines.map(l => ({
       skuCode:         l.skuCode.trim() || null,
       skuName:         l.skuCode.trim() ? l.descriptionLine : null,
       descriptionLine: l.descriptionLine,

@@ -60,8 +60,8 @@ export const routes: Routes = [
   },
   {
     path: "home",
-    component: AccountsPage,
-    data: { title: "Cuentas Contables" },
+    component: PurchaseInvoicesPage,
+    data: { title: "Facturas de Compra" },
     canActivate: [AuthGuard],
   },
   {

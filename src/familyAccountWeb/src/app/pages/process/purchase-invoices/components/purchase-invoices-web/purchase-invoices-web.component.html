@@ -418,6 +418,13 @@
         </div>
         <div class="modal-body">
 
+          @if (formError()) {
+            <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+              <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+              {{ formError() }}
+            </div>
+          }
+
           <!-- Datos de cabecera -->
           <div class="row g-3 mb-3">
             <div class="col-md-4">
@@ -648,22 +655,22 @@
                                     <td>
                                       <select class="form-select form-select-sm"
                                               aria-label="Cuenta contable"
-                                              [value]="accRow.idAccount"
-                                              (change)="updateLineAccount($index, 'idAccount', +$any($event.target).value)">
-                                        <option value="0">— Cuenta —</option>
+                                              [ngModel]="accRow.idAccount"
+                                              (ngModelChange)="updateLineAccount($index, 'idAccount', $event)">
+                                        <option [ngValue]="0">— Cuenta —</option>
                                         @for (a of movementAccountsForLine(); track a.idAccount) {
-                                          <option [value]="a.idAccount">{{ a.codeAccount }} – {{ a.nameAccount }}</option>
+                                          <option [ngValue]="a.idAccount">{{ a.codeAccount }} – {{ a.nameAccount }}</option>
                                         }
                                       </select>
                                     </td>
                                     <td>
                                       <select class="form-select form-select-sm"
                                               aria-label="Centro de costo"
-                                              [value]="accRow.idCostCenter ?? ''"
-                                              (change)="updateLineAccount($index, 'idCostCenter', $any($event.target).value ? +$any($event.target).value : null)">
-                                        <option value="">— Sin C.Costo —</option>
+                                              [ngModel]="accRow.idCostCenter"
+                                              (ngModelChange)="updateLineAccount($index, 'idCostCenter', $event)">
+                                        <option [ngValue]="null">— Sin C.Costo —</option>
                                         @for (cc of costCenters(); track cc.idCostCenter) {
-                                          <option [value]="cc.idCostCenter">{{ cc.codeCostCenter }} – {{ cc.nameCostCenter }}</option>
+                                          <option [ngValue]="cc.idCostCenter">{{ cc.codeCostCenter }} – {{ cc.nameCostCenter }}</option>
                                         }
                                       </select>
                                     </td>
