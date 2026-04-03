@@ -1,0 +1,273 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Home</a></li>
+  <li class="breadcrumb-item active">Mantenimiento</li>
+  <li class="breadcrumb-item active">Productos</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Productos
+  <small>Catálogo de productos internos y sus SKUs asociados</small>
+</h1>
+
+<!-- Error global -->
+@if (errorMessage()) {
+  <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i>
+    <span class="flex-grow-1">{{ errorMessage() }}</span>
+    <button type="button" class="btn-close ms-2" (click)="clearError.emit()"
+      [attr.aria-label]="'Cerrar alerta de error'"></button>
+  </div>
+}
+
+<!-- Formulario crear/editar producto -->
+@if (showForm()) {
+  <div class="alert alert-info mb-3" role="region" aria-label="Formulario de producto">
+    <h5 class="alert-heading">
+      <i class="fa fa-cube me-2" aria-hidden="true"></i>{{ formTitle() }}
+    </h5>
+    <div class="row g-2">
+      <div class="col-sm-3">
+        <label for="productCode" class="form-label fw-semibold">Código</label>
+        <input id="productCode" type="text" class="form-control"
+          placeholder="Ej: PROD-001"
+          [value]="formCode()"
+          (input)="formCode.set($any($event.target).value)"
+          maxlength="50"
+          [attr.aria-label]="'Código del producto'">
+      </div>
+      <div class="col-sm-6">
+        <label for="productName" class="form-label fw-semibold">Nombre</label>
+        <input id="productName" type="text" class="form-control"
+          placeholder="Nombre del producto"
+          [value]="formName()"
+          (input)="formName.set($any($event.target).value)"
+          maxlength="200"
+          [attr.aria-label]="'Nombre del producto'">
+      </div>
+      <div class="col-sm-3 d-flex align-items-end gap-2">
+        <button type="button" class="btn btn-success flex-grow-1"
+          (click)="submitForm()"
+          [disabled]="!isFormValid()">
+          <i class="fa fa-save me-1" aria-hidden="true"></i>
+          {{ isEditing() ? 'Guardar' : 'Crear' }}
+        </button>
+        <button type="button" class="btn btn-secondary"
+          (click)="cancelForm()"
+          [attr.aria-label]="'Cancelar formulario'">
+          <i class="fa fa-times" aria-hidden="true"></i>
+          <span class="visually-hidden">Cancelar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Confirmación borrado -->
+@if (confirmDeleteId() !== null) {
+  <div class="alert alert-warning mb-3" role="alert">
+    <i class="fa fa-exclamation-circle me-2" aria-hidden="true"></i>
+    ¿Eliminar este producto? Esta acción no se puede deshacer.
+    <div class="mt-2">
+      <button type="button" class="btn btn-danger btn-sm me-2" (click)="confirmDelete()">
+        <i class="fa fa-trash me-1" aria-hidden="true"></i>Eliminar
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="cancelDelete()">Cancelar</button>
+    </div>
+  </div>
+}
+
+<panel title="Catálogo de Productos"
+  variant="inverse"
+  [showReloadButton]="true"
+  [reload]="isLoading()"
+  (onReload)="refresh.emit()">
+
+  <!-- Barra de herramientas -->
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <div class="input-group input-group-sm" style="max-width:280px">
+      <span class="input-group-text"><i class="fa fa-search" aria-hidden="true"></i></span>
+      <input type="text" class="form-control" placeholder="Buscar código o nombre…"
+        [value]="filterSearch()"
+        (input)="filterSearch.set($any($event.target).value)"
+        aria-label="Buscar producto">
+    </div>
+    <button type="button" class="btn btn-success btn-sm ms-auto"
+      (click)="openCreate()"
+      [attr.aria-label]="'Nuevo producto'">
+      <i class="fa fa-plus me-1" aria-hidden="true"></i>Nuevo Producto
+    </button>
+  </div>
+
+  <ngx-datatable
+    class="bootstrap"
+    [rows]="filteredProducts()"
+    [columnMode]="ColumnMode.force"
+    [headerHeight]="40"
+    [footerHeight]="50"
+    [rowHeight]="'auto'"
+    [limit]="20"
+    [loadingIndicator]="isLoading()">
+
+    <!-- Toggle fila expandible -->
+    <ngx-datatable-row-detail #rowDetail rowHeight="auto" (toggle)="onDetailToggle($event)">
+      <ng-template let-row="row" ngx-datatable-row-detail-template>
+        <div class="p-3 bg-light border-top">
+          <div class="row g-3">
+
+            <!-- SKUs asociados -->
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2">
+                <i class="fa fa-barcode me-1" aria-hidden="true"></i>
+                SKUs Asociados ({{ row.skus.length }})
+              </h6>
+              @if (row.skus.length === 0) {
+                <p class="text-muted small mb-2">Sin SKUs asociados.</p>
+              } @else {
+                <ul class="list-group list-group-sm mb-2">
+                  @for (sku of row.skus; track sku.idProductSKU) {
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-1 px-2">
+                      <span class="small">
+                        <span class="badge bg-secondary me-1">{{ sku.codeProductSKU }}</span>
+                        {{ sku.nameProductSKU }}
+                        @if (sku.brandProductSKU) { <em class="text-muted"> · {{ sku.brandProductSKU }}</em> }
+                      </span>
+                      <button type="button" class="btn btn-outline-danger btn-xs py-0 px-1"
+                        (click)="handleRemoveSku(row.idProduct, sku)"
+                        [attr.aria-label]="'Desasociar SKU ' + sku.codeProductSKU + ' del producto ' + row.codeProduct"
+                        [attr.title]="'Desasociar SKU ' + sku.codeProductSKU + ' del producto ' + row.codeProduct">
+                        <i class="fa fa-unlink" aria-hidden="true"></i>
+                        <span class="visually-hidden">Desasociar SKU {{ sku.codeProductSKU }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+              <!-- Agregar SKU -->
+              <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm"
+                  [ngModel]="selectedSkuId()"
+                  (ngModelChange)="selectedSkuId.set($event)"
+                  [attr.aria-label]="'Seleccionar SKU a asociar al producto ' + row.codeProduct"
+                  style="max-width:200px">
+                  <option [ngValue]="null">— Seleccionar SKU —</option>
+                  @for (sku of availableSkus(); track sku.idProductSKU) {
+                    <option [ngValue]="sku.idProductSKU">{{ sku.codeProductSKU }} · {{ sku.nameProductSKU }}</option>
+                  }
+                </select>
+                <button type="button" class="btn btn-primary btn-sm"
+                  (click)="handleAddSku(row.idProduct)"
+                  [disabled]="selectedSkuId() === null"
+                  [attr.aria-label]="'Asociar SKU seleccionado al producto ' + row.codeProduct"
+                  [attr.title]="'Asociar SKU seleccionado al producto ' + row.codeProduct">
+                  <i class="fa fa-link me-1" aria-hidden="true"></i>Asociar
+                </button>
+              </div>
+            </div>
+
+            <!-- Categorías asociadas -->
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2">
+                <i class="fa fa-tags me-1" aria-hidden="true"></i>
+                Categorías
+              </h6>
+              <p class="text-muted small mb-2">
+                Gestiona las categorías desde el panel de <strong>Categorías</strong>.
+                Las categorías se asocian desde ese catálogo hacia este producto.
+              </p>
+              <!-- Agregar Categoría -->
+              <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm"
+                  [ngModel]="selectedCategoryId()"
+                  (ngModelChange)="selectedCategoryId.set($event)"
+                  [attr.aria-label]="'Seleccionar categoría a asociar al producto ' + row.codeProduct"
+                  style="max-width:200px">
+                  <option [ngValue]="null">— Seleccionar —</option>
+                  @for (cat of availableCategories(); track cat.idProductCategory) {
+                    <option [ngValue]="cat.idProductCategory">{{ cat.nameProductCategory }}</option>
+                  }
+                </select>
+                <button type="button" class="btn btn-primary btn-sm"
+                  (click)="handleAddCategory(row.idProduct)"
+                  [disabled]="selectedCategoryId() === null"
+                  [attr.aria-label]="'Asociar categoría seleccionada al producto ' + row.codeProduct"
+                  [attr.title]="'Asociar categoría seleccionada al producto ' + row.codeProduct">
+                  <i class="fa fa-tag me-1" aria-hidden="true"></i>Asociar
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </ng-template>
+    </ngx-datatable-row-detail>
+
+    <!-- Columna expander -->
+    <ngx-datatable-column [width]="40" [resizeable]="false" [sortable]="false"
+      [canAutoResize]="false" [draggable]="false">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        <button type="button" class="btn btn-link btn-sm p-0"
+          (click)="toggleRowDetail(row)"
+          [attr.aria-label]="'Ver detalle del producto ' + row.codeProduct"
+          [attr.title]="'Ver detalle del producto ' + row.codeProduct">
+          <i class="fa"
+            [class.fa-chevron-right]="expandedId() !== row.idProduct"
+            [class.fa-chevron-down]="expandedId() === row.idProduct"
+            aria-hidden="true"></i>
+          <span class="visually-hidden">{{ expandedId() === row.idProduct ? 'Colapsar' : 'Expandir' }} producto {{ row.codeProduct }}</span>
+        </button>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Código -->
+    <ngx-datatable-column name="Código" prop="codeProduct" [width]="120" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        <span class="badge bg-secondary">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Nombre -->
+    <ngx-datatable-column name="Nombre" prop="nameProduct" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        {{ value }}
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- SKUs count -->
+    <ngx-datatable-column name="SKUs" prop="skus" [width]="80" [sortable]="false">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        <span class="badge bg-info text-dark">{{ value.length }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Acciones -->
+    <ngx-datatable-column name="Acciones" [width]="120" [sortable]="false">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        <div class="d-flex gap-1">
+          <button type="button" class="btn btn-xs btn-primary"
+            (click)="openEdit(row)"
+            [disabled]="showForm() || deletingId() === row.idProduct"
+            [attr.aria-label]="'Editar producto ' + row.codeProduct"
+            [attr.title]="'Editar producto ' + row.codeProduct">
+            <i class="fa fa-pencil" aria-hidden="true"></i>
+            <span class="visually-hidden">Editar {{ row.codeProduct }}</span>
+          </button>
+          <button type="button" class="btn btn-xs btn-danger"
+            (click)="askDelete(row.idProduct)"
+            [disabled]="showForm() || deletingId() === row.idProduct"
+            [attr.aria-label]="'Eliminar producto ' + row.codeProduct"
+            [attr.title]="'Eliminar producto ' + row.codeProduct">
+            @if (deletingId() === row.idProduct) {
+              <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+            } @else {
+              <i class="fa fa-trash" aria-hidden="true"></i>
+            }
+            <span class="visually-hidden">Eliminar {{ row.codeProduct }}</span>
+          </button>
+        </div>
+      </ng-template>
+    </ngx-datatable-column>
+
+  </ngx-datatable>
+</panel>

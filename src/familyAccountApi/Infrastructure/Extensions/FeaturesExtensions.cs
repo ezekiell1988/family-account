@@ -19,7 +19,12 @@ using FamilyAccountApi.Features.Health;
 using FamilyAccountApi.Features.ProductCategories;
 using FamilyAccountApi.Features.Products;
 using FamilyAccountApi.Features.ProductAccounts;
-using FamilyAccountApi.Features.ProductSKUs;
+using FamilyAccountApi.Features.ProductTypes;
+using FamilyAccountApi.Features.ProductUnits;
+using FamilyAccountApi.Features.ProductRecipes;
+using FamilyAccountApi.Features.InventoryLots;
+using FamilyAccountApi.Features.InventoryAdjustments;
+using FamilyAccountApi.Features.UnitsOfMeasure;
 using FamilyAccountApi.Features.PurchaseInvoiceTypes;
 using FamilyAccountApi.Features.PurchaseInvoices;
 using FamilyAccountApi.Features.Users;
@@ -33,9 +38,14 @@ public static class FeaturesExtensions
             .AddUsersModule()
             .AddAuthModule()
             .AddEmailModule()
-            .AddProductSKUsModule()
+            .AddUnitsOfMeasureModule()
+            .AddProductTypesModule()
             .AddProductsModule()
             .AddProductCategoriesModule()
+            .AddProductUnitsModule()
+            .AddProductRecipesModule()
+            .AddInventoryLotsModule()
+            .AddInventoryAdjustmentsModule()
             .AddAccountsModule()
             .AddFiscalPeriodsModule()
             .AddAccountingEntriesModule()
@@ -65,9 +75,14 @@ public static class FeaturesExtensions
 
         v1.MapUsersEndpoints();
         v1.MapAuthEndpoints();
-        v1.MapProductSKUsEndpoints();
+        v1.MapUnitsOfMeasureEndpoints();
+        v1.MapProductTypesEndpoints();
         v1.MapProductsEndpoints();
         v1.MapProductCategoriesEndpoints();
+        v1.MapProductUnitsEndpoints();
+        v1.MapProductRecipesEndpoints();
+        v1.MapInventoryLotsEndpoints();
+        v1.MapInventoryAdjustmentsEndpoints();
         v1.MapAccountsEndpoints();
         v1.MapFiscalPeriodsEndpoints();
         v1.MapAccountingEntriesEndpoints();

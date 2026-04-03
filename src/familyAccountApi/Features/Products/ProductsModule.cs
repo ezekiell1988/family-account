@@ -19,14 +19,13 @@ public static class ProductsModule
             .WithTags("Products")
             .RequireAuthorization();
 
-        // ── CRUD base ────────────────────────────────────────
         group.MapGet("/data.json", GetAll)
             .WithName("GetAllProducts")
             .WithSummary("Obtener todos los productos");
 
         group.MapGet("/{id:int}.json", GetById)
             .WithName("GetProductById")
-            .WithSummary("Obtener producto por ID (incluye SKUs asociados)");
+            .WithSummary("Obtener producto por ID");
 
         group.MapPost("/", Create)
             .WithName("CreateProduct")
@@ -41,17 +40,6 @@ public static class ProductsModule
         group.MapDelete("/{id:int}", Delete)
             .WithName("DeleteProduct")
             .WithSummary("Eliminar producto")
-            .RequireAuthorization("Admin");
-
-        // ── Gestión de SKUs asociados ─────────────────────────
-        group.MapPost("/{id:int}/skus/{idSku:int}", AddSKU)
-            .WithName("AddSKUToProduct")
-            .WithSummary("Asociar un ProductSKU a un producto")
-            .RequireAuthorization("Admin");
-
-        group.MapDelete("/{id:int}/skus/{idSku:int}", RemoveSKU)
-            .WithName("RemoveSKUFromProduct")
-            .WithSummary("Desasociar un ProductSKU de un producto")
             .RequireAuthorization("Admin");
 
         return app;
@@ -128,30 +116,6 @@ public static class ProductsModule
     {
         var deleted = await service.DeleteAsync(id, ct);
         return deleted
-            ? TypedResults.NoContent()
-            : TypedResults.NotFound();
-    }
-
-    private static async Task<Results<NoContent, NotFound>> AddSKU(
-        int id,
-        int idSku,
-        IProductService service,
-        CancellationToken ct)
-    {
-        var ok = await service.AddSKUAsync(id, idSku, ct);
-        return ok
-            ? TypedResults.NoContent()
-            : TypedResults.NotFound();
-    }
-
-    private static async Task<Results<NoContent, NotFound>> RemoveSKU(
-        int id,
-        int idSku,
-        IProductService service,
-        CancellationToken ct)
-    {
-        var ok = await service.RemoveSKUAsync(id, idSku, ct);
-        return ok
             ? TypedResults.NoContent()
             : TypedResults.NotFound();
     }

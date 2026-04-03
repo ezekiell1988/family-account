@@ -98,6 +98,13 @@ export class AppMenuService {
           url: "/maintenance/bank-movement-types",
           roles: [1, 2],
         },
+        {
+          icon: "fa fa-cube",
+          iconMobile: "pricetags-outline",
+          title: "Productos",
+          url: "/maintenance/products",
+          roles: [1, 2],
+        },
       ],
     },
   ];

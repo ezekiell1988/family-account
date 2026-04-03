@@ -1,0 +1,222 @@
+<header
+  pageTitle="Productos"
+  color="theme"
+  [translucent]="true">
+</header>
+
+<ion-content class="ion-padding">
+  <!-- Pull-to-refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Error -->
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="clearError.emit()">
+              <ion-icon slot="icon-only" name="close-outline"
+                [attr.aria-label]="'Cerrar alerta de error'"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
+
+  <!-- Spinner de carga -->
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  <!-- Formulario crear/editar producto -->
+  @if (showForm()) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon [name]="isEditing() ? 'pencil-outline' : 'add-outline'" aria-hidden="true"></ion-icon>
+          {{ isEditing() ? 'Editar Producto' : 'Nuevo Producto' }}
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-input
+          fill="outline"
+          labelPlacement="floating"
+          label="Código"
+          [value]="formCode()"
+          (ionInput)="formCode.set($any($event.target).value)"
+          maxlength="50"
+          class="ion-margin-bottom">
+        </ion-input>
+        <ion-input
+          fill="outline"
+          labelPlacement="floating"
+          label="Nombre"
+          [value]="formName()"
+          (ionInput)="formName.set($any($event.target).value)"
+          maxlength="200">
+        </ion-input>
+        <ion-grid class="ion-margin-top">
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" (click)="submitForm()" [disabled]="!isFormValid()">
+                <ion-icon slot="start" name="save-outline" aria-hidden="true"></ion-icon>
+                {{ isEditing() ? 'Guardar' : 'Crear' }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelForm()">
+                <ion-icon slot="start" name="close-outline" aria-hidden="true"></ion-icon>
+                Cancelar
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Confirmación eliminar -->
+  @if (confirmDeleteId() !== null) {
+    <ion-card color="warning">
+      <ion-card-content>
+        <ion-text>
+          <p>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            ¿Eliminar este producto? Esta acción no se puede deshacer.
+          </p>
+        </ion-text>
+        <ion-grid>
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" color="danger" (click)="confirmDelete()">
+                <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
+                Eliminar
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium" (click)="cancelDelete()">
+                Cancelar
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- Lista vacía -->
+  @if (products().length === 0 && !isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-icon name="pricetags-outline" size="large" aria-hidden="true"></ion-icon>
+      <ion-text color="medium">
+        <p>No hay productos registrados.</p>
+      </ion-text>
+    </div>
+  }
+
+  <!-- Lista de productos -->
+  @if (products().length > 0) {
+    <ion-list>
+      @for (product of products(); track product.idProduct) {
+        <ion-item [button]="true" [detail]="false"
+          (click)="toggleExpand(product.idProduct)">
+          <ion-icon
+            slot="start"
+            [name]="expandedId() === product.idProduct ? 'chevron-down-outline' : 'chevron-forward-outline'"
+            color="medium"
+            aria-hidden="true">
+          </ion-icon>
+          <ion-label>
+            <h2>{{ product.nameProduct }}</h2>
+            <p>
+              <ion-icon name="barcode-outline" aria-hidden="true"></ion-icon>
+              <span> {{ product.codeProduct }}</span>
+              @if (product.skus.length > 0) {
+                <span> · {{ getSkuSummary(product) }}</span>
+              }
+            </p>
+          </ion-label>
+          <ion-badge slot="end" color="primary">
+            {{ product.skus.length }} SKU{{ product.skus.length !== 1 ? 's' : '' }}
+          </ion-badge>
+        </ion-item>
+
+        <!-- Detalle expandido -->
+        @if (expandedId() === product.idProduct) {
+          <div class="ion-padding-horizontal ion-padding-bottom">
+            <!-- Lista de SKUs -->
+            @if (product.skus.length > 0) {
+              <ion-text color="medium">
+                <p class="ion-no-margin ion-padding-top">
+                  <ion-icon name="barcode-outline" aria-hidden="true"></ion-icon>
+                  <strong> SKUs asociados:</strong>
+                </p>
+              </ion-text>
+              @for (sku of product.skus; track sku.idProductSKU) {
+                <ion-text>
+                  <p class="ion-no-margin ion-padding-start">
+                    · <code>{{ sku.codeProductSKU }}</code> {{ sku.nameProductSKU }}
+                    @if (sku.brandProductSKU) { <em> ({{ sku.brandProductSKU }})</em> }
+                  </p>
+                </ion-text>
+              }
+            } @else {
+              <ion-text color="medium">
+                <p class="ion-padding-top">Sin SKUs asociados.</p>
+              </ion-text>
+            }
+
+            <!-- Acciones -->
+            <ion-grid class="ion-margin-top">
+              <ion-row>
+                <ion-col>
+                  <ion-button size="small" color="primary"
+                    (click)="openEdit(product)"
+                    [disabled]="showForm() || deletingProductId() === product.idProduct"
+                    [attr.aria-label]="'Editar producto ' + product.codeProduct">
+                    <ion-icon slot="start" name="pencil-outline" aria-hidden="true"></ion-icon>
+                    Editar
+                  </ion-button>
+                </ion-col>
+                <ion-col>
+                  <ion-button size="small" color="danger"
+                    (click)="askDelete(product.idProduct)"
+                    [disabled]="showForm() || deletingProductId() === product.idProduct"
+                    [attr.aria-label]="'Eliminar producto ' + product.codeProduct">
+                    @if (deletingProductId() === product.idProduct) {
+                      <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                    } @else {
+                      <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
+                      Eliminar
+                    }
+                  </ion-button>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </div>
+        }
+      }
+    </ion-list>
+  }
+
+  <!-- FAB nuevo producto -->
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button color="success"
+      (click)="openCreate()"
+      [disabled]="showForm()"
+      [attr.aria-label]="'Nuevo producto'">
+      <ion-icon name="add-outline" aria-hidden="true"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>
+
+<app-footer></app-footer>

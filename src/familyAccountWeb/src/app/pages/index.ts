@@ -1,6 +1,7 @@
 export { AccountsPage } from './maintenance/accounts';
 export { BankMovementTypesPage } from './maintenance/bank-movement-types';
 export { BanksPage } from './maintenance/banks';
+export { ProductsPage } from './maintenance/products';
 export { AccountingEntriesPage } from './process/accounting-entries';
 export { BankMovementsPage } from './process/bank-movements';
 export { PurchaseInvoicesPage } from './process/purchase-invoices';

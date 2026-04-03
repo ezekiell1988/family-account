@@ -2,10 +2,20 @@ namespace FamilyAccountApi.Domain.Entities;
 
 public sealed class Product
 {
-    public int    IdProduct   { get; set; }
-    public string CodeProduct { get; set; } = null!;
-    public string NameProduct { get; set; } = null!;
+    public int     IdProduct       { get; set; }
+    public string  CodeProduct     { get; set; } = null!;
+    public string  NameProduct     { get; set; } = null!;
+    public int     IdProductType   { get; set; }
+    public int     IdUnit          { get; set; }
+    public int?    IdProductParent { get; set; }
+    public decimal AverageCost     { get; set; }
 
-    public ICollection<ProductProductSKU>      ProductProductSKUs      { get; set; } = [];
+    public ProductType  IdProductTypeNavigation  { get; set; } = null!;
+    public UnitOfMeasure IdUnitNavigation        { get; set; } = null!;
+    public Product?      IdProductParentNavigation { get; set; }
+
+    public ICollection<Product>              Variants                 { get; set; } = [];
+    public ICollection<ProductUnit>          ProductUnits             { get; set; } = [];
     public ICollection<ProductProductCategory> ProductProductCategories { get; set; } = [];
+    public ICollection<ProductAccount>       ProductAccounts          { get; set; } = [];
 }

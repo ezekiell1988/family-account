@@ -11,21 +11,20 @@ public sealed class ProductService(AppDbContext db) : IProductService
         p.IdProduct,
         p.CodeProduct,
         p.NameProduct,
-        p.ProductProductSKUs
-            .Select(pp => new ProductSKUSummary(
-                pp.ProductSKU.IdProductSKU,
-                pp.ProductSKU.CodeProductSKU,
-                pp.ProductSKU.NameProductSKU,
-                pp.ProductSKU.BrandProductSKU,
-                pp.ProductSKU.NetContent))
-            .ToList());
+        p.IdProductType,
+        p.IdProductTypeNavigation.NameProductType,
+        p.IdUnit,
+        p.IdUnitNavigation.CodeUnit,
+        p.IdProductParent,
+        p.AverageCost);
 
     public async Task<IReadOnlyList<ProductResponse>> GetAllAsync(CancellationToken ct = default)
     {
         var products = await db.Product
             .AsNoTracking()
-            .Include(p => p.ProductProductSKUs)
-                .ThenInclude(pp => pp.ProductSKU)
+            .Include(p => p.IdProductTypeNavigation)
+            .Include(p => p.IdUnitNavigation)
+            .OrderBy(p => p.NameProduct)
             .ToListAsync(ct);
 
         return products.Select(ToResponse).ToList();
@@ -35,8 +34,8 @@ public sealed class ProductService(AppDbContext db) : IProductService
     {
         var product = await db.Product
             .AsNoTracking()
-            .Include(p => p.ProductProductSKUs)
-                .ThenInclude(pp => pp.ProductSKU)
+            .Include(p => p.IdProductTypeNavigation)
+            .Include(p => p.IdUnitNavigation)
             .FirstOrDefaultAsync(p => p.IdProduct == idProduct, ct);
 
         return product is null ? null : ToResponse(product);
@@ -46,29 +45,42 @@ public sealed class ProductService(AppDbContext db) : IProductService
     {
         var product = new Product
         {
-            CodeProduct = request.CodeProduct,
-            NameProduct = request.NameProduct
+            CodeProduct     = request.CodeProduct,
+            NameProduct     = request.NameProduct,
+            IdProductType   = request.IdProductType,
+            IdUnit          = request.IdUnit,
+            IdProductParent = request.IdProductParent,
+            AverageCost     = 0m
         };
 
         db.Product.Add(product);
-        await db.SaveChangesAsync(CancellationToken.None);
+        await db.SaveChangesAsync(ct);
 
-        return new ProductResponse(product.IdProduct, product.CodeProduct, product.NameProduct, []);
+        await db.Entry(product).Reference(p => p.IdProductTypeNavigation).LoadAsync(ct);
+        await db.Entry(product).Reference(p => p.IdUnitNavigation).LoadAsync(ct);
+
+        return ToResponse(product);
     }
 
     public async Task<ProductResponse?> UpdateAsync(int idProduct, UpdateProductRequest request, CancellationToken ct = default)
     {
         var product = await db.Product
-            .Include(p => p.ProductProductSKUs)
-                .ThenInclude(pp => pp.ProductSKU)
+            .Include(p => p.IdProductTypeNavigation)
+            .Include(p => p.IdUnitNavigation)
             .FirstOrDefaultAsync(p => p.IdProduct == idProduct, ct);
 
         if (product is null) return null;
 
-        product.CodeProduct = request.CodeProduct;
-        product.NameProduct = request.NameProduct;
+        product.CodeProduct     = request.CodeProduct;
+        product.NameProduct     = request.NameProduct;
+        product.IdProductType   = request.IdProductType;
+        product.IdUnit          = request.IdUnit;
+        product.IdProductParent = request.IdProductParent;
 
-        await db.SaveChangesAsync(CancellationToken.None);
+        await db.SaveChangesAsync(ct);
+
+        await db.Entry(product).Reference(p => p.IdProductTypeNavigation).LoadAsync(ct);
+        await db.Entry(product).Reference(p => p.IdUnitNavigation).LoadAsync(ct);
 
         return ToResponse(product);
     }
@@ -77,38 +89,7 @@ public sealed class ProductService(AppDbContext db) : IProductService
     {
         var deleted = await db.Product
             .Where(p => p.IdProduct == idProduct)
-            .ExecuteDeleteAsync(CancellationToken.None);
-
-        return deleted > 0;
-    }
-
-    public async Task<bool> AddSKUAsync(int idProduct, int idProductSKU, CancellationToken ct = default)
-    {
-        var productExists = await db.Product.AnyAsync(p => p.IdProduct == idProduct, ct);
-        var skuExists     = await db.ProductSKU.AnyAsync(s => s.IdProductSKU == idProductSKU, ct);
-
-        if (!productExists || !skuExists) return false;
-
-        var alreadyLinked = await db.ProductProductSKU
-            .AnyAsync(pp => pp.IdProduct == idProduct && pp.IdProductSKU == idProductSKU, ct);
-
-        if (alreadyLinked) return true;
-
-        db.ProductProductSKU.Add(new ProductProductSKU
-        {
-            IdProduct    = idProduct,
-            IdProductSKU = idProductSKU
-        });
-
-        await db.SaveChangesAsync(CancellationToken.None);
-        return true;
-    }
-
-    public async Task<bool> RemoveSKUAsync(int idProduct, int idProductSKU, CancellationToken ct = default)
-    {
-        var deleted = await db.ProductProductSKU
-            .Where(pp => pp.IdProduct == idProduct && pp.IdProductSKU == idProductSKU)
-            .ExecuteDeleteAsync(CancellationToken.None);
+            .ExecuteDeleteAsync(ct);
 
         return deleted > 0;
     }

@@ -5,15 +5,20 @@ namespace FamilyAccountApi.Features.PurchaseInvoices.Dtos;
 
 public sealed record PurchaseInvoiceLineRequest
 {
+    [Description("ID del producto en catálogo (opcional).")]
+    public int? IdProduct { get; init; }
+
+    [Description("ID de la unidad de medida usada en esta línea (opcional).")]
+    public int? IdUnit { get; init; }
+
     [StringLength(100)]
-    [Description("Código del SKU (código de barras, código interno, etc.). Si existe se actualiza el nombre; si no existe se crea.")]
-    public string? SkuCode { get; init; }
+    [Description("Número de lote (opcional).")]
+    public string? LotNumber { get; init; }
 
-    [StringLength(300)]
-    [Description("Nombre del SKU para crear/actualizar en catálogo. Si no se provee se usa DescriptionLine.")]
-    public string? SkuName { get; init; }
+    [Description("Fecha de vencimiento del lote (opcional).")]
+    public DateOnly? ExpirationDate { get; init; }
 
-    [Required, StringLength(300, MinimumLength = 1)]
+    [Required, StringLength(500, MinimumLength = 1)]
     [Description("Descripción de la línea tal como aparece en la factura del proveedor")]
     public required string DescriptionLine { get; init; }
 

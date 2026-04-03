@@ -20,5 +20,6 @@ export { PurchaseInvoiceService } from './purchase-invoice.service';
 export { ProductSKUService } from './product-sku.service';
 export { ProductService } from './product.service';
 export { ProductAccountService } from './product-account.service';
+export { ProductCategoryService } from './product-category.service';
 export { CostCenterService } from './cost-center.service';
 export { ContactService } from './contact.service';

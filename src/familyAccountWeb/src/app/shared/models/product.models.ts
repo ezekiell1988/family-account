@@ -52,8 +52,11 @@ export interface UpdateProductAccountRequest {
 }
 
 export interface CreateProductSKURequest {
-  codeProductSKU: string;
-  nameProductSKU: string;
+  codeProductSKU:        string;
+  nameProductSKU:        string;
+  brandProductSKU?:      string | null;
+  descriptionProductSKU?: string | null;
+  netContent?:            string | null;
 }
 
 export interface CreateProductRequest {
@@ -70,4 +73,31 @@ export interface CreateProductWithAccountsRequest {
     idCostCenter:      number | null;
     percentageAccount: number;
   }>;
+}
+
+export interface UpdateProductRequest {
+  codeProduct: string;
+  nameProduct: string;
+}
+
+export interface UpdateProductSKURequest {
+  codeProductSKU:        string;
+  nameProductSKU:        string;
+  brandProductSKU:       string | null;
+  descriptionProductSKU: string | null;
+  netContent:            string | null;
+}
+
+// ── Categoría de producto ─────────────────────────────────────────────────────
+export interface ProductCategoryDto {
+  idProductCategory:   number;
+  nameProductCategory: string;
+}
+
+export interface CreateProductCategoryRequest {
+  nameProductCategory: string;
+}
+
+export interface UpdateProductCategoryRequest {
+  nameProductCategory: string;
 }

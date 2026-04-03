@@ -16,7 +16,9 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
             .Include(pi => pi.IdPurchaseInvoiceTypeNavigation)
             .Include(pi => pi.IdBankAccountNavigation)
             .Include(pi => pi.PurchaseInvoiceLines)
-                .ThenInclude(l => l.IdProductSKUNavigation)
+                .ThenInclude(l => l.IdProductNavigation)
+            .Include(pi => pi.PurchaseInvoiceLines)
+                .ThenInclude(l => l.IdUnitNavigation)
             .Include(pi => pi.PurchaseInvoiceEntries);
 
     private static PurchaseInvoiceResponse ToResponse(PurchaseInvoice pi) => new(
@@ -47,13 +49,18 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
             .Select(l => new PurchaseInvoiceLineResponse(
                 l.IdPurchaseInvoiceLine,
                 l.IdPurchaseInvoice,
-                l.IdProductSKU,
-                l.IdProductSKUNavigation?.CodeProductSKU,
+                l.IdProduct,
+                l.IdProductNavigation?.NameProduct,
+                l.IdUnit,
+                l.IdUnitNavigation?.CodeUnit,
                 l.DescriptionLine,
                 l.Quantity,
+                l.QuantityBase ?? l.Quantity,
                 l.UnitPrice,
                 l.TaxPercent,
-                l.TotalLineAmount))
+                l.TotalLineAmount,
+                l.LotNumber,
+                l.ExpirationDate))
             .ToList());
 
     // ── Consultas ─────────────────────────────────────────────────────────────
@@ -100,8 +107,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
             CreatedAt             = DateTime.UtcNow,
         };
 
-        var skuCodeToId = await UpsertSkusAsync(request.Lines, ct);
-        entity.PurchaseInvoiceLines = request.Lines.Select(l => MapLine(l, skuCodeToId)).ToList();
+        entity.PurchaseInvoiceLines = request.Lines.Select(MapLine).ToList();
 
         db.PurchaseInvoice.Add(entity);
         await db.SaveChangesAsync(CancellationToken.None);
@@ -137,9 +143,8 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         db.PurchaseInvoiceLine.RemoveRange(entity.PurchaseInvoiceLines);
         entity.PurchaseInvoiceLines.Clear();
 
-        var skuCodeToId = await UpsertSkusAsync(request.Lines, ct);
         foreach (var l in request.Lines)
-            entity.PurchaseInvoiceLines.Add(MapLine(l, skuCodeToId));
+            entity.PurchaseInvoiceLines.Add(MapLine(l));
 
         await db.SaveChangesAsync(CancellationToken.None);
 
@@ -308,14 +313,11 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
 
         foreach (var invoiceLine in invoice.PurchaseInvoiceLines)
         {
-            if (invoiceLine.IdProductSKU is not null)
+            if (invoiceLine.IdProduct is not null)
             {
                 var productAccounts = await db.ProductAccount
                     .AsNoTracking()
-                    .Where(pa => db.ProductProductSKU
-                        .Where(pps => pps.IdProductSKU == invoiceLine.IdProductSKU)
-                        .Select(pps => pps.IdProduct)
-                        .Contains(pa.IdProduct))
+                    .Where(pa => pa.IdProduct == invoiceLine.IdProduct)
                     .ToListAsync(ct);
 
                 if (productAccounts.Count > 0)
@@ -324,7 +326,6 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
                     {
                         var rawAmount = Math.Round(invoiceLine.TotalLineAmount * pa.PercentageAccount / 100m, 2);
                         var absAmount = Math.Abs(rawAmount);
-                        // Porcentaje negativo = contrapartida interna (CR); positivo = gasto (DR)
                         drLines.Add((new AccountingEntryLine
                         {
                             IdAccount       = pa.IdAccount,
@@ -453,43 +454,15 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
     }
 
     // ── Helpers privados ──────────────────────────────────────────────────────
-    private async Task<IReadOnlyDictionary<string, int>> UpsertSkusAsync(
-        IEnumerable<PurchaseInvoiceLineRequest> lines, CancellationToken ct)
+    private static PurchaseInvoiceLine MapLine(PurchaseInvoiceLineRequest l) => new()
     {
-        var result = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (var l in lines.Where(l => !string.IsNullOrWhiteSpace(l.SkuCode)))
-        {
-            var code = l.SkuCode!.Trim();
-            if (result.ContainsKey(code)) continue;
-
-            var name = string.IsNullOrWhiteSpace(l.SkuName)
-                ? l.DescriptionLine.Trim()
-                : l.SkuName.Trim();
-
-            var sku = await db.ProductSKU.FirstOrDefaultAsync(s => s.CodeProductSKU == code, ct);
-            if (sku is null)
-            {
-                sku = new ProductSKU { CodeProductSKU = code, NameProductSKU = name };
-                db.ProductSKU.Add(sku);
-                await db.SaveChangesAsync(CancellationToken.None);
-            }
-            else if (sku.NameProductSKU != name)
-            {
-                sku.NameProductSKU = name;
-                await db.SaveChangesAsync(CancellationToken.None);
-            }
-            result[code] = sku.IdProductSKU;
-        }
-        return result;
-    }
-
-    private static PurchaseInvoiceLine MapLine(
-        PurchaseInvoiceLineRequest l, IReadOnlyDictionary<string, int> skuCodeToId) => new()
-    {
-        IdProductSKU    = !string.IsNullOrWhiteSpace(l.SkuCode)
-                          && skuCodeToId.TryGetValue(l.SkuCode.Trim(), out var id) ? id : null,
+        IdProduct       = l.IdProduct,
+        IdUnit          = l.IdUnit,
+        LotNumber       = string.IsNullOrWhiteSpace(l.LotNumber) ? null : l.LotNumber.Trim(),
+        ExpirationDate  = l.ExpirationDate,
         DescriptionLine = l.DescriptionLine.Trim(),
         Quantity        = l.Quantity,
+        QuantityBase    = l.Quantity,
         UnitPrice       = l.UnitPrice,
         TaxPercent      = l.TaxPercent,
         TotalLineAmount = l.TotalLineAmount

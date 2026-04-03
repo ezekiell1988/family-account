@@ -3,6 +3,7 @@ import {
   AccountsPage,
   BankMovementTypesPage,
   BanksPage,
+  ProductsPage,
   AccountingEntriesPage,
   BankMovementsPage,
   PurchaseInvoicesPage,
@@ -38,6 +39,12 @@ export const routes: Routes = [
     path: "maintenance/banks",
     component: BanksPage,
     data: { title: "Bancos" },
+    canActivate: [AuthGuard],
+  },
+  {
+    path: "maintenance/products",
+    component: ProductsPage,
+    data: { title: "Productos" },
     canActivate: [AuthGuard],
   },
   {

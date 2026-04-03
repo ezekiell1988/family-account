@@ -13,11 +13,17 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Contact>            Contact            => Set<Contact>();
     public DbSet<ContactType>         ContactType        => Set<ContactType>();
     public DbSet<ContactContactType>  ContactContactType => Set<ContactContactType>();
-    public DbSet<ProductSKU>          ProductSKU         => Set<ProductSKU>();
     public DbSet<Product>                  Product                  => Set<Product>();
-    public DbSet<ProductProductSKU>        ProductProductSKU        => Set<ProductProductSKU>();
     public DbSet<ProductCategory>          ProductCategory          => Set<ProductCategory>();
     public DbSet<ProductProductCategory>   ProductProductCategory   => Set<ProductProductCategory>();
+    public DbSet<UnitOfMeasure>            UnitOfMeasure            => Set<UnitOfMeasure>();
+    public DbSet<ProductType>              ProductType              => Set<ProductType>();
+    public DbSet<ProductUnit>              ProductUnit              => Set<ProductUnit>();
+    public DbSet<ProductRecipe>            ProductRecipe            => Set<ProductRecipe>();
+    public DbSet<ProductRecipeLine>        ProductRecipeLine        => Set<ProductRecipeLine>();
+    public DbSet<InventoryLot>             InventoryLot             => Set<InventoryLot>();
+    public DbSet<InventoryAdjustment>      InventoryAdjustment      => Set<InventoryAdjustment>();
+    public DbSet<InventoryAdjustmentLine>  InventoryAdjustmentLine  => Set<InventoryAdjustmentLine>();
     public DbSet<Account>                  Account                  => Set<Account>();
     public DbSet<FiscalPeriod>             FiscalPeriod             => Set<FiscalPeriod>();
     public DbSet<AccountingEntry>          AccountingEntry          => Set<AccountingEntry>();
@@ -40,6 +46,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<PurchaseInvoiceLine>      PurchaseInvoiceLine      => Set<PurchaseInvoiceLine>();
     public DbSet<PurchaseInvoiceEntry>     PurchaseInvoiceEntry     => Set<PurchaseInvoiceEntry>();
     public DbSet<PurchaseInvoiceLineEntry> PurchaseInvoiceLineEntry => Set<PurchaseInvoiceLineEntry>();
+    public DbSet<Company>                  Company                  => Set<Company>();
+    public DbSet<CompanyDomain>            CompanyDomain            => Set<CompanyDomain>();
+    public DbSet<CompanyWhatsapp>          CompanyWhatsapp          => Set<CompanyWhatsapp>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

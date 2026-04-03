@@ -2050,7 +2050,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             ColumnMappings = "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}",
                             DateFormat = "dd/MM/yyyy",
                             IsActive = true,
-                            KeywordRules = "[\r\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\r\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\r\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\r\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\r\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\r\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\r\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\r\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\r\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\r\n]",
+                            KeywordRules = "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]",
                             NameTemplate = "BCR – Movimientos de Cuenta (HTML-XLS)",
                             Notes = "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.",
                             TimeFormat = "HH:mm:ss"
@@ -2219,6 +2219,190 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             t.HasComment("Presupuestos contables por cuenta y período fiscal para control y análisis financiero.");
 
                             t.HasCheckConstraint("CK_budget_amountBudget_positive", "amountBudget > 0");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Company", b =>
+                {
+                    b.Property<int>("IdCompany")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idCompany")
+                        .HasComment("Identificador único autoincremental de la empresa.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdCompany"));
+
+                    b.Property<string>("CodeCompany")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("codeCompany")
+                        .HasComment("Código único de la empresa.");
+
+                    b.Property<string>("NameCompany")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("nameCompany")
+                        .HasComment("Nombre completo de la empresa.");
+
+                    b.HasKey("IdCompany");
+
+                    b.HasIndex("CodeCompany")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_company_codeCompany");
+
+                    b.ToTable("company", t =>
+                        {
+                            t.HasComment("Empresas registradas en el sistema.");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdCompany = 1,
+                            CodeCompany = "FBS",
+                            NameCompany = "Familia Baltodano Soto"
+                        },
+                        new
+                        {
+                            IdCompany = 2,
+                            CodeCompany = "CDSRL",
+                            NameCompany = "Corporacion los diablitos SRL"
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.CompanyDomain", b =>
+                {
+                    b.Property<int>("IdDomain")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idDomain");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdDomain"));
+
+                    b.Property<string>("DomainUrl")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("domainUrl");
+
+                    b.Property<int>("IdCompany")
+                        .HasColumnType("int")
+                        .HasColumnName("idCompany");
+
+                    b.HasKey("IdDomain");
+
+                    b.HasIndex("DomainUrl")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_domain_domain");
+
+                    b.HasIndex("IdCompany");
+
+                    b.ToTable("companyDomain");
+
+                    b.HasData(
+                        new
+                        {
+                            IdDomain = 1,
+                            DomainUrl = "localhost:8000",
+                            IdCompany = 1
+                        },
+                        new
+                        {
+                            IdDomain = 2,
+                            DomainUrl = "localhost:8001",
+                            IdCompany = 1
+                        },
+                        new
+                        {
+                            IdDomain = 3,
+                            DomainUrl = "diablitos.ezekl.com",
+                            IdCompany = 2
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.CompanyWhatsapp", b =>
+                {
+                    b.Property<int>("IdCompanyWhatsapp")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idCompanyWhatsapp");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdCompanyWhatsapp"));
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("accessToken");
+
+                    b.Property<string>("ApiVersion")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("apiVersion");
+
+                    b.Property<int>("IdCompany")
+                        .HasColumnType("int")
+                        .HasColumnName("idCompany");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("isActive");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("phoneNumber");
+
+                    b.Property<string>("PhoneNumberId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("phoneNumberId");
+
+                    b.Property<string>("WabaId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("wabaId");
+
+                    b.Property<string>("WebhookVerifyToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("webhookVerifyToken");
+
+                    b.HasKey("IdCompanyWhatsapp");
+
+                    b.HasIndex("IdCompany")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_companyWhatsapp_idCompany");
+
+                    b.ToTable("companyWhatsapp");
+
+                    b.HasData(
+                        new
+                        {
+                            IdCompanyWhatsapp = 1,
+                            AccessToken = "EAAvhrvgZBWCQBOZBxsB7YHZCNISSIugqpkPDDG6UZCgQv0AFqHFE9BtT7tXYlTygFDfJ3BhlCFAAPD6Pu7rVsI0orXxhxsMvDqsCF3alYbU9T8CYQQCzViv6Rck94yHkYr7ueiJLL4M4XLax46rLyULdZBwESpW5TvKoS6UDnS9byoZA73gM8BAHDgd3KZCcpPo",
+                            ApiVersion = "v24.0",
+                            IdCompany = 2,
+                            IsActive = true,
+                            PhoneNumber = "+15550636204",
+                            PhoneNumberId = "102981099397560",
+                            WabaId = "110007718685670",
+                            WebhookVerifyToken = "mi_token_secreto_whatsapp_2024"
                         });
                 });
 
@@ -2697,6 +2881,221 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustment", b =>
+                {
+                    b.Property<int>("IdInventoryAdjustment")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryAdjustment")
+                        .HasComment("Identificador único autoincremental del ajuste.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdInventoryAdjustment"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación del registro.");
+
+                    b.Property<DateOnly>("DateAdjustment")
+                        .HasColumnType("date")
+                        .HasColumnName("dateAdjustment")
+                        .HasComment("Fecha del evento: conteo físico, corrida de producción o ajuste de costo.");
+
+                    b.Property<string>("DescriptionAdjustment")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("descriptionAdjustment")
+                        .HasComment("Motivo o descripción del ajuste (ej: Conteo físico mensual, Corrida lote 26032002, NC proveedor).");
+
+                    b.Property<int>("IdFiscalPeriod")
+                        .HasColumnType("int")
+                        .HasColumnName("idFiscalPeriod")
+                        .HasComment("FK al período fiscal al que corresponde este ajuste.");
+
+                    b.Property<string>("NumberAdjustment")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("numberAdjustment")
+                        .HasComment("Consecutivo interno generado al confirmar. Formato: AJ-YYYYMMDD-NNN.");
+
+                    b.Property<string>("StatusAdjustment")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("statusAdjustment")
+                        .HasComment("Estado del ajuste: Borrador | Confirmado | Anulado.");
+
+                    b.Property<string>("TypeAdjustment")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("typeAdjustment")
+                        .HasComment("Tipo de ajuste: Conteo Físico | Producción | Ajuste de Costo.");
+
+                    b.HasKey("IdInventoryAdjustment");
+
+                    b.HasIndex("IdFiscalPeriod")
+                        .HasDatabaseName("IX_inventoryAdjustment_idFiscalPeriod");
+
+                    b.HasIndex("NumberAdjustment")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_inventoryAdjustment_numberAdjustment");
+
+                    b.ToTable("inventoryAdjustment", t =>
+                        {
+                            t.HasComment("Documento de ajuste de inventario. Cubre tres casos: Conteo Físico (corrección teórico vs real), Producción (corrida V1: consume MP/PP y genera PP/PT) y Ajuste de Costo (corrige unitCost sin mover cantidades). Único mecanismo válido para modificar inventoryLot fuera de una factura.");
+
+                            t.HasCheckConstraint("CK_inventoryAdjustment_statusAdjustment", "statusAdjustment IN ('Borrador', 'Confirmado', 'Anulado')");
+
+                            t.HasCheckConstraint("CK_inventoryAdjustment_typeAdjustment", "typeAdjustment IN ('Conteo Físico', 'Producción', 'Ajuste de Costo')");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentLine", b =>
+                {
+                    b.Property<int>("IdInventoryAdjustmentLine")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryAdjustmentLine")
+                        .HasComment("Identificador único autoincremental de la línea.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdInventoryAdjustmentLine"));
+
+                    b.Property<string>("DescriptionLine")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("descriptionLine")
+                        .HasComment("Detalle por línea: insumo consumido, merma, motivo del ajuste, etc.");
+
+                    b.Property<int>("IdInventoryAdjustment")
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryAdjustment")
+                        .HasComment("FK al ajuste de inventario cabecera. Cascade delete.");
+
+                    b.Property<int>("IdInventoryLot")
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryLot")
+                        .HasComment("FK al lote de inventario a ajustar. Para líneas positivas que crean un lote nuevo, se crea el lote primero.");
+
+                    b.Property<decimal>("QuantityDelta")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("quantityDelta")
+                        .HasComment("Delta en unidad base: positivo = entrada, negativo = salida, cero = ajuste de costo puro (no mueve stock).");
+
+                    b.Property<decimal?>("UnitCostNew")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("unitCostNew")
+                        .HasComment("Nuevo costo unitario para el lote. Requerido si quantityDelta > 0. Si informado: reemplaza inventoryLot.unitCost.");
+
+                    b.HasKey("IdInventoryAdjustmentLine");
+
+                    b.HasIndex("IdInventoryAdjustment")
+                        .HasDatabaseName("IX_inventoryAdjustmentLine_idInventoryAdjustment");
+
+                    b.HasIndex("IdInventoryLot");
+
+                    b.ToTable("inventoryAdjustmentLine", t =>
+                        {
+                            t.HasComment("Líneas del ajuste de inventario. Cada línea referencia un lote específico: quantityDelta positivo = entrada, negativo = salida, cero = ajuste de costo puro. Si quantityDelta > 0, unitCostNew es requerido.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryLot", b =>
+                {
+                    b.Property<int>("IdInventoryLot")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryLot")
+                        .HasComment("Identificador único autoincremental del lote.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdInventoryLot"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación del registro.");
+
+                    b.Property<DateOnly?>("ExpirationDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expirationDate")
+                        .HasComment("Fecha de vencimiento del lote. NULL para productos no perecederos.");
+
+                    b.Property<int?>("IdInventoryAdjustment")
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryAdjustment")
+                        .HasComment("FK al ajuste de inventario que originó este lote. Poblado si sourceType = 'Ajuste' o 'Producción' (V1).");
+
+                    b.Property<int>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("FK al producto de este lote.");
+
+                    b.Property<int?>("IdPurchaseInvoice")
+                        .HasColumnType("int")
+                        .HasColumnName("idPurchaseInvoice")
+                        .HasComment("FK a la factura de compra que originó este lote. Poblado si sourceType = 'Compra'.");
+
+                    b.Property<string>("LotNumber")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("lotNumber")
+                        .HasComment("Número de lote: '{idContact}-{numberInvoice}' para compras, código interno para producción, 'SYSTEM-{idInventoryAdjustment}' para ajustes. NULL si no aplica.");
+
+                    b.Property<decimal>("QuantityAvailable")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("quantityAvailable")
+                        .HasComment("Stock disponible en unidad base. Solo se modifica al confirmar documentos. Nunca editable directamente.");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("sourceType")
+                        .HasComment("Origen del lote: Compra | Producción | Ajuste.");
+
+                    b.Property<decimal>("UnitCost")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("unitCost")
+                        .HasComment("Costo unitario en unidad base al momento del ingreso del lote.");
+
+                    b.HasKey("IdInventoryLot");
+
+                    b.HasIndex("IdInventoryAdjustment");
+
+                    b.HasIndex("IdPurchaseInvoice")
+                        .HasDatabaseName("IX_inventoryLot_idPurchaseInvoice")
+                        .HasFilter("[idPurchaseInvoice] IS NOT NULL");
+
+                    b.HasIndex("IdProduct", "ExpirationDate")
+                        .HasDatabaseName("IX_inventoryLot_idProduct_expirationDate");
+
+                    b.ToTable("inventoryLot", t =>
+                        {
+                            t.HasComment("Registro de stock de inventario por producto y lote. Es la unidad mínima de trazabilidad. quantityAvailable nunca se edita directamente: solo se modifica al confirmar purchaseInvoice, salesInvoice o inventoryAdjustment.");
+
+                            t.HasCheckConstraint("CK_inventoryLot_quantityAvailable", "quantityAvailable >= 0");
+
+                            t.HasCheckConstraint("CK_inventoryLot_sourceType", "sourceType IN ('Compra', 'Producción', 'Ajuste')");
+                        });
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Product", b =>
                 {
                     b.Property<int>("IdProduct")
@@ -2707,13 +3106,36 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProduct"));
 
+                    b.Property<decimal>("AverageCost")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("averageCost")
+                        .HasComment("Costo promedio ponderado en unidad base. Se recalcula automáticamente al confirmar compras y ajustes con stock positivo.");
+
                     b.Property<string>("CodeProduct")
                         .IsRequired()
                         .HasMaxLength(50)
                         .IsUnicode(false)
                         .HasColumnType("varchar(50)")
                         .HasColumnName("codeProduct")
-                        .HasComment("Código interno único del producto. Definido por la empresa, distinto al código de barras del fabricante.");
+                        .HasComment("Código interno único del producto definido por la empresa.");
+
+                    b.Property<int?>("IdProductParent")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductParent")
+                        .HasComment("FK auto-referencial al producto padre. Agrupa variantes bajo un mismo producto (máximo un nivel). NULL si es raíz.");
+
+                    b.Property<int>("IdProductType")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductType")
+                        .HasComment("FK al tipo de producto: Materia Prima, Prod. en Proceso, Prod. Terminado o Reventa.");
+
+                    b.Property<int>("IdUnit")
+                        .HasColumnType("int")
+                        .HasColumnName("idUnit")
+                        .HasComment("FK a la unidad de medida base del producto. Es la unidad en la que se lleva el inventario y se expresan las recetas.");
 
                     b.Property<string>("NameProduct")
                         .IsRequired()
@@ -2728,9 +3150,15 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("UQ_product_codeProduct");
 
+                    b.HasIndex("IdProductParent");
+
+                    b.HasIndex("IdProductType");
+
+                    b.HasIndex("IdUnit");
+
                     b.ToTable("product", t =>
                         {
-                            t.HasComment("Catálogo interno de productos de la empresa. Un producto puede estar relacionado con uno o más SKUs escaneables (productProductSKU) y pertenecer a una o más categorías (productProductCategory).");
+                            t.HasComment("Catálogo interno de productos. Cada producto tiene un tipo (Materia Prima, Producto en Proceso, Producto Terminado, Reventa), una unidad base de inventario y opcionalmente un producto padre para agrupar variantes.");
                         });
                 });
 
@@ -2765,6 +3193,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("percentageAccount")
                         .HasComment("Porcentaje del total de la línea asignado a esta cuenta/centro de costo. La suma por IdProduct debe ser 100.00.");
 
+                    b.Property<int?>("ProductIdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("productIdProduct");
+
                     b.HasKey("IdProductAccount");
 
                     b.HasIndex("IdAccount")
@@ -2773,6 +3205,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.HasIndex("IdCostCenter")
                         .HasDatabaseName("IX_productAccount_idCostCenter")
                         .HasFilter("[idCostCenter] IS NOT NULL");
+
+                    b.HasIndex("ProductIdProduct");
 
                     b.HasIndex("IdProduct", "IdAccount", "IdCostCenter")
                         .IsUnique()
@@ -2844,93 +3278,227 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductProductSKU", b =>
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductRecipe", b =>
                 {
-                    b.Property<int>("IdProductProductSKU")
+                    b.Property<int>("IdProductRecipe")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("idProductProductSKU")
-                        .HasComment("Identificador único autoincremental de la asociación producto-SKU.");
+                        .HasColumnName("idProductRecipe")
+                        .HasComment("Identificador único autoincremental de la receta.");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductProductSKU"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductRecipe"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación del registro.");
+
+                    b.Property<string>("DescriptionRecipe")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("descriptionRecipe")
+                        .HasComment("Instrucciones generales u observaciones del proceso productivo.");
+
+                    b.Property<int>("IdProductOutput")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductOutput")
+                        .HasComment("FK al producto que produce esta receta. No puede ser Materia Prima ni Reventa.");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("isActive")
+                        .HasComment("Solo recetas activas se usan en producción.");
+
+                    b.Property<string>("NameRecipe")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("nameRecipe")
+                        .HasComment("Nombre descriptivo de la receta (ej: Cahuita Salsa Caribeña 160ml v2).");
+
+                    b.Property<decimal>("QuantityOutput")
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasColumnName("quantityOutput")
+                        .HasComment("Cantidad producida por corrida, expresada en la unidad base del producto output.");
+
+                    b.HasKey("IdProductRecipe");
+
+                    b.HasIndex("IdProductOutput");
+
+                    b.ToTable("productRecipe", t =>
+                        {
+                            t.HasComment("Recetas (BOM - Bill of Materials) para la producción de un producto. Define qué insumos se consumen y en qué cantidades para producir una corrida del output. Solo puede ser output un producto de tipo Producto en Proceso o Producto Terminado.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductRecipeLine", b =>
+                {
+                    b.Property<int>("IdProductRecipeLine")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idProductRecipeLine")
+                        .HasComment("Identificador único autoincremental de la línea de receta.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductRecipeLine"));
+
+                    b.Property<int>("IdProductInput")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductInput")
+                        .HasComment("FK al producto insumo. No puede ser igual al idProductOutput de la receta.");
+
+                    b.Property<int>("IdProductRecipe")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductRecipe")
+                        .HasComment("FK a la receta cabecera. Cascade delete.");
+
+                    b.Property<decimal>("QuantityInput")
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasColumnName("quantityInput")
+                        .HasComment("Cantidad requerida del insumo en su unidad base por cada corrida de la receta.");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sortOrder")
+                        .HasComment("Orden de visualización de los ingredientes.");
+
+                    b.HasKey("IdProductRecipeLine");
+
+                    b.HasIndex("IdProductInput");
+
+                    b.HasIndex("IdProductRecipe")
+                        .HasDatabaseName("IX_productRecipeLine_idProductRecipe");
+
+                    b.ToTable("productRecipeLine", t =>
+                        {
+                            t.HasComment("Ingredientes de una receta de producción. Cada línea es un insumo con su cantidad en unidad base. idProductInput no puede ser igual al idProductOutput de la receta padre.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductType", b =>
+                {
+                    b.Property<int>("IdProductType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idProductType")
+                        .HasComment("Identificador único autoincremental del tipo de producto.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductType"));
+
+                    b.Property<string>("DescriptionProductType")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("descriptionProductType")
+                        .HasComment("Descripción del tipo de producto y sus reglas de negocio.");
+
+                    b.Property<string>("NameProductType")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("nameProductType")
+                        .HasComment("Nombre del tipo: Materia Prima | Producto en Proceso | Producto Terminado | Reventa.");
+
+                    b.HasKey("IdProductType");
+
+                    b.HasIndex("NameProductType")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_productType_nameProductType");
+
+                    b.ToTable("productType", t =>
+                        {
+                            t.HasComment("Tipo de producto según la fase productiva: Materia Prima, Producto en Proceso, Producto Terminado o Reventa. Catálogo de sistema, sin CRUD expuesto al usuario.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductUnit", b =>
+                {
+                    b.Property<int>("IdProductUnit")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idProductUnit")
+                        .HasComment("Identificador único autoincremental de la presentación del producto.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductUnit"));
+
+                    b.Property<string>("BrandPresentation")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("brandPresentation")
+                        .HasComment("Marca del fabricante del empaque (ej: Fiesta de Diablitos, Aroy-D).");
+
+                    b.Property<string>("CodeBarcode")
+                        .HasMaxLength(48)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(48)")
+                        .HasColumnName("codeBarcode")
+                        .HasComment("Código de barras EAN-8, EAN-13 o UPC-A del empaque. NULL si no tiene barcode. Único en todo el sistema.");
+
+                    b.Property<decimal>("ConversionFactor")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("conversionFactor")
+                        .HasComment("Cuántas unidades base equivalen a 1 de esta presentación. La fila base siempre vale 1.000000.");
 
                     b.Property<int>("IdProduct")
                         .HasColumnType("int")
                         .HasColumnName("idProduct")
-                        .HasComment("FK al producto interno.");
+                        .HasComment("FK al producto al que pertenece esta presentación.");
 
-                    b.Property<int>("IdProductSKU")
+                    b.Property<int>("IdUnit")
                         .HasColumnType("int")
-                        .HasColumnName("idProductSKU")
-                        .HasComment("FK al SKU de código de barras.");
+                        .HasColumnName("idUnit")
+                        .HasComment("FK a la unidad de medida de esta presentación (ej: LATA400, BOT160, KG).");
 
-                    b.HasKey("IdProductProductSKU");
-
-                    b.HasIndex("IdProductSKU");
-
-                    b.HasIndex("IdProduct", "IdProductSKU")
-                        .IsUnique()
-                        .HasDatabaseName("UQ_productProductSKU_idProduct_idProductSKU");
-
-                    b.ToTable("productProductSKU", t =>
-                        {
-                            t.HasComment("Tabla de asociación muchos-a-muchos entre productos internos y SKUs de código de barras. Permite que un producto interno (product) esté vinculado a múltiples SKUs escaneables y que un mismo SKU pueda usarse en varios productos.");
-                        });
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductSKU", b =>
-                {
-                    b.Property<int>("IdProductSKU")
+                    b.Property<bool>("IsBase")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("idProductSKU")
-                        .HasComment("Identificador único autoincremental del SKU.");
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("isBase")
+                        .HasComment("Exactamente 1 registro por producto marca la unidad base (isBase=1, conversionFactor=1, idUnit = product.idUnit).");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductSKU"));
-
-                    b.Property<string>("BrandProductSKU")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("brandProductSKU")
-                        .HasComment("Marca o fabricante del producto. Ej: 'Nestlé', 'Unilever'.");
-
-                    b.Property<string>("CodeProductSKU")
-                        .IsRequired()
-                        .HasMaxLength(48)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(48)")
-                        .HasColumnName("codeProductSKU")
-                        .HasComment("Código de barras del producto. Soporta EAN-8 (8 dígitos), EAN-13 (13 dígitos), UPC-A (12 dígitos) y otros formatos de hasta 48 caracteres.");
-
-                    b.Property<string>("DescriptionProductSKU")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
-                        .HasColumnName("descriptionProductSKU")
-                        .HasComment("Descripción detallada del producto: ingredientes, características, uso recomendado.");
-
-                    b.Property<string>("NameProductSKU")
-                        .IsRequired()
+                    b.Property<string>("NamePresentation")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
-                        .HasColumnName("nameProductSKU")
-                        .HasComment("Nombre completo del producto tal como aparece en el empaque.");
+                        .HasColumnName("namePresentation")
+                        .HasComment("Nombre comercial del empaque tal como aparece en la etiqueta (ej: Cahuita Salsa Caribeña 160ml).");
 
-                    b.Property<string>("NetContent")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("netContent")
-                        .HasComment("Contenido neto del producto con su unidad de medida. Ej: '500ml', '1kg', '12 unidades'.");
+                    b.Property<bool>("UsedForPurchase")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("usedForPurchase")
+                        .HasComment("Indica si esta presentación puede usarse en líneas de factura de compra.");
 
-                    b.HasKey("IdProductSKU");
+                    b.Property<bool>("UsedForSale")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("usedForSale")
+                        .HasComment("Indica si esta presentación puede usarse en líneas de factura de venta.");
 
-                    b.HasIndex("CodeProductSKU")
+                    b.HasKey("IdProductUnit");
+
+                    b.HasIndex("CodeBarcode")
                         .IsUnique()
-                        .HasDatabaseName("UQ_productSKU_codeProductSKU");
+                        .HasDatabaseName("UQ_productUnit_codeBarcode")
+                        .HasFilter("[codeBarcode] IS NOT NULL");
 
-                    b.ToTable("productSKU", t =>
+                    b.HasIndex("IdUnit");
+
+                    b.HasIndex("IdProduct", "IdUnit")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_productUnit_idProduct_idUnit");
+
+                    b.ToTable("productUnit", t =>
                         {
-                            t.HasComment("Catálogo de SKUs de productos identificados por código de barras. Un SKU representa la unidad comercial exacta de un producto (marca + contenido + presentación). Múltiples productos internos pueden referenciar el mismo SKU a través de productProductSKU.");
+                            t.HasComment("Presentaciones de compra/venta de un producto con su factor de conversión a la unidad base. Reemplaza productSKU + productProductSKU. El campo codeBarcode permite escanear EAN para pre-llenar líneas de factura.");
                         });
                 });
 
@@ -3103,57 +3671,82 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.Property<string>("DescriptionLine")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
                         .HasColumnName("descriptionLine")
                         .HasComment("Descripción de la línea tal como aparece en la factura del proveedor.");
 
-                    b.Property<int?>("IdProductSKU")
+                    b.Property<DateOnly?>("ExpirationDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expirationDate")
+                        .HasComment("Fecha de vencimiento según la etiqueta del proveedor. Pasa a inventoryLot.expirationDate al confirmar. NULL para productos no perecederos.");
+
+                    b.Property<int?>("IdProduct")
                         .HasColumnType("int")
-                        .HasColumnName("idProductSKU")
-                        .HasComment("FK opcional al SKU del producto escaneado. Nullable hasta que se implemente el catálogo completo de productos.");
+                        .HasColumnName("idProduct")
+                        .HasComment("FK al producto. NULL para líneas de gasto sin producto (flete, servicios, etc.).");
 
                     b.Property<int>("IdPurchaseInvoice")
                         .HasColumnType("int")
                         .HasColumnName("idPurchaseInvoice")
                         .HasComment("FK a la factura de compra cabecera. Cascade delete.");
 
+                    b.Property<int?>("IdUnit")
+                        .HasColumnType("int")
+                        .HasColumnName("idUnit")
+                        .HasComment("FK a la unidad de medida de la compra. Debe existir en productUnit para el idProduct con usedForPurchase=1. NULL si idProduct es NULL.");
+
+                    b.Property<string>("LotNumber")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("lotNumber")
+                        .HasComment("Número de lote del proveedor impreso en la etiqueta física del insumo. Pasa a inventoryLot.lotNumber al confirmar.");
+
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)")
                         .HasColumnName("quantity")
-                        .HasComment("Cantidad comprada.");
+                        .HasComment("Cantidad comprada en la unidad idUnit.");
+
+                    b.Property<decimal?>("QuantityBase")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("quantityBase")
+                        .HasComment("Cantidad en unidad base del producto: quantity × productUnit.conversionFactor. Calculado al confirmar la factura. No editable.");
 
                     b.Property<decimal>("TaxPercent")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)")
                         .HasColumnName("taxPercent")
-                        .HasComment("Porcentaje de impuesto aplicado a la línea (ej. 13.00 para IVA 13%).");
+                        .HasComment("Porcentaje de impuesto aplicado a la línea (ej: 13.00 para IVA 13%).");
 
                     b.Property<decimal>("TotalLineAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
                         .HasColumnName("totalLineAmount")
-                        .HasComment("Total de la línea calculado: Quantity * UnitPrice * (1 + TaxPercent / 100).");
+                        .HasComment("Total de la línea: quantity × unitPrice × (1 + taxPercent / 100).");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
                         .HasColumnName("unitPrice")
-                        .HasComment("Precio unitario del producto o servicio.");
+                        .HasComment("Precio unitario del producto o servicio en la unidad idUnit.");
 
                     b.HasKey("IdPurchaseInvoiceLine");
 
-                    b.HasIndex("IdProductSKU")
-                        .HasDatabaseName("IX_purchaseInvoiceLine_idProductSKU")
-                        .HasFilter("[idProductSKU] IS NOT NULL");
+                    b.HasIndex("IdProduct")
+                        .HasDatabaseName("IX_purchaseInvoiceLine_idProduct")
+                        .HasFilter("[idProduct] IS NOT NULL");
 
                     b.HasIndex("IdPurchaseInvoice")
                         .HasDatabaseName("IX_purchaseInvoiceLine_idPurchaseInvoice");
 
+                    b.HasIndex("IdUnit");
+
                     b.ToTable("purchaseInvoiceLine", t =>
                         {
-                            t.HasComment("Líneas de la factura de compra. Cada línea representa un producto o servicio adquirido. Cuando IdProductSKU está presente la cadena productSKU → product → productAccount genera automáticamente las líneas DR del asiento contable.");
+                            t.HasComment("Líneas de la factura de compra. Cada línea representa un producto o servicio adquirido. Cuando idProduct está presente, al confirmar la factura se crea automáticamente un registro en inventoryLot y se recalcula product.averageCost.");
                         });
                 });
 
@@ -3372,6 +3965,83 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             CreateAt = new DateTime(2026, 3, 19, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             DescriptionRole = "Usuario estándar",
                             NameRole = "User"
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UnitOfMeasure", b =>
+                {
+                    b.Property<int>("IdUnit")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idUnit")
+                        .HasComment("Identificador único autoincremental de la unidad de medida.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdUnit"));
+
+                    b.Property<string>("CodeUnit")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("codeUnit")
+                        .HasComment("Código corto de la unidad: ML, GR, KG, LTR, BOT160, LATA400, UNI, etc.");
+
+                    b.Property<string>("NameUnit")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasColumnName("nameUnit")
+                        .HasComment("Nombre legible de la unidad: Mililitro, Gramo, Botella 160ml, etc.");
+
+                    b.Property<string>("TypeUnit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("typeUnit")
+                        .HasComment("Clasificación dimensional: Volumen | Masa | Unidad | Longitud.");
+
+                    b.HasKey("IdUnit");
+
+                    b.HasIndex("CodeUnit")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_unitOfMeasure_codeUnit");
+
+                    b.ToTable("unitOfMeasure", t =>
+                        {
+                            t.HasComment("Catálogo global de unidades de medida utilizadas en productos, recetas e inventario.");
+
+                            t.HasCheckConstraint("CK_unitOfMeasure_typeUnit", "typeUnit IN ('Volumen', 'Masa', 'Unidad', 'Longitud')");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdUnit = 1,
+                            CodeUnit = "U",
+                            NameUnit = "Unidad",
+                            TypeUnit = "Unidad"
+                        },
+                        new
+                        {
+                            IdUnit = 2,
+                            CodeUnit = "M3",
+                            NameUnit = "Metro Cúbico",
+                            TypeUnit = "Volumen"
+                        },
+                        new
+                        {
+                            IdUnit = 3,
+                            CodeUnit = "KG",
+                            NameUnit = "Kilogramo",
+                            TypeUnit = "Masa"
+                        },
+                        new
+                        {
+                            IdUnit = 4,
+                            CodeUnit = "M",
+                            NameUnit = "Metro",
+                            TypeUnit = "Longitud"
                         });
                 });
 
@@ -3775,6 +4445,28 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdFiscalPeriodNavigation");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.CompanyDomain", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Company", "Company")
+                        .WithMany("Domains")
+                        .HasForeignKey("IdCompany")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.CompanyWhatsapp", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Company", "Company")
+                        .WithMany("Whatsapps")
+                        .HasForeignKey("IdCompany")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ContactContactType", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.Contact", "Contact")
@@ -3805,6 +4497,87 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdCurrencyNavigation");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustment", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.FiscalPeriod", "IdFiscalPeriodNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdFiscalPeriod")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdFiscalPeriodNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentLine", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryAdjustment", "IdInventoryAdjustmentNavigation")
+                        .WithMany("InventoryAdjustmentLines")
+                        .HasForeignKey("IdInventoryAdjustment")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryLot", "IdInventoryLotNavigation")
+                        .WithMany("AdjustmentLines")
+                        .HasForeignKey("IdInventoryLot")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdInventoryAdjustmentNavigation");
+
+                    b.Navigation("IdInventoryLotNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryLot", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryAdjustment", "IdInventoryAdjustmentNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdInventoryAdjustment")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.PurchaseInvoice", "IdPurchaseInvoiceNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdPurchaseInvoice")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("IdInventoryAdjustmentNavigation");
+
+                    b.Navigation("IdPurchaseInvoiceNavigation");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Product", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductParentNavigation")
+                        .WithMany("Variants")
+                        .HasForeignKey("IdProductParent")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductType", "IdProductTypeNavigation")
+                        .WithMany("Products")
+                        .HasForeignKey("IdProductType")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.UnitOfMeasure", "IdUnitNavigation")
+                        .WithMany("Products")
+                        .HasForeignKey("IdUnit")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdProductParentNavigation");
+
+                    b.Navigation("IdProductTypeNavigation");
+
+                    b.Navigation("IdUnitNavigation");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductAccount", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountNavigation")
@@ -3823,6 +4596,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasForeignKey("IdProduct")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", null)
+                        .WithMany("ProductAccounts")
+                        .HasForeignKey("ProductIdProduct");
 
                     b.Navigation("IdAccountNavigation");
 
@@ -3850,23 +4627,53 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("ProductCategory");
                 });
 
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductProductSKU", b =>
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductRecipe", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductOutputNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductOutput")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdProductOutputNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductRecipeLine", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductInputNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductInput")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductRecipe", "IdProductRecipeNavigation")
+                        .WithMany("ProductRecipeLines")
+                        .HasForeignKey("IdProductRecipe")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdProductInputNavigation");
+
+                    b.Navigation("IdProductRecipeNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductUnit", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.Product", "Product")
-                        .WithMany("ProductProductSKUs")
+                        .WithMany("ProductUnits")
                         .HasForeignKey("IdProduct")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductSKU", "ProductSKU")
-                        .WithMany("ProductProductSKUs")
-                        .HasForeignKey("IdProductSKU")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.HasOne("FamilyAccountApi.Domain.Entities.UnitOfMeasure", "UnitOfMeasure")
+                        .WithMany("ProductUnits")
+                        .HasForeignKey("IdUnit")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Product");
 
-                    b.Navigation("ProductSKU");
+                    b.Navigation("UnitOfMeasure");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PurchaseInvoice", b =>
@@ -3924,9 +4731,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PurchaseInvoiceLine", b =>
                 {
-                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductSKU", "IdProductSKUNavigation")
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
                         .WithMany()
-                        .HasForeignKey("IdProductSKU")
+                        .HasForeignKey("IdProduct")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("FamilyAccountApi.Domain.Entities.PurchaseInvoice", "IdPurchaseInvoiceNavigation")
@@ -3935,9 +4742,16 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("IdProductSKUNavigation");
+                    b.HasOne("FamilyAccountApi.Domain.Entities.UnitOfMeasure", "IdUnitNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdUnit")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("IdProductNavigation");
 
                     b.Navigation("IdPurchaseInvoiceNavigation");
+
+                    b.Navigation("IdUnitNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PurchaseInvoiceLineEntry", b =>
@@ -4061,6 +4875,13 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("BankStatementImports");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Company", b =>
+                {
+                    b.Navigation("Domains");
+
+                    b.Navigation("Whatsapps");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Contact", b =>
                 {
                     b.Navigation("ContactContactTypes");
@@ -4092,11 +4913,25 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("Budgets");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustment", b =>
+                {
+                    b.Navigation("InventoryAdjustmentLines");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryLot", b =>
+                {
+                    b.Navigation("AdjustmentLines");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Product", b =>
                 {
+                    b.Navigation("ProductAccounts");
+
                     b.Navigation("ProductProductCategories");
 
-                    b.Navigation("ProductProductSKUs");
+                    b.Navigation("ProductUnits");
+
+                    b.Navigation("Variants");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductCategory", b =>
@@ -4104,9 +4939,14 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("ProductProductCategories");
                 });
 
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductSKU", b =>
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductRecipe", b =>
                 {
-                    b.Navigation("ProductProductSKUs");
+                    b.Navigation("ProductRecipeLines");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductType", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PurchaseInvoice", b =>
@@ -4131,6 +4971,13 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Role", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UnitOfMeasure", b =>
+                {
+                    b.Navigation("ProductUnits");
+
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.User", b =>
