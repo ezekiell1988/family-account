@@ -30,6 +30,7 @@ import {
   IonList,
   IonItem,
   IonLabel,
+  IonBadge,
   IonCard,
   IonCardHeader,
   IonCardTitle,
@@ -44,12 +45,16 @@ import {
   IonCol,
   IonFab,
   IonFabButton,
+  IonToggle,
 } from '@ionic/angular/standalone';
 import { HeaderComponent, FooterComponent } from '../../../../../components';
 import {
   ProductDto,
   ProductTypeDto,
   UnitOfMeasureDto,
+  ProductUnitDto,
+  ProductOptionGroupDto,
+  ProductComboSlotDto,
   CreateProductRequest,
   UpdateProductRequest,
 } from '../../../../../shared/models';
@@ -72,6 +77,7 @@ import {
     IonList,
     IonItem,
     IonLabel,
+    IonBadge,
     IonCard,
     IonCardHeader,
     IonCardTitle,
@@ -86,6 +92,7 @@ import {
     IonCol,
     IonFab,
     IonFabButton,
+    IonToggle,
   ],
   templateUrl: './products-mobile.component.html',
 })
@@ -94,6 +101,10 @@ export class ProductsMobileComponent {
   products          = input<ProductDto[]>([]);
   productTypes      = input<ProductTypeDto[]>([]);
   units             = input<UnitOfMeasureDto[]>([]);
+  expandedUnits        = input<ProductUnitDto[]>([]);
+  expandedOptionGroups = input<ProductOptionGroupDto[]>([]);
+  expandedComboSlots   = input<ProductComboSlotDto[]>([]);
+  loadingDetail     = input(false);
   isLoading         = input(false);
   errorMessage      = input('');
   deletingProductId = input<number | null>(null);
@@ -104,6 +115,7 @@ export class ProductsMobileComponent {
   editProduct   = output<UpdateProductRequest & { id: number }>();
   removeProduct = output<number>();
   clearError    = output<void>();
+  rowExpanded   = output<ProductDto>();
 
   // ── Estado de UI ──────────────────────────────────────────────────
   expandedId         = signal<number | null>(null);
@@ -114,6 +126,8 @@ export class ProductsMobileComponent {
   formProductTypeId  = signal<number | null>(null);
   formUnitId         = signal<number | null>(null);
   formProductParentId = signal<number | null>(null);
+  formHasOptions     = signal(false);
+  formIsCombo        = signal(false);
   confirmDeleteId    = signal<number | null>(null);
 
   isEditing   = computed(() => this.editingId() !== null);
@@ -133,8 +147,12 @@ export class ProductsMobileComponent {
     });
   }
 
-  toggleExpand(id: number): void {
-    this.expandedId.update(v => v === id ? null : id);
+  toggleExpand(product: ProductDto): void {
+    const next = this.expandedId() === product.idProduct ? null : product.idProduct;
+    this.expandedId.set(next);
+    if (next !== null) {
+      this.rowExpanded.emit(product);
+    }
   }
 
   async handleRefresh(event: CustomEvent): Promise<void> {
@@ -149,6 +167,8 @@ export class ProductsMobileComponent {
     this.formProductTypeId.set(null);
     this.formUnitId.set(null);
     this.formProductParentId.set(null);
+    this.formHasOptions.set(false);
+    this.formIsCombo.set(false);
     this.editingId.set(null);
     this.showForm.set(true);
   }
@@ -159,6 +179,8 @@ export class ProductsMobileComponent {
     this.formProductTypeId.set(product.idProductType);
     this.formUnitId.set(product.idUnit);
     this.formProductParentId.set(product.idProductParent);
+    this.formHasOptions.set(product.hasOptions);
+    this.formIsCombo.set(product.isCombo);
     this.editingId.set(product.idProduct);
     this.expandedId.set(null);
     this.showForm.set(true);
@@ -177,6 +199,8 @@ export class ProductsMobileComponent {
       idProductType:   this.formProductTypeId()!,
       idUnit:          this.formUnitId()!,
       idProductParent: this.formProductParentId(),
+      hasOptions:      this.formHasOptions(),
+      isCombo:         this.formIsCombo(),
     };
     if (id !== null) {
       this.editProduct.emit({ ...req, id });
@@ -193,4 +217,3 @@ export class ProductsMobileComponent {
     if (id !== null) { this.removeProduct.emit(id); this.confirmDeleteId.set(null); }
   }
 }
-

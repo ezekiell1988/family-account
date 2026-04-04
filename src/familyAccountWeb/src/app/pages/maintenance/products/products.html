@@ -3,6 +3,10 @@
     [products]="products()"
     [productTypes]="productTypes()"
     [units]="units()"
+    [expandedUnits]="expandedProductUnits()"
+    [expandedOptionGroups]="expandedProductOptionGroups()"
+    [expandedComboSlots]="expandedProductComboSlots()"
+    [loadingDetail]="loadingDetail()"
     [isLoading]="productsLoading()"
     [errorMessage]="productsError() ?? ''"
     [deletingProductId]="deletingProductId()"
@@ -11,6 +15,7 @@
     (editProduct)="updateProduct($event)"
     (removeProduct)="deleteProduct($event)"
     (clearError)="productSvc.clearError()"
+    (rowExpanded)="loadDetailFor($event)"
   />
 } @else {
   <!-- Panel principal: Productos -->
@@ -19,6 +24,12 @@
     [productTypes]="productTypes()"
     [units]="units()"
     [categories]="categories()"
+    [allProducts]="products()"
+    [allUnits]="units()"
+    [expandedUnits]="expandedProductUnits()"
+    [expandedOptionGroups]="expandedProductOptionGroups()"
+    [expandedComboSlots]="expandedProductComboSlots()"
+    [loadingDetail]="loadingDetail()"
     [isLoading]="productsLoading()"
     [errorMessage]="productsError() ?? ''"
     [deletingId]="deletingProductId()"
@@ -29,5 +40,15 @@
     (addCategory)="addCategoryToProduct($event)"
     (removeCategory)="removeCategoryFromProduct($event)"
     (clearError)="clearProductError()"
+    (rowExpanded)="loadDetailFor($event)"
+    (createUnit)="createProductUnit($event)"
+    (editUnit)="updateProductUnit($event)"
+    (removeUnit)="deleteProductUnit($event)"
+    (createOptionGroup)="createOptionGroup($event)"
+    (editOptionGroup)="updateOptionGroup($event)"
+    (removeOptionGroup)="deleteOptionGroup($event)"
+    (createComboSlot)="createComboSlot($event)"
+    (editComboSlot)="updateComboSlot($event)"
+    (removeComboSlot)="deleteComboSlot($event)"
   />
 }

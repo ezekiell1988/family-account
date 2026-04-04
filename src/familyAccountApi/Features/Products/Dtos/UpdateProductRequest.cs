@@ -23,4 +23,10 @@ public sealed record UpdateProductRequest
 
     [Description("ID del producto padre para agrupar variantes (opcional, máximo 1 nivel)")]
     public int? IdProductParent { get; init; }
+
+    [Description("Indica que el producto tiene opciones configurables")]
+    public bool HasOptions { get; init; } = false;
+
+    [Description("Indica que el producto es un combo de slots")]
+    public bool IsCombo { get; init; } = false;
 }

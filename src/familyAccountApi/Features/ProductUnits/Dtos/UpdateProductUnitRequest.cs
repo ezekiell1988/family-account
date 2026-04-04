@@ -32,4 +32,9 @@ public sealed record UpdateProductUnitRequest
     [StringLength(100)]
     [Description("Marca del fabricante del empaque")]
     public string? BrandPresentation { get; init; }
+
+    [Range(typeof(decimal), "0", "999999999999.9999",
+        ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
+    [Description("Precio base de venta para esta presentación")]
+    public decimal SalePrice { get; init; } = 0m;
 }

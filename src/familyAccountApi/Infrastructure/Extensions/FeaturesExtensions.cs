@@ -28,6 +28,8 @@ using FamilyAccountApi.Features.UnitsOfMeasure;
 using FamilyAccountApi.Features.PurchaseInvoiceTypes;
 using FamilyAccountApi.Features.PurchaseInvoices;
 using FamilyAccountApi.Features.Users;
+using FamilyAccountApi.Features.ProductOptionGroups;
+using FamilyAccountApi.Features.ProductComboSlots;
 
 namespace FamilyAccountApi.Infrastructure.Extensions;
 
@@ -63,7 +65,9 @@ public static class FeaturesExtensions
             .AddProductAccountsModule()
             .AddPurchaseInvoiceTypesModule()
             .AddPurchaseInvoicesModule()
-            .AddContactsModule();
+            .AddContactsModule()
+            .AddProductOptionGroupsModule()
+            .AddProductComboSlotsModule();
 
     public static WebApplication MapAllEndpoints(this WebApplication app)
     {
@@ -101,6 +105,8 @@ public static class FeaturesExtensions
         v1.MapPurchaseInvoiceTypesEndpoints();
         v1.MapPurchaseInvoicesEndpoints();
         v1.MapContactsEndpoints();
+        v1.MapProductOptionGroupsEndpoints();
+        v1.MapProductComboSlotsEndpoints();
 
         return app;
     }

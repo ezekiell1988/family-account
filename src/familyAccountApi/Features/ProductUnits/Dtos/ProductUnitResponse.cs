@@ -11,4 +11,5 @@ public sealed record ProductUnitResponse(
     bool     UsedForSale,
     string?  CodeBarcode,
     string?  NamePresentation,
-    string?  BrandPresentation);
+    string?  BrandPresentation,
+    decimal  SalePrice);

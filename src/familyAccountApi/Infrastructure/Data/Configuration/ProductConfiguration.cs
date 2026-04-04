@@ -46,6 +46,16 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasDefaultValue(0m)
             .HasComment("Costo promedio ponderado en unidad base. Se recalcula automáticamente al confirmar compras y ajustes con stock positivo.");
 
+        builder.Property(p => p.HasOptions)
+            .IsRequired()
+            .HasDefaultValue(false)
+            .HasComment("Indica que el producto tiene grupos de opciones configurables por el cliente (ej: tamaño, masa, sabor).");
+
+        builder.Property(p => p.IsCombo)
+            .IsRequired()
+            .HasDefaultValue(false)
+            .HasComment("Indica que el producto es un combo compuesto de slots con productos elegibles.");
+
         // ── Índice único ─────────────────────────────────────
         builder.HasIndex(p => p.CodeProduct)
             .IsUnique()

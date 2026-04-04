@@ -18,7 +18,8 @@ public sealed class ProductUnitService(AppDbContext db) : IProductUnitService
         pu.UsedForSale,
         pu.CodeBarcode,
         pu.NamePresentation,
-        pu.BrandPresentation);
+        pu.BrandPresentation,
+        pu.SalePrice);
 
     public async Task<IReadOnlyList<ProductUnitResponse>> GetByProductAsync(int idProduct, CancellationToken ct = default)
         => await db.ProductUnit
@@ -30,7 +31,7 @@ public sealed class ProductUnitService(AppDbContext db) : IProductUnitService
             .Select(pu => new ProductUnitResponse(
                 pu.IdProductUnit, pu.IdProduct, pu.IdUnit, pu.UnitOfMeasure.CodeUnit,
                 pu.ConversionFactor, pu.IsBase, pu.UsedForPurchase, pu.UsedForSale,
-                pu.CodeBarcode, pu.NamePresentation, pu.BrandPresentation))
+                pu.CodeBarcode, pu.NamePresentation, pu.BrandPresentation, pu.SalePrice))
             .ToListAsync(ct);
 
     public async Task<ProductUnitResponse?> GetByBarcodeAsync(string barcode, CancellationToken ct = default)
@@ -65,7 +66,8 @@ public sealed class ProductUnitService(AppDbContext db) : IProductUnitService
             UsedForSale       = request.UsedForSale,
             CodeBarcode       = request.CodeBarcode,
             NamePresentation  = request.NamePresentation,
-            BrandPresentation = request.BrandPresentation
+            BrandPresentation = request.BrandPresentation,
+            SalePrice         = request.SalePrice
         };
 
         db.ProductUnit.Add(entity);
@@ -91,6 +93,7 @@ public sealed class ProductUnitService(AppDbContext db) : IProductUnitService
         entity.CodeBarcode       = request.CodeBarcode;
         entity.NamePresentation  = request.NamePresentation;
         entity.BrandPresentation = request.BrandPresentation;
+        entity.SalePrice         = request.SalePrice;
 
         await db.SaveChangesAsync(ct);
 

@@ -6,6 +6,7 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import {
   AppSettings,
@@ -16,11 +17,24 @@ import {
   AccountService,
   CostCenterService,
   LoggerService,
+  ProductUnitService,
+  ProductOptionGroupService,
+  ProductComboSlotService,
 } from '../../../service';
 import { ResponsiveComponent } from '../../../shared';
 import {
+  ProductDto,
   CreateProductRequest,
   UpdateProductRequest,
+  ProductUnitDto,
+  ProductOptionGroupDto,
+  ProductComboSlotDto,
+  CreateProductUnitRequest,
+  UpdateProductUnitRequest,
+  CreateProductOptionGroupRequest,
+  UpdateProductOptionGroupRequest,
+  CreateProductComboSlotRequest,
+  UpdateProductComboSlotRequest,
 } from '../../../shared/models';
 import {
   ProductsWebComponent,
@@ -45,6 +59,9 @@ export class ProductsPage extends ResponsiveComponent implements OnInit, OnDestr
   private readonly accountSvc    = inject(AccountService);
   private readonly costCenterSvc = inject(CostCenterService);
   private readonly logger        = inject(LoggerService).getLogger('ProductsPage');
+  private readonly productUnitSvc        = inject(ProductUnitService);
+  private readonly productOptionGroupSvc = inject(ProductOptionGroupService);
+  private readonly productComboSlotSvc   = inject(ProductComboSlotService);
 
   // ── Estado expuesto ────────────────────────────────────────────────────────
   products        = this.productSvc.items;
@@ -64,6 +81,12 @@ export class ProductsPage extends ResponsiveComponent implements OnInit, OnDestr
 
   // ── Estado local ──────────────────────────────────────────────────────────
   deletingProductId = signal<number | null>(null);
+
+  // ── Estado de detalle expandido ───────────────────────────────────────────
+  expandedProductUnits        = signal<ProductUnitDto[]>([]);
+  expandedProductOptionGroups = signal<ProductOptionGroupDto[]>([]);
+  expandedProductComboSlots   = signal<ProductComboSlotDto[]>([]);
+  loadingDetail               = signal(false);
 
   constructor(public appSettings: AppSettings) {
     super();
@@ -152,6 +175,122 @@ export class ProductsPage extends ResponsiveComponent implements OnInit, OnDestr
         this.productSvc.loadList().subscribe();
       },
       error: (e) => this.logger.error('❌ Error al desasociar categoría:', e),
+    });
+  }
+
+  // ── Carga lazy de detalle ─────────────────────────────────────────────────
+  loadDetailFor(product: ProductDto): void {
+    this.loadingDetail.set(true);
+    this.expandedProductUnits.set([]);
+    this.expandedProductOptionGroups.set([]);
+    this.expandedProductComboSlots.set([]);
+
+    const requests: ReturnType<typeof forkJoin> extends never ? never : any[] = [
+      this.productUnitSvc.getByProduct(product.idProduct),
+    ];
+    if (product.hasOptions) {
+      requests.push(this.productOptionGroupSvc.getByProduct(product.idProduct));
+    }
+    if (product.isCombo) {
+      requests.push(this.productComboSlotSvc.getByCombo(product.idProduct));
+    }
+
+    forkJoin(requests)
+      .pipe(finalize(() => this.loadingDetail.set(false)))
+      .subscribe({
+        next: (results: any[]) => {
+          this.expandedProductUnits.set(results[0] ?? []);
+          if (product.hasOptions) this.expandedProductOptionGroups.set(results[1] ?? []);
+          if (product.isCombo)    this.expandedProductComboSlots.set(results[product.hasOptions ? 2 : 1] ?? []);
+        },
+        error: (e) => this.logger.error('❌ Error al cargar detalle:', e),
+      });
+  }
+
+  // ── CRUD presentaciones ───────────────────────────────────────────────────
+  createProductUnit(req: CreateProductUnitRequest): void {
+    this.productUnitSvc.create(req).subscribe({
+      next: (unit) => {
+        this.expandedProductUnits.update(ls => [...ls, unit]);
+        this.logger.success('✅ Presentación creada');
+      },
+      error: (e) => this.logger.error('❌ Error al crear presentación:', e),
+    });
+  }
+
+  updateProductUnit(payload: UpdateProductUnitRequest & { id: number }): void {
+    const { id, ...req } = payload;
+    this.productUnitSvc.update(id, req).subscribe({
+      next: (unit) => {
+        this.expandedProductUnits.update(ls => ls.map(u => u.idProductUnit === id ? unit : u));
+        this.logger.success('✅ Presentación actualizada');
+      },
+      error: (e) => this.logger.error('❌ Error al actualizar presentación:', e),
+    });
+  }
+
+  deleteProductUnit(id: number): void {
+    this.productUnitSvc.delete(id).subscribe({
+      next: () => this.expandedProductUnits.update(ls => ls.filter(u => u.idProductUnit !== id)),
+      error: (e) => this.logger.error('❌ Error al eliminar presentación:', e),
+    });
+  }
+
+  // ── CRUD grupos de opciones ───────────────────────────────────────────────
+  createOptionGroup(req: CreateProductOptionGroupRequest): void {
+    this.productOptionGroupSvc.create(req).subscribe({
+      next: (group) => {
+        this.expandedProductOptionGroups.update(ls => [...ls, group]);
+        this.logger.success('✅ Grupo de opciones creado');
+      },
+      error: (e) => this.logger.error('❌ Error al crear grupo de opciones:', e),
+    });
+  }
+
+  updateOptionGroup(payload: UpdateProductOptionGroupRequest & { id: number }): void {
+    const { id, ...req } = payload;
+    this.productOptionGroupSvc.update(id, req).subscribe({
+      next: (group) => {
+        this.expandedProductOptionGroups.update(ls => ls.map(g => g.idProductOptionGroup === id ? group : g));
+        this.logger.success('✅ Grupo de opciones actualizado');
+      },
+      error: (e) => this.logger.error('❌ Error al actualizar grupo de opciones:', e),
+    });
+  }
+
+  deleteOptionGroup(id: number): void {
+    this.productOptionGroupSvc.delete(id).subscribe({
+      next: () => this.expandedProductOptionGroups.update(ls => ls.filter(g => g.idProductOptionGroup !== id)),
+      error: (e) => this.logger.error('❌ Error al eliminar grupo de opciones:', e),
+    });
+  }
+
+  // ── CRUD slots de combo ───────────────────────────────────────────────────
+  createComboSlot(req: CreateProductComboSlotRequest): void {
+    this.productComboSlotSvc.create(req).subscribe({
+      next: (slot) => {
+        this.expandedProductComboSlots.update(ls => [...ls, slot]);
+        this.logger.success('✅ Slot de combo creado');
+      },
+      error: (e) => this.logger.error('❌ Error al crear slot de combo:', e),
+    });
+  }
+
+  updateComboSlot(payload: UpdateProductComboSlotRequest & { id: number }): void {
+    const { id, ...req } = payload;
+    this.productComboSlotSvc.update(id, req).subscribe({
+      next: (slot) => {
+        this.expandedProductComboSlots.update(ls => ls.map(s => s.idProductComboSlot === id ? slot : s));
+        this.logger.success('✅ Slot de combo actualizado');
+      },
+      error: (e) => this.logger.error('❌ Error al actualizar slot de combo:', e),
+    });
+  }
+
+  deleteComboSlot(id: number): void {
+    this.productComboSlotSvc.delete(id).subscribe({
+      next: () => this.expandedProductComboSlots.update(ls => ls.filter(s => s.idProductComboSlot !== id)),
+      error: (e) => this.logger.error('❌ Error al eliminar slot de combo:', e),
     });
   }
 

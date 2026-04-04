@@ -12,6 +12,7 @@ public sealed class ProductUnit
     public string?  CodeBarcode        { get; set; }
     public string?  NamePresentation   { get; set; }
     public string?  BrandPresentation  { get; set; }
+    public decimal  SalePrice          { get; set; } = 0m;
 
     public Product       Product       { get; set; } = null!;
     public UnitOfMeasure UnitOfMeasure { get; set; } = null!;

@@ -57,6 +57,8 @@ export interface ProductDto {
   codeUnit:        string;
   idProductParent: number | null;
   averageCost:     number;
+  hasOptions:      boolean;
+  isCombo:         boolean;
 }
 
 // ── Centro de costo ───────────────────────────────────────────────────────────
@@ -101,6 +103,8 @@ export interface CreateProductRequest {
   idProductType:   number;
   idUnit:          number;
   idProductParent: number | null;
+  hasOptions:      boolean;
+  isCombo:         boolean;
 }
 
 export interface UpdateProductRequest {
@@ -109,6 +113,8 @@ export interface UpdateProductRequest {
   idProductType:   number;
   idUnit:          number;
   idProductParent: number | null;
+  hasOptions:      boolean;
+  isCombo:         boolean;
 }
 
 // ── Categoría de producto ─────────────────────────────────────────────────────
@@ -123,4 +129,135 @@ export interface CreateProductCategoryRequest {
 
 export interface UpdateProductCategoryRequest {
   nameProductCategory: string;
+}
+
+// ── Presentación / unidad de venta ────────────────────────────────────────────
+export interface ProductUnitDto {
+  idProductUnit:     number;
+  idProduct:         number;
+  idUnit:            number;
+  codeUnit:          string;
+  conversionFactor:  number;
+  isBase:            boolean;
+  usedForPurchase:   boolean;
+  usedForSale:       boolean;
+  codeBarcode:       string | null;
+  namePresentation:  string | null;
+  brandPresentation: string | null;
+  salePrice:         number;
+}
+
+export interface CreateProductUnitRequest {
+  idProduct:         number;
+  idUnit:            number;
+  conversionFactor:  number;
+  isBase:            boolean;
+  usedForPurchase:   boolean;
+  usedForSale:       boolean;
+  codeBarcode:       string | null;
+  namePresentation:  string | null;
+  brandPresentation: string | null;
+  salePrice:         number;
+}
+
+export interface UpdateProductUnitRequest {
+  conversionFactor:  number;
+  isBase:            boolean;
+  usedForPurchase:   boolean;
+  usedForSale:       boolean;
+  codeBarcode:       string | null;
+  namePresentation:  string | null;
+  brandPresentation: string | null;
+  salePrice:         number;
+}
+
+// ── Grupo de opciones ─────────────────────────────────────────────────────────
+export interface ProductOptionItemDto {
+  idProductOptionItem: number;
+  nameItem:            string;
+  priceDelta:          number;
+  isDefault:           boolean;
+  sortOrder:           number;
+}
+
+export interface ProductOptionGroupDto {
+  idProductOptionGroup: number;
+  idProduct:            number;
+  nameGroup:            string;
+  isRequired:           boolean;
+  minSelections:        number;
+  maxSelections:        number;
+  allowSplit:           boolean;
+  sortOrder:            number;
+  items:                ProductOptionItemDto[];
+}
+
+export interface ProductOptionItemRequest {
+  nameItem:   string;
+  priceDelta: number;
+  isDefault:  boolean;
+  sortOrder:  number;
+}
+
+export interface CreateProductOptionGroupRequest {
+  idProduct:     number;
+  nameGroup:     string;
+  isRequired:    boolean;
+  minSelections: number;
+  maxSelections: number;
+  allowSplit:    boolean;
+  sortOrder:     number;
+  items:         ProductOptionItemRequest[];
+}
+
+export interface UpdateProductOptionGroupRequest {
+  nameGroup:     string;
+  isRequired:    boolean;
+  minSelections: number;
+  maxSelections: number;
+  allowSplit:    boolean;
+  sortOrder:     number;
+  items:         ProductOptionItemRequest[];
+}
+
+// ── Slots de combo ────────────────────────────────────────────────────────────
+export interface ProductComboSlotProductDto {
+  idProductComboSlotProduct: number;
+  idProduct:                 number;
+  nameProduct:               string;
+  priceAdjustment:           number;
+  sortOrder:                 number;
+}
+
+export interface ProductComboSlotDto {
+  idProductComboSlot: number;
+  idProductCombo:     number;
+  nameSlot:           string;
+  quantity:           number;
+  isRequired:         boolean;
+  sortOrder:          number;
+  products:           ProductComboSlotProductDto[];
+}
+
+export interface ProductComboSlotProductRequest {
+  idProduct:       number;
+  priceAdjustment: number;
+  sortOrder:       number;
+}
+
+export interface CreateProductComboSlotRequest {
+  idProductCombo: number;
+  nameSlot:       string;
+  quantity:       number;
+  isRequired:     boolean;
+  sortOrder:      number;
+  products:       ProductComboSlotProductRequest[];
+}
+
+export interface UpdateProductComboSlotRequest {
+  nameSlot:   string;
+  quantity:   number;
+  isRequired: boolean;
+  sortOrder:  number;
+  products:   ProductComboSlotProductRequest[];
 }

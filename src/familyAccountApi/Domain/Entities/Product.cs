@@ -10,6 +10,9 @@ public sealed class Product
     public int?    IdProductParent { get; set; }
     public decimal AverageCost     { get; set; }
 
+    public bool    HasOptions { get; set; } = false;
+    public bool    IsCombo    { get; set; } = false;
+
     public ProductType  IdProductTypeNavigation  { get; set; } = null!;
     public UnitOfMeasure IdUnitNavigation        { get; set; } = null!;
     public Product?      IdProductParentNavigation { get; set; }
@@ -18,4 +21,6 @@ public sealed class Product
     public ICollection<ProductUnit>          ProductUnits             { get; set; } = [];
     public ICollection<ProductProductCategory> ProductProductCategories { get; set; } = [];
     public ICollection<ProductAccount>       ProductAccounts          { get; set; } = [];
+    public ICollection<ProductOptionGroup>   ProductOptionGroups      { get; set; } = [];
+    public ICollection<ProductComboSlot>     ProductComboSlots        { get; set; } = [];
 }

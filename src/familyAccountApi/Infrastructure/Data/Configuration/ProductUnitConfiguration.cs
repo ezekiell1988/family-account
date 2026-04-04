@@ -56,6 +56,12 @@ public sealed class ProductUnitConfiguration : IEntityTypeConfiguration<ProductU
             .HasMaxLength(100)
             .HasComment("Marca del fabricante del empaque (ej: Fiesta de Diablitos, Aroy-D).");
 
+        builder.Property(pu => pu.SalePrice)
+            .HasPrecision(18, 4)
+            .IsRequired()
+            .HasDefaultValue(0m)
+            .HasComment("Precio base de venta para esta presentación. El precio final en combos/opciones se calcula sumando deltas.");
+
         // ── Índice único: un producto no puede tener dos filas con la misma unidad ──
         builder.HasIndex(pu => new { pu.IdProduct, pu.IdUnit })
             .IsUnique()

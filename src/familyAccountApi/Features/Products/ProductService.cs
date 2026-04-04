@@ -16,7 +16,9 @@ public sealed class ProductService(AppDbContext db) : IProductService
         p.IdUnit,
         p.IdUnitNavigation.CodeUnit,
         p.IdProductParent,
-        p.AverageCost);
+        p.AverageCost,
+        p.HasOptions,
+        p.IsCombo);
 
     public async Task<IReadOnlyList<ProductResponse>> GetAllAsync(CancellationToken ct = default)
     {
@@ -50,7 +52,9 @@ public sealed class ProductService(AppDbContext db) : IProductService
             IdProductType   = request.IdProductType,
             IdUnit          = request.IdUnit,
             IdProductParent = request.IdProductParent,
-            AverageCost     = 0m
+            AverageCost     = 0m,
+            HasOptions      = request.HasOptions,
+            IsCombo         = request.IsCombo
         };
 
         db.Product.Add(product);
@@ -76,6 +80,8 @@ public sealed class ProductService(AppDbContext db) : IProductService
         product.IdProductType   = request.IdProductType;
         product.IdUnit          = request.IdUnit;
         product.IdProductParent = request.IdProductParent;
+        product.HasOptions      = request.HasOptions;
+        product.IsCombo         = request.IsCombo;
 
         await db.SaveChangesAsync(ct);
 

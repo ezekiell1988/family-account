@@ -9,4 +9,6 @@ public sealed record ProductResponse(
     int      IdUnit,
     string   CodeUnit,
     int?     IdProductParent,
-    decimal  AverageCost);
+    decimal  AverageCost,
+    bool     HasOptions,
+    bool     IsCombo);

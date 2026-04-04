@@ -83,6 +83,20 @@
           }
         </select>
       </div>
+      <div class="col-sm-auto d-flex align-items-end pb-1 gap-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="chkHasOptions"
+            [checked]="formHasOptions()"
+            (change)="formHasOptions.set($any($event.target).checked)">
+          <label class="form-check-label" for="chkHasOptions">Tiene opciones</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="chkIsCombo"
+            [checked]="formIsCombo()"
+            (change)="formIsCombo.set($any($event.target).checked)">
+          <label class="form-check-label" for="chkIsCombo">Es combo</label>
+        </div>
+      </div>
       <div class="col-sm-1 d-flex align-items-end gap-2">
         <button type="button" class="btn btn-success flex-grow-1"
           (click)="submitForm()"
@@ -151,13 +165,227 @@
     <ngx-datatable-row-detail #rowDetail rowHeight="auto" (toggle)="onDetailToggle($event)">
       <ng-template let-row="row" ngx-datatable-row-detail-template>
         <div class="p-3 bg-light border-top">
-          <div class="row g-3">
 
-            <!-- Categorías asociadas -->
-            <div class="col-md-6">
+          <!-- Tabs de navegación -->
+          <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" [class.active]="activeDetailTab() === 'units'"
+                type="button" role="tab"
+                (click)="activeDetailTab.set('units')"
+                [attr.aria-selected]="activeDetailTab() === 'units'">
+                <i class="fa fa-box me-1" aria-hidden="true"></i>Presentaciones
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" [class.active]="activeDetailTab() === 'categories'"
+                type="button" role="tab"
+                (click)="activeDetailTab.set('categories')"
+                [attr.aria-selected]="activeDetailTab() === 'categories'">
+                <i class="fa fa-tags me-1" aria-hidden="true"></i>Categorías
+              </button>
+            </li>
+            @if (row.hasOptions) {
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" [class.active]="activeDetailTab() === 'options'"
+                  type="button" role="tab"
+                  (click)="activeDetailTab.set('options')"
+                  [attr.aria-selected]="activeDetailTab() === 'options'">
+                  <i class="fa fa-sliders me-1" aria-hidden="true"></i>Opciones
+                </button>
+              </li>
+            }
+            @if (row.isCombo) {
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" [class.active]="activeDetailTab() === 'combo'"
+                  type="button" role="tab"
+                  (click)="activeDetailTab.set('combo')"
+                  [attr.aria-selected]="activeDetailTab() === 'combo'">
+                  <i class="fa fa-layer-group me-1" aria-hidden="true"></i>Combo
+                </button>
+              </li>
+            }
+          </ul>
+
+          @if (loadingDetail()) {
+            <div class="text-center py-3">
+              <i class="fa fa-spinner fa-spin me-2" aria-hidden="true"></i>Cargando detalle…
+            </div>
+          }
+
+          <!-- Tab: Presentaciones -->
+          @if (activeDetailTab() === 'units' && !loadingDetail()) {
+            <div role="tabpanel">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0">
+                  <i class="fa fa-box me-1" aria-hidden="true"></i>Presentaciones
+                </h6>
+                <button type="button" class="btn btn-success btn-sm"
+                  (click)="openCreateUnit(row.idProduct)"
+                  [disabled]="showUnitForm()">
+                  <i class="fa fa-plus me-1" aria-hidden="true"></i>Nueva presentación
+                </button>
+              </div>
+
+              <!-- Formulario presentación -->
+              @if (showUnitForm()) {
+                <div class="alert alert-info mb-3">
+                  <h6 class="alert-heading">{{ editingUnitId() !== null ? 'Editar' : 'Nueva' }} presentación</h6>
+                  <div class="row g-2">
+                    <div class="col-sm-2">
+                      <label class="form-label fw-semibold">Unidad</label>
+                      <select class="form-select form-select-sm"
+                            title="Unidad de la presentación"
+                            [ngModel]="formUnitSelectId()"
+                            (ngModelChange)="formUnitSelectId.set($event)">
+                        <option [ngValue]="null">— Seleccionar —</option>
+                        @for (u of allUnits(); track u.idUnit) {
+                          <option [ngValue]="u.idUnit">{{ u.codeUnit }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div class="col-sm-1">
+                      <label class="form-label fw-semibold">Factor</label>
+                      <input type="number" class="form-control form-control-sm" min="0.000001"
+                        aria-label="Factor de conversión"
+                        [value]="formUnitConvFactor()"
+                        (input)="formUnitConvFactor.set(+$any($event.target).value)">
+                    </div>
+                    <div class="col-sm-2">
+                      <label class="form-label fw-semibold">Precio venta</label>
+                      <input type="number" class="form-control form-control-sm" min="0"
+                        aria-label="Precio de venta"
+                        [value]="formUnitSalePrice()"
+                        (input)="formUnitSalePrice.set(+$any($event.target).value)">
+                    </div>
+                    <div class="col-sm-2">
+                      <label class="form-label fw-semibold">Nombre presentación</label>
+                      <input type="text" class="form-control form-control-sm"
+                        aria-label="Nombre de la presentación"
+                        [value]="formUnitName() ?? ''"
+                        (input)="formUnitName.set($any($event.target).value || null)">
+                    </div>
+                    <div class="col-sm-2">
+                      <label class="form-label fw-semibold">Marca</label>
+                      <input type="text" class="form-control form-control-sm"
+                        aria-label="Marca del fabricante"
+                        [value]="formUnitBrand() ?? ''"
+                        (input)="formUnitBrand.set($any($event.target).value || null)">
+                    </div>
+                    <div class="col-sm-2">
+                      <label class="form-label fw-semibold">Barcode</label>
+                      <input type="text" class="form-control form-control-sm"
+                        aria-label="Código de barras"
+                        [value]="formUnitBarcode() ?? ''"
+                        (input)="formUnitBarcode.set($any($event.target).value || null)">
+                    </div>
+                    <div class="col-sm-auto d-flex align-items-end gap-3 pb-1">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="unitIsBase"
+                          [checked]="formUnitIsBase()"
+                          (change)="formUnitIsBase.set($any($event.target).checked)">
+                        <label class="form-check-label" for="unitIsBase">Base</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="unitForPurch"
+                          [checked]="formUnitForPurch()"
+                          (change)="formUnitForPurch.set($any($event.target).checked)">
+                        <label class="form-check-label" for="unitForPurch">Compra</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="unitForSale"
+                          [checked]="formUnitForSale()"
+                          (change)="formUnitForSale.set($any($event.target).checked)">
+                        <label class="form-check-label" for="unitForSale">Venta</label>
+                      </div>
+                    </div>
+                    <div class="col-sm-auto d-flex align-items-end gap-2 pb-1">
+                      <button type="button" class="btn btn-success btn-sm"
+                        (click)="submitUnitForm()" [disabled]="!isUnitFormValid()">
+                        <i class="fa fa-save me-1" aria-hidden="true"></i>Guardar
+                      </button>
+                      <button type="button" class="btn btn-secondary btn-sm"
+                        (click)="cancelUnitForm()">Cancelar</button>
+                    </div>
+                  </div>
+                </div>
+              }
+
+              <!-- Confirmación borrado presentación -->
+              @if (confirmDeleteUnitId() !== null) {
+                <div class="alert alert-warning mb-2">
+                  ¿Eliminar esta presentación?
+                  <button type="button" class="btn btn-danger btn-sm ms-2" (click)="confirmDeleteUnit()">Eliminar</button>
+                  <button type="button" class="btn btn-secondary btn-sm ms-1" (click)="cancelDeleteUnit()">Cancelar</button>
+                </div>
+              }
+
+              @if (expandedUnits().length === 0) {
+                <p class="text-muted small">Sin presentaciones registradas.</p>
+              } @else {
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Unidad</th>
+                        <th>Factor</th>
+                        <th>Precio venta</th>
+                        <th>Nombre</th>
+                        <th>Barcode</th>
+                        <th>Base</th>
+                        <th>Compra</th>
+                        <th>Venta</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (unit of expandedUnits(); track unit.idProductUnit) {
+                        <tr>
+                          <td><span class="badge bg-secondary">{{ unit.codeUnit }}</span></td>
+                          <td>{{ unit.conversionFactor }}</td>
+                          <td>{{ unit.salePrice | number:'1.2-4' }}</td>
+                          <td>{{ unit.namePresentation ?? '—' }}</td>
+                          <td>{{ unit.codeBarcode ?? '—' }}</td>
+                          <td>
+                            @if (unit.isBase) { <span class="badge bg-warning text-dark">Base</span> }
+                          </td>
+                          <td>
+                            @if (unit.usedForPurchase) { <i class="fa fa-check text-success" aria-hidden="true"></i> }
+                          </td>
+                          <td>
+                            @if (unit.usedForSale) { <i class="fa fa-check text-success" aria-hidden="true"></i> }
+                          </td>
+                          <td>
+                            <div class="d-flex gap-1">
+                              <button type="button" class="btn btn-xs btn-primary"
+                                title="Editar presentación"
+                                (click)="openEditUnit(unit)"
+                                [attr.aria-label]="'Editar presentación ' + unit.codeUnit">
+                                <i class="fa fa-pencil" aria-hidden="true"></i>
+                              </button>
+                              @if (!unit.isBase) {
+                                <button type="button" class="btn btn-xs btn-danger"
+                                  title="Eliminar presentación"
+                                  (click)="askDeleteUnit(unit.idProductUnit)"
+                                  [attr.aria-label]="'Eliminar presentación ' + unit.codeUnit">
+                                  <i class="fa fa-trash" aria-hidden="true"></i>
+                                </button>
+                              }
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Tab: Categorías -->
+          @if (activeDetailTab() === 'categories' && !loadingDetail()) {
+            <div role="tabpanel">
               <h6 class="fw-bold mb-2">
-                <i class="fa fa-tags me-1" aria-hidden="true"></i>
-                Categorías
+                <i class="fa fa-tags me-1" aria-hidden="true"></i>Categorías
               </h6>
               <p class="text-muted small mb-2">
                 Gestiona las categorías desde el panel de <strong>Categorías</strong>.
@@ -185,23 +413,365 @@
                   <i class="fa fa-tag me-1" aria-hidden="true"></i>Asociar
                 </button>
               </div>
+              <div class="mt-2">
+                <dl class="row small mb-0">
+                  <dt class="col-sm-5">Costo promedio</dt>
+                  <dd class="col-sm-7">{{ row.averageCost | number:'1.2-6' }}</dd>
+                  <dt class="col-sm-5">Producto padre</dt>
+                  <dd class="col-sm-7">{{ row.idProductParent ?? '—' }}</dd>
+                </dl>
+              </div>
             </div>
+          }
 
-            <!-- Info adicional -->
-            <div class="col-md-6">
-              <h6 class="fw-bold mb-2">
-                <i class="fa fa-info-circle me-1" aria-hidden="true"></i>
-                Detalle
-              </h6>
-              <dl class="row small mb-0">
-                <dt class="col-sm-5">Costo promedio</dt>
-                <dd class="col-sm-7">{{ row.averageCost | number:'1.2-6' }}</dd>
-                <dt class="col-sm-5">Producto padre</dt>
-                <dd class="col-sm-7">{{ row.idProductParent ?? '—' }}</dd>
-              </dl>
+          <!-- Tab: Opciones -->
+          @if (activeDetailTab() === 'options' && row.hasOptions && !loadingDetail()) {
+            <div role="tabpanel">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0">
+                  <i class="fa fa-sliders me-1" aria-hidden="true"></i>Grupos de opciones
+                </h6>
+                <button type="button" class="btn btn-success btn-sm"
+                  (click)="openCreateGroup(row.idProduct)"
+                  [disabled]="showGroupForm()">
+                  <i class="fa fa-plus me-1" aria-hidden="true"></i>Nuevo grupo
+                </button>
+              </div>
+
+              <!-- Formulario grupo de opciones -->
+              @if (showGroupForm()) {
+                <div class="alert alert-info mb-3">
+                  <h6 class="alert-heading">{{ editingGroupId() !== null ? 'Editar' : 'Nuevo' }} grupo</h6>
+                  <div class="row g-2 mb-2">
+                    <div class="col-sm-3">
+                      <label class="form-label fw-semibold">Nombre del grupo</label>
+                      <input type="text" class="form-control form-control-sm" maxlength="200"
+                        aria-label="Nombre del grupo de opciones"
+                        [value]="formGroupName()"
+                        (input)="formGroupName.set($any($event.target).value)">
+                    </div>
+                    <div class="col-sm-1">
+                      <label class="form-label fw-semibold">Mín.</label>
+                      <input type="number" class="form-control form-control-sm" min="0"
+                        aria-label="Mínimo de selecciones"
+                        [value]="formGroupMin()"
+                        (input)="formGroupMin.set(+$any($event.target).value)">
+                    </div>
+                    <div class="col-sm-1">
+                      <label class="form-label fw-semibold">Máx.</label>
+                      <input type="number" class="form-control form-control-sm" min="1"
+                        aria-label="Máximo de selecciones"
+                        [value]="formGroupMax()"
+                        (input)="formGroupMax.set(+$any($event.target).value)">
+                    </div>
+                    <div class="col-sm-1">
+                      <label class="form-label fw-semibold">Orden</label>
+                      <input type="number" class="form-control form-control-sm" min="0"
+                        aria-label="Orden del grupo"
+                        [value]="formGroupSortOrder()"
+                        (input)="formGroupSortOrder.set(+$any($event.target).value)">
+                    </div>
+                    <div class="col-sm-auto d-flex align-items-end gap-3 pb-1">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="grpRequired"
+                          [checked]="formGroupRequired()"
+                          (change)="formGroupRequired.set($any($event.target).checked)">
+                        <label class="form-check-label" for="grpRequired">Obligatorio</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="grpAllowSplit"
+                          [checked]="formGroupAllowSplit()"
+                          (change)="formGroupAllowSplit.set($any($event.target).checked)">
+                        <label class="form-check-label" for="grpAllowSplit">Permite mitad/mitad</label>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Items del grupo -->
+                  <table class="table table-sm mb-2">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Nombre item</th>
+                        <th>Delta precio</th>
+                        <th>Por defecto</th>
+                        <th>Orden</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of formGroupItems(); track $index; let idx = $index) {
+                        <tr>
+                          <td>
+                            <input type="text" class="form-control form-control-sm"
+                              aria-label="Nombre del item"
+                              [value]="item.nameItem"
+                              (input)="updateGroupItem(idx, 'nameItem', $any($event.target).value)">
+                          </td>
+                          <td>
+                            <input type="number" class="form-control form-control-sm"
+                              aria-label="Delta de precio"
+                              [value]="item.priceDelta"
+                              (input)="updateGroupItem(idx, 'priceDelta', +$any($event.target).value)">
+                          </td>
+                          <td class="text-center">
+                            <input type="checkbox" class="form-check-input"
+                              aria-label="Por defecto"
+                              [checked]="item.isDefault"
+                              (change)="updateGroupItem(idx, 'isDefault', $any($event.target).checked)">
+                          </td>
+                          <td>
+                            <input type="number" class="form-control form-control-sm"
+                              aria-label="Orden del item"
+                              [value]="item.sortOrder"
+                              (input)="updateGroupItem(idx, 'sortOrder', +$any($event.target).value)">
+                          </td>
+                          <td>
+                      <button type="button" class="btn btn-xs btn-danger"
+                        aria-label="Eliminar item"
+                        title="Eliminar item"
+                        (click)="removeGroupItem(idx)"
+                        [disabled]="formGroupItems().length <= 1">
+                        <i class="fa fa-trash" aria-hidden="true"></i>
+                      </button>
+                    </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                  <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      (click)="addGroupItem()">
+                      <i class="fa fa-plus me-1" aria-hidden="true"></i>+ Item
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm"
+                      (click)="submitGroupForm()" [disabled]="!isGroupFormValid()">
+                      <i class="fa fa-save me-1" aria-hidden="true"></i>Guardar
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm"
+                      (click)="cancelGroupForm()">Cancelar</button>
+                  </div>
+                </div>
+              }
+
+              <!-- Confirmación borrado grupo -->
+              @if (confirmDeleteGroupId() !== null) {
+                <div class="alert alert-warning mb-2">
+                  ¿Eliminar este grupo de opciones y todos sus items?
+                  <button type="button" class="btn btn-danger btn-sm ms-2" (click)="confirmDeleteGroup()">Eliminar</button>
+                  <button type="button" class="btn btn-secondary btn-sm ms-1" (click)="cancelDeleteGroup()">Cancelar</button>
+                </div>
+              }
+
+              @if (expandedOptionGroups().length === 0) {
+                <p class="text-muted small">Sin grupos de opciones registrados.</p>
+              }
+
+              @for (group of expandedOptionGroups(); track group.idProductOptionGroup) {
+                <div class="card mb-2">
+                  <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="fw-semibold">{{ group.nameGroup }}</span>
+                    <div class="d-flex gap-2 align-items-center">
+                      @if (group.isRequired) { <span class="badge bg-danger">Obligatorio</span> }
+                      <span class="badge bg-secondary">{{ group.minSelections }}–{{ group.maxSelections }}</span>
+                      @if (group.allowSplit) { <span class="badge bg-info text-dark">Mitad</span> }
+                      <button type="button" class="btn btn-xs btn-primary"
+                        title="Editar grupo"
+                        (click)="openEditGroup(group)"
+                        [attr.aria-label]="'Editar grupo ' + group.nameGroup"
+                        [attr.title]="'Editar grupo ' + group.nameGroup">
+                        <i class="fa fa-pencil" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" class="btn btn-xs btn-danger"
+                        title="Eliminar grupo"
+                        (click)="askDeleteGroup(group.idProductOptionGroup)"
+                        [attr.aria-label]="'Eliminar grupo ' + group.nameGroup"
+                        [attr.title]="'Eliminar grupo ' + group.nameGroup">
+                        <i class="fa fa-trash" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="card-body py-2">
+                    <div class="d-flex flex-wrap gap-1">
+                      @for (item of group.items; track item.idProductOptionItem) {
+                        <span class="badge"
+                          [class.bg-success]="item.isDefault"
+                          [class.bg-light]="!item.isDefault"
+                          [class.text-dark]="!item.isDefault">
+                          {{ item.nameItem }}
+                          @if (item.priceDelta !== 0) { (+{{ item.priceDelta | number:'1.2-2' }}) }
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
             </div>
+          }
 
-          </div>
+          <!-- Tab: Combo -->
+          @if (activeDetailTab() === 'combo' && row.isCombo && !loadingDetail()) {
+            <div role="tabpanel">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0">
+                  <i class="fa fa-layer-group me-1" aria-hidden="true"></i>Slots de combo
+                </h6>
+                <button type="button" class="btn btn-success btn-sm"
+                  (click)="openCreateSlot(row.idProduct)"
+                  [disabled]="showSlotForm()">
+                  <i class="fa fa-plus me-1" aria-hidden="true"></i>Nuevo slot
+                </button>
+              </div>
+
+              <!-- Formulario slot -->
+              @if (showSlotForm()) {
+                <div class="alert alert-info mb-3">
+                  <h6 class="alert-heading">{{ editingSlotId() !== null ? 'Editar' : 'Nuevo' }} slot</h6>
+                  <div class="row g-2 mb-2">
+                    <div class="col-sm-3">
+                      <label class="form-label fw-semibold">Nombre del slot</label>
+                      <input type="text" class="form-control form-control-sm" maxlength="200"
+                        aria-label="Nombre del slot de combo"
+                        [value]="formSlotName()"
+                        (input)="formSlotName.set($any($event.target).value)">
+                    </div>
+                    <div class="col-sm-1">
+                      <label class="form-label fw-semibold">Cantidad</label>
+                      <input type="number" class="form-control form-control-sm" min="0.001"
+                        aria-label="Cantidad del slot"
+                        [value]="formSlotQuantity()"
+                        (input)="formSlotQuantity.set(+$any($event.target).value)">
+                    </div>
+                    <div class="col-sm-1">
+                      <label class="form-label fw-semibold">Orden</label>
+                      <input type="number" class="form-control form-control-sm" min="0"
+                        aria-label="Orden del slot"
+                        [value]="formSlotSortOrder()"
+                        (input)="formSlotSortOrder.set(+$any($event.target).value)">
+                    </div>
+                    <div class="col-sm-auto d-flex align-items-end pb-1">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="slotRequired"
+                          [checked]="formSlotRequired()"
+                          (change)="formSlotRequired.set($any($event.target).checked)">
+                        <label class="form-check-label" for="slotRequired">Obligatorio</label>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Productos del slot -->
+                  <table class="table table-sm mb-2">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Producto</th>
+                        <th>Ajuste precio</th>
+                        <th>Orden</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (sp of formSlotProducts(); track $index; let idx = $index) {
+                        <tr>
+                          <td>
+                            <select class="form-select form-select-sm"
+                                title="Producto del slot"
+                                aria-label="Producto del slot"
+                                [ngModel]="sp.idProduct"
+                                (ngModelChange)="updateSlotProduct(idx, 'idProduct', $event)">
+                              <option [ngValue]="0">— Seleccionar —</option>
+                              @for (p of allProducts(); track p.idProduct) {
+                                <option [ngValue]="p.idProduct">{{ p.codeProduct }} · {{ p.nameProduct }}</option>
+                              }
+                            </select>
+                          </td>
+                          <td>
+                            <input type="number" class="form-control form-control-sm"
+                              aria-label="Ajuste de precio"
+                              [value]="sp.priceAdjustment"
+                              (input)="updateSlotProduct(idx, 'priceAdjustment', +$any($event.target).value)">
+                          </td>
+                          <td>
+                            <input type="number" class="form-control form-control-sm"
+                              aria-label="Orden del producto"
+                              [value]="sp.sortOrder"
+                              (input)="updateSlotProduct(idx, 'sortOrder', +$any($event.target).value)">
+                          </td>
+                          <td>
+                            <button type="button" class="btn btn-xs btn-danger"
+                              title="Eliminar producto del slot"
+                              aria-label="Eliminar producto del slot"
+                              (click)="removeSlotProduct(idx)"
+                              [disabled]="formSlotProducts().length <= 1">
+                              <i class="fa fa-trash" aria-hidden="true"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                  <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                      (click)="addSlotProduct()">
+                      <i class="fa fa-plus me-1" aria-hidden="true"></i>+ Producto
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm"
+                      (click)="submitSlotForm()" [disabled]="!isSlotFormValid()">
+                      <i class="fa fa-save me-1" aria-hidden="true"></i>Guardar
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm"
+                      (click)="cancelSlotForm()">Cancelar</button>
+                  </div>
+                </div>
+              }
+
+              <!-- Confirmación borrado slot -->
+              @if (confirmDeleteSlotId() !== null) {
+                <div class="alert alert-warning mb-2">
+                  ¿Eliminar este slot de combo?
+                  <button type="button" class="btn btn-danger btn-sm ms-2" (click)="confirmDeleteSlot()">Eliminar</button>
+                  <button type="button" class="btn btn-secondary btn-sm ms-1" (click)="cancelDeleteSlot()">Cancelar</button>
+                </div>
+              }
+
+              @if (expandedComboSlots().length === 0) {
+                <p class="text-muted small">Sin slots registrados.</p>
+              }
+
+              @for (slot of expandedComboSlots(); track slot.idProductComboSlot) {
+                <div class="card mb-2">
+                  <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="fw-semibold">{{ slot.nameSlot }}</span>
+                    <div class="d-flex gap-2 align-items-center">
+                      <span class="badge bg-secondary">x{{ slot.quantity }}</span>
+                      @if (slot.isRequired) { <span class="badge bg-danger">Obligatorio</span> }
+                      <button type="button" class="btn btn-xs btn-primary"
+                        title="Editar slot"
+                        (click)="openEditSlot(slot)"
+                        [attr.aria-label]="'Editar slot ' + slot.nameSlot"
+                        [attr.title]="'Editar slot ' + slot.nameSlot">
+                        <i class="fa fa-pencil" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" class="btn btn-xs btn-danger"
+                        title="Eliminar slot"
+                        (click)="askDeleteSlot(slot.idProductComboSlot)"
+                        [attr.aria-label]="'Eliminar slot ' + slot.nameSlot"
+                        [attr.title]="'Eliminar slot ' + slot.nameSlot">
+                        <i class="fa fa-trash" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="card-body py-2">
+                    <div class="d-flex flex-wrap gap-1">
+                      @for (p of slot.products; track p.idProductComboSlotProduct) {
+                        <span class="badge bg-light text-dark border">
+                          {{ p.nameProduct }}
+                          @if (p.priceAdjustment !== 0) { ({{ p.priceAdjustment | number:'1.2-2' }}) }
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
         </div>
       </ng-template>
     </ngx-datatable-row-detail>
@@ -243,6 +813,20 @@
 
     <!-- Unidad base -->
     <ngx-datatable-column name="Unidad" prop="codeUnit" [width]="90" [sortable]="true">
+    </ngx-datatable-column>
+
+    <!-- Comportamiento -->
+    <ngx-datatable-column name="Comportamiento" [width]="130" [sortable]="false">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        <div class="d-flex gap-1 flex-wrap">
+          @if (row.hasOptions) {
+            <span class="badge bg-warning text-dark" title="Tiene opciones configurables">Opciones</span>
+          }
+          @if (row.isCombo) {
+            <span class="badge bg-info text-dark" title="Es un combo de slots">Combo</span>
+          }
+        </div>
+      </ng-template>
     </ngx-datatable-column>
 
     <!-- Acciones -->
