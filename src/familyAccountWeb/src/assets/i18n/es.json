@@ -710,5 +710,22 @@
       "DESCRIPTION": "Descripción",
       "ACCOUNTING_ENTRY": "Asiento"
     }
+  },
+  "PRODUCT_CATEGORIES": {
+    "TITLE": "Categorías de Productos",
+    "PAGE_SUBTITLE": "Catálogo de categorías para clasificar los productos",
+    "NEW_ITEM": "Nueva Categoría",
+    "EMPTY": "No hay categorías registradas",
+    "CONFIRM_DELETE": "¿Eliminar esta categoría? Los productos que la tengan asociada quedarán sin ella.",
+    "SEARCH_PLACEHOLDER": "Buscar categoría…",
+    "COL_NAME": "Nombre",
+    "COL_ACTIONS": "Acciones",
+    "FORM": {
+      "NEW_TITLE": "Nueva Categoría",
+      "EDIT_TITLE": "Editar Categoría",
+      "NAME_LABEL": "Nombre",
+      "NAME_PLACEHOLDER": "Ej: Lácteos, Limpieza, Bebidas…",
+      "CREATE_BTN": "Crear"
+    }
   }
 }

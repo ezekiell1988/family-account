@@ -105,6 +105,13 @@ export class AppMenuService {
           url: "/maintenance/products",
           roles: [1, 2],
         },
+        {
+          icon: "fa fa-tag",
+          iconMobile: "pricetag-outline",
+          title: "Categorías de Productos",
+          url: "/maintenance/product-categories",
+          roles: [1, 2],
+        },
       ],
     },
   ];

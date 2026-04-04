@@ -30,13 +30,12 @@ import {
   AccountingEntryLineRequest,
   UpdateAccountingEntryRequest,
   AccountDto,
-  ProductSKUDto,
   ProductDto,
   ProductAccountDto,
   CostCenterDto,
   CreateProductAccountRequest,
   UpdateProductAccountRequest,
-  CreateProductWithAccountsRequest,
+  UnitOfMeasureDto,
   ContactDto,
 } from '../../../../../shared/models';
 
@@ -44,7 +43,8 @@ const STATUS_OPTIONS = ['Borrador', 'Confirmado', 'Anulado'] as const;
 const ENTRY_STATUS_OPTIONS = ['Borrador', 'Publicado', 'Anulado'] as const;
 
 interface FormLine {
-  skuCode:         string;
+  idProduct:       number | null;
+  idUnit:          number | null;
   descriptionLine: string;
   quantity:        number;
   unitPrice:       number;
@@ -53,7 +53,7 @@ interface FormLine {
 }
 
 function emptyLine(): FormLine {
-  return { skuCode: '', descriptionLine: '', quantity: 1, unitPrice: 0, taxPercent: 13, totalLineAmount: 0 };
+  return { idProduct: null, idUnit: null, descriptionLine: '', quantity: 1, unitPrice: 0, taxPercent: 13, totalLineAmount: 0 };
 }
 
 interface FormEntryLine {
@@ -90,9 +90,9 @@ export class PurchaseInvoicesWebComponent {
   bankAccounts  = input<BankAccountDto[]>([]);
   entries       = input<AccountingEntryDto[]>([]);
   accounts      = input<AccountDto[]>([]);
-  productSKUs   = input<ProductSKUDto[]>([]);
   products      = input<ProductDto[]>([]);
   productAccounts = input<ProductAccountDto[]>([]);
+  units            = input<UnitOfMeasureDto[]>([]);
   costCenters      = input<CostCenterDto[]>([]);
   providers        = input<ContactDto[]>([]);
   lineAccountError  = input<string | null>(null);
@@ -109,7 +109,6 @@ export class PurchaseInvoicesWebComponent {
   createProductAccount      = output<CreateProductAccountRequest>();
   updateProductAccount      = output<UpdateProductAccountRequest & { id: number }>();
   deleteProductAccount      = output<number>();
-  createProductWithAccounts = output<CreateProductWithAccountsRequest>();
 
   // ── Row detail ────────────────────────────────────────────────────
   @ViewChild(DatatableRowDetailDirective) rowDetail!: DatatableRowDetailDirective;
@@ -201,16 +200,6 @@ export class PurchaseInvoicesWebComponent {
       const updated = [...ls];
       (updated[index] as unknown as Record<string, unknown>)[field] = value;
       const l = updated[index];
-      // Auto-rellenar descripción cuando se ingresa un código SKU conocido
-      if (field === 'skuCode' && typeof value === 'string') {
-        const code = value.trim();
-        const match = this.productSKUs().find(
-          s => s.codeProductSKU.toLowerCase() === code.toLowerCase()
-        );
-        if (match) {
-          updated[index].descriptionLine = match.nameProductSKU;
-        }
-      }
       // Recalcular total de línea
       if (field === 'quantity' || field === 'unitPrice' || field === 'taxPercent') {
         const base = l.quantity * l.unitPrice;
@@ -265,7 +254,8 @@ export class PurchaseInvoicesWebComponent {
     this.formDescription.set(inv.descriptionInvoice ?? '');
     this.formExchangeRate.set(inv.exchangeRateValue);
     this.formLines.set(inv.lines.map(l => ({
-      skuCode:         l.codeProductSKU ?? '',
+      idProduct:       l.idProduct ?? null,
+      idUnit:          l.idUnit ?? null,
       descriptionLine: l.descriptionLine,
       quantity:        l.quantity,
       unitPrice:       l.unitPrice,
@@ -337,8 +327,10 @@ export class PurchaseInvoicesWebComponent {
     }
 
     const lines: PurchaseInvoiceLineRequest[] = nonEmptyLines.map(l => ({
-      skuCode:         l.skuCode.trim() || null,
-      skuName:         l.skuCode.trim() ? l.descriptionLine : null,
+      idProduct:       l.idProduct,
+      idUnit:          l.idUnit,
+      lotNumber:       null,
+      expirationDate:  null,
       descriptionLine: l.descriptionLine,
       quantity:        l.quantity,
       unitPrice:       l.unitPrice,
@@ -536,20 +528,9 @@ export class PurchaseInvoicesWebComponent {
     this.accounts().filter(a => a.allowsMovements && a.isActive)
   );
 
-  /** Devuelve el idProduct que tiene el skuCode dado, o null si no se encuentra. */
-  getProductIdForSkuCode(skuCode: string): number | null {
-    if (!skuCode?.trim()) return null;
-    const code = skuCode.trim().toLowerCase();
-    // Lookup primario: productSKUs → products (relación por idProductSKU)
-    const sku = this.productSKUs().find(s => s.codeProductSKU.toLowerCase() === code);
-    if (sku) {
-      const prod = this.products().find(p => p.skus?.some(s => s.idProductSKU === sku.idProductSKU));
-      if (prod) return prod.idProduct;
-    }
-    // Fallback: buscar en productAccounts por codeProduct === skuCode
-    // (al crear un producto nuevo se usa el skuCode como codeProduct)
-    const fromAccount = this.productAccounts().find(pa => pa.codeProduct.toLowerCase() === code);
-    return fromAccount?.idProduct ?? null;
+  /** Devuelve el idProduct de la línea dada directamente. */
+  getProductId(line: FormLine): number | null {
+    return line.idProduct;
   }
 
   /** Abre/cierra el panel de distribución contable para la línea indicada. */
@@ -560,14 +541,12 @@ export class PurchaseInvoicesWebComponent {
       return;
     }
     const line      = this.formLines()[lineIndex];
-    const idProduct = this.getProductIdForSkuCode(line.skuCode);
-    // Si no hay producto asociado, abrir de todas formas para mostrar el aviso
+    const idProduct = line.idProduct;
     if (idProduct === null) {
       this.lineAccountRows.set([]);
       this.expandedLineAccountIndex.set(lineIndex);
       return;
     }
-    // Carga distribuciones existentes para ese producto
     const existing = this.productAccounts()
       .filter(pa => pa.idProduct === idProduct)
       .map(pa => ({
@@ -599,20 +578,9 @@ export class PurchaseInvoicesWebComponent {
   /** Guarda la distribución contable de la línea expandida. */
   saveLineAccounts(lineIndex: number): void {
     const line      = this.formLines()[lineIndex];
-    const idProduct = this.getProductIdForSkuCode(line.skuCode);
+    const idProduct = line.idProduct;
 
-    // ── Producto NUEVO: no existe en catálogo → emitir creación completa ───────
     if (idProduct === null) {
-      const rows = this.lineAccountRows();
-      this.createProductWithAccounts.emit({
-        skuCode: line.skuCode.trim(),
-        skuName: line.descriptionLine.trim() || line.skuCode.trim(),
-        accounts: rows.map(r => ({
-          idAccount:         r.idAccount,
-          idCostCenter:      r.idCostCenter,
-          percentageAccount: r.percentageAccount,
-        })),
-      });
       this.expandedLineAccountIndex.set(null);
       this.lineAccountRows.set([]);
       return;

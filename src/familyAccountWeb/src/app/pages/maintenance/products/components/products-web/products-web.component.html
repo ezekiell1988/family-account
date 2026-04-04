@@ -8,7 +8,7 @@
 
 <h1 class="page-header">
   Productos
-  <small>Catálogo de productos internos y sus SKUs asociados</small>
+  <small>Catálogo de productos con tipo y unidad base</small>
 </h1>
 
 <!-- Error global -->
@@ -16,8 +16,7 @@
   <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
     <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i>
     <span class="flex-grow-1">{{ errorMessage() }}</span>
-    <button type="button" class="btn-close ms-2" (click)="clearError.emit()"
-      [attr.aria-label]="'Cerrar alerta de error'"></button>
+    <button type="button" class="btn-close ms-2" aria-label="Cerrar alerta de error" (click)="clearError.emit()"></button>
   </div>
 }
 
@@ -28,7 +27,7 @@
       <i class="fa fa-cube me-2" aria-hidden="true"></i>{{ formTitle() }}
     </h5>
     <div class="row g-2">
-      <div class="col-sm-3">
+      <div class="col-sm-2">
         <label for="productCode" class="form-label fw-semibold">Código</label>
         <input id="productCode" type="text" class="form-control"
           placeholder="Ej: PROD-001"
@@ -37,7 +36,7 @@
           maxlength="50"
           [attr.aria-label]="'Código del producto'">
       </div>
-      <div class="col-sm-6">
+      <div class="col-sm-3">
         <label for="productName" class="form-label fw-semibold">Nombre</label>
         <input id="productName" type="text" class="form-control"
           placeholder="Nombre del producto"
@@ -46,7 +45,45 @@
           maxlength="200"
           [attr.aria-label]="'Nombre del producto'">
       </div>
-      <div class="col-sm-3 d-flex align-items-end gap-2">
+      <div class="col-sm-2">
+        <label for="productType" class="form-label fw-semibold">Tipo</label>
+        <select id="productType" class="form-select"
+          [ngModel]="formProductTypeId()"
+          (ngModelChange)="formProductTypeId.set($event)"
+          [attr.aria-label]="'Tipo de producto'">
+          <option [ngValue]="null">— Seleccionar —</option>
+          @for (pt of productTypes(); track pt.idProductType) {
+            <option [ngValue]="pt.idProductType">{{ pt.nameProductType }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-sm-2">
+        <label for="productUnit" class="form-label fw-semibold">Unidad base</label>
+        <select id="productUnit" class="form-select"
+          [ngModel]="formUnitId()"
+          (ngModelChange)="formUnitId.set($event)"
+          [attr.aria-label]="'Unidad base de inventario'">
+          <option [ngValue]="null">— Seleccionar —</option>
+          @for (u of units(); track u.idUnit) {
+            <option [ngValue]="u.idUnit">{{ u.codeUnit }} · {{ u.nameUnit }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-sm-2">
+        <label for="productParent" class="form-label fw-semibold">Producto padre</label>
+        <select id="productParent" class="form-select"
+          [ngModel]="formProductParentId()"
+          (ngModelChange)="formProductParentId.set($event)"
+          [attr.aria-label]="'Producto padre (opcional)'">
+          <option [ngValue]="null">— Sin padre —</option>
+          @for (p of products(); track p.idProduct) {
+            @if (p.idProductParent === null && p.idProduct !== editingId()) {
+              <option [ngValue]="p.idProduct">{{ p.codeProduct }} · {{ p.nameProduct }}</option>
+            }
+          }
+        </select>
+      </div>
+      <div class="col-sm-1 d-flex align-items-end gap-2">
         <button type="button" class="btn btn-success flex-grow-1"
           (click)="submitForm()"
           [disabled]="!isFormValid()">
@@ -86,7 +123,7 @@
 
   <!-- Barra de herramientas -->
   <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-    <div class="input-group input-group-sm" style="max-width:280px">
+    <div class="input-group input-group-sm w-300px">
       <span class="input-group-text"><i class="fa fa-search" aria-hidden="true"></i></span>
       <input type="text" class="form-control" placeholder="Buscar código o nombre…"
         [value]="filterSearch()"
@@ -116,56 +153,6 @@
         <div class="p-3 bg-light border-top">
           <div class="row g-3">
 
-            <!-- SKUs asociados -->
-            <div class="col-md-6">
-              <h6 class="fw-bold mb-2">
-                <i class="fa fa-barcode me-1" aria-hidden="true"></i>
-                SKUs Asociados ({{ row.skus.length }})
-              </h6>
-              @if (row.skus.length === 0) {
-                <p class="text-muted small mb-2">Sin SKUs asociados.</p>
-              } @else {
-                <ul class="list-group list-group-sm mb-2">
-                  @for (sku of row.skus; track sku.idProductSKU) {
-                    <li class="list-group-item d-flex justify-content-between align-items-center py-1 px-2">
-                      <span class="small">
-                        <span class="badge bg-secondary me-1">{{ sku.codeProductSKU }}</span>
-                        {{ sku.nameProductSKU }}
-                        @if (sku.brandProductSKU) { <em class="text-muted"> · {{ sku.brandProductSKU }}</em> }
-                      </span>
-                      <button type="button" class="btn btn-outline-danger btn-xs py-0 px-1"
-                        (click)="handleRemoveSku(row.idProduct, sku)"
-                        [attr.aria-label]="'Desasociar SKU ' + sku.codeProductSKU + ' del producto ' + row.codeProduct"
-                        [attr.title]="'Desasociar SKU ' + sku.codeProductSKU + ' del producto ' + row.codeProduct">
-                        <i class="fa fa-unlink" aria-hidden="true"></i>
-                        <span class="visually-hidden">Desasociar SKU {{ sku.codeProductSKU }}</span>
-                      </button>
-                    </li>
-                  }
-                </ul>
-              }
-              <!-- Agregar SKU -->
-              <div class="d-flex gap-2 align-items-center">
-                <select class="form-select form-select-sm"
-                  [ngModel]="selectedSkuId()"
-                  (ngModelChange)="selectedSkuId.set($event)"
-                  [attr.aria-label]="'Seleccionar SKU a asociar al producto ' + row.codeProduct"
-                  style="max-width:200px">
-                  <option [ngValue]="null">— Seleccionar SKU —</option>
-                  @for (sku of availableSkus(); track sku.idProductSKU) {
-                    <option [ngValue]="sku.idProductSKU">{{ sku.codeProductSKU }} · {{ sku.nameProductSKU }}</option>
-                  }
-                </select>
-                <button type="button" class="btn btn-primary btn-sm"
-                  (click)="handleAddSku(row.idProduct)"
-                  [disabled]="selectedSkuId() === null"
-                  [attr.aria-label]="'Asociar SKU seleccionado al producto ' + row.codeProduct"
-                  [attr.title]="'Asociar SKU seleccionado al producto ' + row.codeProduct">
-                  <i class="fa fa-link me-1" aria-hidden="true"></i>Asociar
-                </button>
-              </div>
-            </div>
-
             <!-- Categorías asociadas -->
             <div class="col-md-6">
               <h6 class="fw-bold mb-2">
@@ -176,13 +163,16 @@
                 Gestiona las categorías desde el panel de <strong>Categorías</strong>.
                 Las categorías se asocian desde ese catálogo hacia este producto.
               </p>
-              <!-- Agregar Categoría -->
               <div class="d-flex gap-2 align-items-center">
-                <select class="form-select form-select-sm"
+                <label [attr.for]="'cat-select-' + row.idProduct" class="visually-hidden">
+                  Seleccionar categoría a asociar al producto {{ row.codeProduct }}
+                </label>
+                <select [attr.id]="'cat-select-' + row.idProduct"
+                  class="form-select form-select-sm w-200px"
                   [ngModel]="selectedCategoryId()"
                   (ngModelChange)="selectedCategoryId.set($event)"
                   [attr.aria-label]="'Seleccionar categoría a asociar al producto ' + row.codeProduct"
-                  style="max-width:200px">
+                  title="Seleccionar categoría a asociar al producto">
                   <option [ngValue]="null">— Seleccionar —</option>
                   @for (cat of availableCategories(); track cat.idProductCategory) {
                     <option [ngValue]="cat.idProductCategory">{{ cat.nameProductCategory }}</option>
@@ -191,11 +181,24 @@
                 <button type="button" class="btn btn-primary btn-sm"
                   (click)="handleAddCategory(row.idProduct)"
                   [disabled]="selectedCategoryId() === null"
-                  [attr.aria-label]="'Asociar categoría seleccionada al producto ' + row.codeProduct"
-                  [attr.title]="'Asociar categoría seleccionada al producto ' + row.codeProduct">
+                  [attr.aria-label]="'Asociar categoría seleccionada al producto ' + row.codeProduct">
                   <i class="fa fa-tag me-1" aria-hidden="true"></i>Asociar
                 </button>
               </div>
+            </div>
+
+            <!-- Info adicional -->
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2">
+                <i class="fa fa-info-circle me-1" aria-hidden="true"></i>
+                Detalle
+              </h6>
+              <dl class="row small mb-0">
+                <dt class="col-sm-5">Costo promedio</dt>
+                <dd class="col-sm-7">{{ row.averageCost | number:'1.2-6' }}</dd>
+                <dt class="col-sm-5">Producto padre</dt>
+                <dd class="col-sm-7">{{ row.idProductParent ?? '—' }}</dd>
+              </dl>
             </div>
 
           </div>
@@ -229,16 +232,17 @@
 
     <!-- Nombre -->
     <ngx-datatable-column name="Nombre" prop="nameProduct" [sortable]="true">
+    </ngx-datatable-column>
+
+    <!-- Tipo -->
+    <ngx-datatable-column name="Tipo" prop="nameProductType" [width]="150" [sortable]="true">
       <ng-template let-value="value" ngx-datatable-cell-template>
-        {{ value }}
+        <span class="badge bg-info text-dark">{{ value }}</span>
       </ng-template>
     </ngx-datatable-column>
 
-    <!-- SKUs count -->
-    <ngx-datatable-column name="SKUs" prop="skus" [width]="80" [sortable]="false">
-      <ng-template let-value="value" ngx-datatable-cell-template>
-        <span class="badge bg-info text-dark">{{ value.length }}</span>
-      </ng-template>
+    <!-- Unidad base -->
+    <ngx-datatable-column name="Unidad" prop="codeUnit" [width]="90" [sortable]="true">
     </ngx-datatable-column>
 
     <!-- Acciones -->

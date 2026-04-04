@@ -1,18 +1,62 @@
-// ── Resumen de SKU dentro de Product ──────────────────────────────────────────
+// ── Tipo de producto ──────────────────────────────────────────────────────────
+export interface ProductTypeDto {
+  idProductType:          number;
+  nameProductType:        string;
+  descriptionProductType: string | null;
+}
+
+// ── Unidad de medida ──────────────────────────────────────────────────────────
+export interface UnitOfMeasureDto {
+  idUnit:   number;
+  codeUnit: string;
+  nameUnit: string;
+  typeUnit: string;
+}
+
+// ── SKU de Producto ───────────────────────────────────────────────────────────
 export interface ProductSKUSummaryDto {
-  idProductSKU:    number;
-  codeProductSKU:  string;
-  nameProductSKU:  string;
-  brandProductSKU: string | null;
-  netContent:      string | null;
+  idProductSKU:   number;
+  codeProductSKU: string;
+  nameProductSKU: string;
+}
+
+export interface ProductSKUDto {
+  idProductSKU:          number;
+  codeProductSKU:        string;
+  nameProductSKU:        string;
+  brandProductSKU:       string | null;
+  descriptionProductSKU: string | null;
+  netContent:            string | null;
+}
+
+export interface CreateProductSKURequest {
+  codeProductSKU:        string;
+  nameProductSKU:        string;
+  brandProductSKU:       string | null;
+  descriptionProductSKU: string | null;
+  netContent:            string | null;
+}
+
+export interface UpdateProductSKURequest {
+  id:                    number;
+  codeProductSKU:        string;
+  nameProductSKU:        string;
+  brandProductSKU:       string | null;
+  descriptionProductSKU: string | null;
+  netContent:            string | null;
 }
 
 // ── Producto ──────────────────────────────────────────────────────────────────
 export interface ProductDto {
-  idProduct:   number;
-  codeProduct: string;
-  nameProduct: string;
-  skus:        ProductSKUSummaryDto[];
+  idProduct:       number;
+  codeProduct:     string;
+  nameProduct:     string;
+  idProductType:   number;
+  nameProductType: string;
+  idUnit:          number;
+  codeUnit:        string;
+  idProductParent: number | null;
+  averageCost:     number;
 }
 
 // ── Centro de costo ───────────────────────────────────────────────────────────
@@ -51,41 +95,20 @@ export interface UpdateProductAccountRequest {
   percentageAccount: number;
 }
 
-export interface CreateProductSKURequest {
-  codeProductSKU:        string;
-  nameProductSKU:        string;
-  brandProductSKU?:      string | null;
-  descriptionProductSKU?: string | null;
-  netContent?:            string | null;
-}
-
 export interface CreateProductRequest {
-  codeProduct: string;
-  nameProduct: string;
-}
-
-/** Payload para crear un SKU+Producto+cuentas contables en una sola operación. */
-export interface CreateProductWithAccountsRequest {
-  skuCode:  string;
-  skuName:  string;
-  accounts: Array<{
-    idAccount:         number;
-    idCostCenter:      number | null;
-    percentageAccount: number;
-  }>;
+  codeProduct:     string;
+  nameProduct:     string;
+  idProductType:   number;
+  idUnit:          number;
+  idProductParent: number | null;
 }
 
 export interface UpdateProductRequest {
-  codeProduct: string;
-  nameProduct: string;
-}
-
-export interface UpdateProductSKURequest {
-  codeProductSKU:        string;
-  nameProductSKU:        string;
-  brandProductSKU:       string | null;
-  descriptionProductSKU: string | null;
-  netContent:            string | null;
+  codeProduct:     string;
+  nameProduct:     string;
+  idProductType:   number;
+  idUnit:          number;
+  idProductParent: number | null;
 }
 
 // ── Categoría de producto ─────────────────────────────────────────────────────

@@ -181,10 +181,10 @@ Cada `<input>` o `<select>` dentro de `<td>` debe tener su propio `aria-label`.
 | `<label>` sin `for` / control sin `id` | Emparejar siempre: `<label for="fCode">` + `<input id="fCode">` |
 | `placeholder` como único nombre accesible | `aria-label` **además** del placeholder |
 | Botón de icono sin texto accesible | Agregar `aria-label` o `title` al botón |
-| `<button class="btn-close">` sin `aria-label` | Siempre `aria-label="Cerrar"` — Bootstrap `btn-close` no tiene texto interno |
+| `<button class="btn-close">` sin `aria-label` ni texto real | Bootstrap `btn-close` renderiza su `×` solo vía CSS `::after` — axe reporta `name-role-value`. Agregar `[attr.aria-label]`, `[attr.title]` **y** `<span class="visually-hidden">Cerrar…</span>` como hijo del botón |
 | `<input>`/`<select>` dentro de `<td>` en `@for` sin `aria-label` | El `<th>` NO da nombre accesible al control — agregar `aria-label` en cada control de tabla |
 | `<input readonly>` sin `id` cuando tiene `<label for>` | Los readonly también necesitan `id` — axe no hace excepciones por `readonly` |
-| Estilos `style="…"` inline en el template | CSS class en el template + regla en el `.component.scss` |
+| Estilos `style="…"` inline en el template | CSS class en el template + regla en `src/styles.css` (los sub-componentes web **no tienen `.scss`**) — ej: `.mw-search-sm { max-width: 240px; }` |
 | `<a>` con solo icono sin `aria-label` | `[attr.aria-label]` dinámico o `aria-label` estático descriptivo |
 | `<a>` vacío (backdrop/stretched-link) | `aria-label="Cerrar menú lateral"` u otro texto descriptivo |
 | `<a>` con contenido de `ngTemplateOutlet` sin `aria-label` | Agregar `[attr.aria-label]="menu.title"` en el propio `<a>` |

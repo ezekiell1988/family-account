@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '@ngx-translate/core';
 import { addIcons } from 'ionicons';
 import {
   addOutline,
@@ -15,11 +16,10 @@ import {
   trashOutline,
   chevronDownOutline,
   chevronForwardOutline,
-  pricetagsOutline,
+  pricetagOutline,
   warningOutline,
   closeOutline,
   saveOutline,
-  refreshOutline,
 } from 'ionicons/icons';
 import {
   IonContent,
@@ -37,8 +37,6 @@ import {
   IonButton,
   IonIcon,
   IonInput,
-  IonSelect,
-  IonSelectOption,
   IonGrid,
   IonRow,
   IonCol,
@@ -47,21 +45,20 @@ import {
 } from '@ionic/angular/standalone';
 import { HeaderComponent, FooterComponent } from '../../../../../components';
 import {
-  ProductDto,
-  ProductTypeDto,
-  UnitOfMeasureDto,
-  CreateProductRequest,
-  UpdateProductRequest,
+  ProductCategoryDto,
+  CreateProductCategoryRequest,
+  UpdateProductCategoryRequest,
 } from '../../../../../shared/models';
 
 @Component({
-  selector: 'app-products-mobile',
+  selector: 'app-product-categories-mobile',
   host: { class: 'ion-page' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
   imports: [
     CommonModule,
     FormsModule,
+    TranslatePipe,
     HeaderComponent,
     FooterComponent,
     IonContent,
@@ -79,87 +76,71 @@ import {
     IonButton,
     IonIcon,
     IonInput,
-    IonSelect,
-    IonSelectOption,
     IonGrid,
     IonRow,
     IonCol,
     IonFab,
     IonFabButton,
   ],
-  templateUrl: './products-mobile.component.html',
+  templateUrl: './product-categories-mobile.component.html',
 })
-export class ProductsMobileComponent {
+export class ProductCategoriesMobileComponent {
   // ── Inputs ────────────────────────────────────────────────────────
-  products          = input<ProductDto[]>([]);
-  productTypes      = input<ProductTypeDto[]>([]);
-  units             = input<UnitOfMeasureDto[]>([]);
-  isLoading         = input(false);
-  errorMessage      = input('');
-  deletingProductId = input<number | null>(null);
+  categories   = input<ProductCategoryDto[]>([]);
+  isLoading    = input(false);
+  deletingId   = input<number | null>(null);
+  errorMessage = input('');
 
   // ── Outputs ───────────────────────────────────────────────────────
-  refresh       = output<void>();
-  createProduct = output<CreateProductRequest>();
-  editProduct   = output<UpdateProductRequest & { id: number }>();
-  removeProduct = output<number>();
-  clearError    = output<void>();
+  refresh    = output<void>();
+  create     = output<CreateProductCategoryRequest>();
+  editSave   = output<UpdateProductCategoryRequest & { id: number }>();
+  remove     = output<number>();
+  clearError = output<void>();
 
   // ── Estado de UI ──────────────────────────────────────────────────
-  expandedId         = signal<number | null>(null);
-  showForm           = signal(false);
-  editingId          = signal<number | null>(null);
-  formCode           = signal('');
-  formName           = signal('');
-  formProductTypeId  = signal<number | null>(null);
-  formUnitId         = signal<number | null>(null);
-  formProductParentId = signal<number | null>(null);
-  confirmDeleteId    = signal<number | null>(null);
+  expandedId      = signal<number | null>(null);
+  showForm        = signal(false);
+  editingId       = signal<number | null>(null);
+  formName        = signal('');
+  confirmDeleteId = signal<number | null>(null);
 
   isEditing   = computed(() => this.editingId() !== null);
-  isFormValid = computed(() =>
-    this.formCode().trim().length > 0 &&
-    this.formName().trim().length > 0 &&
-    this.formProductTypeId() !== null &&
-    this.formUnitId() !== null,
-  );
+  isFormValid = computed(() => this.formName().trim().length > 0);
 
   constructor() {
     addIcons({
-      addOutline, pencilOutline, trashOutline,
-      chevronDownOutline, chevronForwardOutline,
-      pricetagsOutline,
-      warningOutline, closeOutline, saveOutline, refreshOutline,
+      addOutline,
+      pencilOutline,
+      trashOutline,
+      chevronDownOutline,
+      chevronForwardOutline,
+      pricetagOutline,
+      warningOutline,
+      closeOutline,
+      saveOutline,
     });
   }
 
   toggleExpand(id: number): void {
-    this.expandedId.update(v => v === id ? null : id);
+    this.expandedId.update((v) => (v === id ? null : id));
   }
 
   async handleRefresh(event: CustomEvent): Promise<void> {
     this.refresh.emit();
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 800));
     (event.target as HTMLIonRefresherElement).complete();
   }
 
   openCreate(): void {
-    this.formCode.set('');
     this.formName.set('');
-    this.formProductTypeId.set(null);
-    this.formUnitId.set(null);
-    this.formProductParentId.set(null);
     this.editingId.set(null);
     this.showForm.set(true);
   }
 
-  openEdit(product: ProductDto): void {
-    this.formCode.set(product.codeProduct);
-    this.formName.set(product.nameProduct);
-    this.formProductTypeId.set(product.idProductType);
-    this.formUnitId.set(product.idUnit);
-    this.formProductParentId.set(product.idProductParent);
-    this.editingId.set(product.idProduct);
+  openEdit(category: ProductCategoryDto): void {
+    this.formName.set(category.nameProductCategory);
+    this.editingId.set(category.idProductCategory);
     this.expandedId.set(null);
     this.showForm.set(true);
   }
@@ -171,17 +152,13 @@ export class ProductsMobileComponent {
 
   submitForm(): void {
     const id  = this.editingId();
-    const req: CreateProductRequest = {
-      codeProduct:     this.formCode().trim(),
-      nameProduct:     this.formName().trim(),
-      idProductType:   this.formProductTypeId()!,
-      idUnit:          this.formUnitId()!,
-      idProductParent: this.formProductParentId(),
+    const req: CreateProductCategoryRequest = {
+      nameProductCategory: this.formName().trim(),
     };
     if (id !== null) {
-      this.editProduct.emit({ ...req, id });
+      this.editSave.emit({ ...req, id });
     } else {
-      this.createProduct.emit(req);
+      this.create.emit(req);
     }
     this.cancelForm();
   }
@@ -190,7 +167,6 @@ export class ProductsMobileComponent {
   cancelDelete(): void         { this.confirmDeleteId.set(null); }
   confirmDelete(): void {
     const id = this.confirmDeleteId();
-    if (id !== null) { this.removeProduct.emit(id); this.confirmDeleteId.set(null); }
+    if (id !== null) { this.remove.emit(id); this.confirmDeleteId.set(null); }
   }
 }
-

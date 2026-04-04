@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '@ngx-translate/core';
 import { NgxDatatableModule, ColumnMode } from '@swimlane/ngx-datatable';
 import { PanelComponent } from '../../../../../components';
 import {
@@ -17,13 +18,13 @@ import {
 } from '../../../../../shared/models';
 
 @Component({
-  selector: 'app-products-categories-web',
+  selector: 'app-product-categories-web',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, FormsModule, NgxDatatableModule, PanelComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, NgxDatatableModule, PanelComponent],
   templateUrl: './product-categories-web.component.html',
 })
-export class ProductsCategoriesWebComponent {
+export class ProductCategoriesWebComponent {
   // ── Inputs ────────────────────────────────────────────────────────
   categories   = input<ProductCategoryDto[]>([]);
   isLoading    = input(false);
@@ -55,7 +56,6 @@ export class ProductsCategoriesWebComponent {
   confirmDeleteId = signal<number | null>(null);
 
   isEditing   = computed(() => this.editingId() !== null);
-  formTitle   = computed(() => this.isEditing() ? 'Editar Categoría' : 'Nueva Categoría');
   isFormValid = computed(() => this.formName().trim().length > 0);
 
   ColumnMode = ColumnMode;

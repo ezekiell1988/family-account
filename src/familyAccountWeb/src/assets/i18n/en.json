@@ -684,5 +684,22 @@
       "DESCRIPTION": "Description",
       "ACCOUNTING_ENTRY": "Accounting entry"
     }
+  },
+  "PRODUCT_CATEGORIES": {
+    "TITLE": "Product Categories",
+    "PAGE_SUBTITLE": "Catalog of categories to classify products",
+    "NEW_ITEM": "New Category",
+    "EMPTY": "No categories registered",
+    "CONFIRM_DELETE": "Delete this category? Products associated with it will be left without one.",
+    "SEARCH_PLACEHOLDER": "Search category…",
+    "COL_NAME": "Name",
+    "COL_ACTIONS": "Actions",
+    "FORM": {
+      "NEW_TITLE": "New Category",
+      "EDIT_TITLE": "Edit Category",
+      "NAME_LABEL": "Name",
+      "NAME_PLACEHOLDER": "e.g.: Dairy, Cleaning, Beverages…",
+      "CREATE_BTN": "Create"
+    }
   }
 }

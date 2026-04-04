@@ -1,8 +1,8 @@
 @if (isMobile()) {
   <app-products-mobile
     [products]="products()"
-    [skus]="skus()"
-    [categories]="categories()"
+    [productTypes]="productTypes()"
+    [units]="units()"
     [isLoading]="productsLoading()"
     [errorMessage]="productsError() ?? ''"
     [deletingProductId]="deletingProductId()"
@@ -16,7 +16,8 @@
   <!-- Panel principal: Productos -->
   <app-products-web
     [products]="products()"
-    [skus]="skus()"
+    [productTypes]="productTypes()"
+    [units]="units()"
     [categories]="categories()"
     [isLoading]="productsLoading()"
     [errorMessage]="productsError() ?? ''"
@@ -25,36 +26,8 @@
     (create)="createProduct($event)"
     (editSave)="updateProduct($event)"
     (remove)="deleteProduct($event)"
-    (addSku)="addSkuToProduct($event)"
-    (removeSku)="removeSkuFromProduct($event)"
     (addCategory)="addCategoryToProduct($event)"
     (removeCategory)="removeCategoryFromProduct($event)"
     (clearError)="clearProductError()"
-  />
-
-  <!-- Panel auxiliar: Catálogo de SKUs -->
-  <app-products-skus-web
-    [skus]="skus()"
-    [isLoading]="skusLoading()"
-    [errorMessage]="skusError() ?? ''"
-    [deletingId]="deletingSkuId()"
-    (refresh)="reloadSkus()"
-    (create)="createSku($event)"
-    (editSave)="updateSku($event)"
-    (remove)="deleteSku($event)"
-    (clearError)="clearSkuError()"
-  />
-
-  <!-- Panel auxiliar: Catálogo de Categorías -->
-  <app-products-categories-web
-    [categories]="categories()"
-    [isLoading]="categoriesLoading()"
-    [errorMessage]="categoriesError() ?? ''"
-    [deletingId]="deletingCategoryId()"
-    (refresh)="reloadCategories()"
-    (create)="createCategory($event)"
-    (editSave)="updateCategory($event)"
-    (remove)="deleteCategory($event)"
-    (clearError)="clearCategoryError()"
   />
 }

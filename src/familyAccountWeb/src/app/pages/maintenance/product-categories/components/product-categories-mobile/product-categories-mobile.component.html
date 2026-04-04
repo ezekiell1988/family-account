@@ -1,5 +1,5 @@
 <header
-  pageTitle="Productos"
+  [pageTitle]="'PRODUCT_CATEGORIES.TITLE' | translate"
   color="theme"
   [translucent]="true">
 </header>
@@ -37,68 +37,36 @@
     </div>
   }
 
-  <!-- Formulario crear/editar producto -->
+  <!-- Formulario crear/editar -->
   @if (showForm()) {
     <ion-card>
       <ion-card-header>
         <ion-card-title>
           <ion-icon [name]="isEditing() ? 'pencil-outline' : 'add-outline'" aria-hidden="true"></ion-icon>
-          {{ isEditing() ? 'Editar Producto' : 'Nuevo Producto' }}
+          {{ isEditing() ? ('PRODUCT_CATEGORIES.FORM.EDIT_TITLE' | translate) : ('PRODUCT_CATEGORIES.FORM.NEW_TITLE' | translate) }}
         </ion-card-title>
       </ion-card-header>
       <ion-card-content>
         <ion-input
           fill="outline"
           labelPlacement="floating"
-          label="Código"
-          [value]="formCode()"
-          (ionInput)="formCode.set($any($event.target).value)"
-          maxlength="50"
-          class="ion-margin-bottom">
-        </ion-input>
-        <ion-input
-          fill="outline"
-          labelPlacement="floating"
-          label="Nombre"
+          [label]="'PRODUCT_CATEGORIES.FORM.NAME_LABEL' | translate"
           [value]="formName()"
           (ionInput)="formName.set($any($event.target).value)"
-          maxlength="200"
-          class="ion-margin-bottom">
+          maxlength="100">
         </ion-input>
-        <ion-select
-          fill="outline"
-          labelPlacement="floating"
-          label="Tipo de producto"
-          [value]="formProductTypeId()"
-          (ionChange)="formProductTypeId.set($event.detail.value)"
-          class="ion-margin-bottom">
-          @for (pt of productTypes(); track pt.idProductType) {
-            <ion-select-option [value]="pt.idProductType">{{ pt.nameProductType }}</ion-select-option>
-          }
-        </ion-select>
-        <ion-select
-          fill="outline"
-          labelPlacement="floating"
-          label="Unidad base"
-          [value]="formUnitId()"
-          (ionChange)="formUnitId.set($event.detail.value)"
-          class="ion-margin-bottom">
-          @for (u of units(); track u.idUnit) {
-            <ion-select-option [value]="u.idUnit">{{ u.codeUnit }} · {{ u.nameUnit }}</ion-select-option>
-          }
-        </ion-select>
         <ion-grid class="ion-margin-top">
           <ion-row>
             <ion-col>
               <ion-button expand="block" (click)="submitForm()" [disabled]="!isFormValid()">
                 <ion-icon slot="start" name="save-outline" aria-hidden="true"></ion-icon>
-                {{ isEditing() ? 'Guardar' : 'Crear' }}
+                {{ isEditing() ? ('COMMON.SAVE' | translate) : ('PRODUCT_CATEGORIES.FORM.CREATE_BTN' | translate) }}
               </ion-button>
             </ion-col>
             <ion-col>
               <ion-button expand="block" fill="outline" color="medium" (click)="cancelForm()">
                 <ion-icon slot="start" name="close-outline" aria-hidden="true"></ion-icon>
-                Cancelar
+                {{ 'COMMON.CANCEL' | translate }}
               </ion-button>
             </ion-col>
           </ion-row>
@@ -114,7 +82,7 @@
         <ion-text>
           <p>
             <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
-            ¿Eliminar este producto? Esta acción no se puede deshacer.
+            {{ 'PRODUCT_CATEGORIES.CONFIRM_DELETE' | translate }}
           </p>
         </ion-text>
         <ion-grid>
@@ -122,12 +90,12 @@
             <ion-col>
               <ion-button expand="block" color="danger" (click)="confirmDelete()">
                 <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
-                Eliminar
+                {{ 'COMMON.DELETE' | translate }}
               </ion-button>
             </ion-col>
             <ion-col>
               <ion-button expand="block" fill="outline" color="medium" (click)="cancelDelete()">
-                Cancelar
+                {{ 'COMMON.CANCEL' | translate }}
               </ion-button>
             </ion-col>
           </ion-row>
@@ -137,64 +105,52 @@
   }
 
   <!-- Lista vacía -->
-  @if (products().length === 0 && !isLoading()) {
+  @if (categories().length === 0 && !isLoading()) {
     <div class="ion-text-center ion-padding">
-      <ion-icon name="pricetags-outline" size="large" aria-hidden="true"></ion-icon>
+      <ion-icon name="pricetag-outline" size="large" aria-hidden="true"></ion-icon>
       <ion-text color="medium">
-        <p>No hay productos registrados.</p>
+        <p>{{ 'PRODUCT_CATEGORIES.EMPTY' | translate }}</p>
       </ion-text>
     </div>
-  }
-
-  <!-- Lista de productos -->
-  @if (products().length > 0) {
+  } @else {
     <ion-list>
-      @for (product of products(); track product.idProduct) {
+      @for (category of categories(); track category.idProductCategory) {
         <ion-item [button]="true" [detail]="false"
-          (click)="toggleExpand(product.idProduct)">
+          (click)="toggleExpand(category.idProductCategory)">
           <ion-icon
             slot="start"
-            [name]="expandedId() === product.idProduct ? 'chevron-down-outline' : 'chevron-forward-outline'"
+            [name]="expandedId() === category.idProductCategory ? 'chevron-down-outline' : 'chevron-forward-outline'"
             color="medium"
             aria-hidden="true">
           </ion-icon>
           <ion-label>
-            <h2>{{ product.nameProduct }}</h2>
-            <p>
-              <span>{{ product.codeProduct }}</span>
-              &nbsp;·&nbsp;
-              <span>{{ product.nameProductType }}</span>
-              &nbsp;·&nbsp;
-              <span>{{ product.codeUnit }}</span>
-            </p>
+            <h2>{{ category.nameProductCategory }}</h2>
           </ion-label>
         </ion-item>
 
-        <!-- Detalle expandido -->
-        @if (expandedId() === product.idProduct) {
+        @if (expandedId() === category.idProductCategory) {
           <div class="ion-padding-horizontal ion-padding-bottom">
-            <!-- Acciones -->
-            <ion-grid class="ion-margin-top">
+            <ion-grid>
               <ion-row>
                 <ion-col>
                   <ion-button size="small" color="primary"
-                    (click)="openEdit(product)"
-                    [disabled]="showForm() || deletingProductId() === product.idProduct"
-                    [attr.aria-label]="'Editar producto ' + product.codeProduct">
+                    (click)="openEdit(category)"
+                    [disabled]="showForm() || deletingId() === category.idProductCategory"
+                    [attr.aria-label]="('COMMON.EDIT' | translate) + ' ' + category.nameProductCategory">
                     <ion-icon slot="start" name="pencil-outline" aria-hidden="true"></ion-icon>
-                    Editar
+                    {{ 'COMMON.EDIT' | translate }}
                   </ion-button>
                 </ion-col>
                 <ion-col>
                   <ion-button size="small" color="danger"
-                    (click)="askDelete(product.idProduct)"
-                    [disabled]="showForm() || deletingProductId() === product.idProduct"
-                    [attr.aria-label]="'Eliminar producto ' + product.codeProduct">
-                    @if (deletingProductId() === product.idProduct) {
+                    (click)="askDelete(category.idProductCategory)"
+                    [disabled]="showForm() || deletingId() === category.idProductCategory"
+                    [attr.aria-label]="('COMMON.DELETE' | translate) + ' ' + category.nameProductCategory">
+                    @if (deletingId() === category.idProductCategory) {
                       <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
                     } @else {
                       <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
-                      Eliminar
+                      {{ 'COMMON.DELETE' | translate }}
                     }
                   </ion-button>
                 </ion-col>
@@ -206,12 +162,13 @@
     </ion-list>
   }
 
-  <!-- FAB nuevo producto -->
+  <!-- FAB: nueva categoría -->
   <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-    <ion-fab-button color="success"
+    <ion-fab-button
+      color="success"
       (click)="openCreate()"
       [disabled]="showForm()"
-      [attr.aria-label]="'Nuevo producto'">
+      [attr.aria-label]="'PRODUCT_CATEGORIES.NEW_ITEM' | translate">
       <ion-icon name="add-outline" aria-hidden="true"></ion-icon>
     </ion-fab-button>
   </ion-fab>

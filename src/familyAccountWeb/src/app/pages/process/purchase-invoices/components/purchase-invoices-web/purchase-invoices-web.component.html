@@ -530,7 +530,7 @@
             <table class="table table-sm table-bordered">
               <thead class="table-light">
                 <tr>
-                  <th style="width:180px">SKU / Producto</th>
+                  <th style="width:200px">Producto</th>
                   <th>Descripción</th>
                   <th style="width:90px">Cantidad</th>
                   <th style="width:110px">Precio Unit.</th>
@@ -545,18 +545,15 @@
                 @for (line of formLines(); track $index) {
                   <tr>
                     <td>
-                      <input type="text"
-                             class="form-control form-control-sm"
-                             aria-label="Código SKU"
-                             placeholder="Ej. 7501055300427"
-                             [attr.list]="'sku-list-' + $index"
-                             [ngModel]="line.skuCode"
-                             (change)="updateLine($index, 'skuCode', $any($event.target).value)" />
-                      <datalist [id]="'sku-list-' + $index">
-                        @for (sku of productSKUs(); track sku.idProductSKU) {
-                          <option [value]="sku.codeProductSKU">{{ sku.nameProductSKU }}</option>
+                      <select class="form-select form-select-sm"
+                              aria-label="Producto"
+                              [ngModel]="line.idProduct"
+                              (ngModelChange)="updateLine($index, 'idProduct', $event ? +$event : null)">
+                        <option [ngValue]="null">— Sin producto —</option>
+                        @for (p of products(); track p.idProduct) {
+                          <option [ngValue]="p.idProduct">{{ p.codeProduct }} – {{ p.nameProduct }}</option>
                         }
-                      </datalist>
+                      </select>
                     </td>
                     <td>
                       <input type="text" class="form-control form-control-sm"
@@ -612,30 +609,16 @@
                             <strong class="small">
                               <i class="fa fa-book me-1 text-primary"></i>
                               Distribución contable
-                              @if (line.skuCode) { <span>— {{ line.skuCode }}</span> }
-                              @if (getProductIdForSkuCode(line.skuCode) === null) {
-                                <span class="badge bg-warning text-dark ms-1">Producto nuevo</span>
-                              }
                             </strong>
                             <button type="button" class="btn btn-xs btn-outline-secondary" (click)="addLineAccount()">
                               <i class="fa fa-plus me-1"></i> Agregar cuenta
                             </button>
                           </div>
 
-                          <!-- Aviso cuando el SKU no tiene código -->
-                          @if (!line.skuCode.trim()) {
+                          @if (line.idProduct === null) {
                             <div class="alert alert-warning py-2 small mb-2">
                               <i class="fa fa-exclamation-triangle me-1"></i>
-                              Ingrese un código SKU en la línea para poder guardar la distribución contable.
-                            </div>
-                          }
-
-                          <!-- Aviso cuando el SKU es nuevo (no existe en catálogo) -->
-                          @if (line.skuCode.trim() && getProductIdForSkuCode(line.skuCode) === null) {
-                            <div class="alert alert-info py-2 small mb-2">
-                              <i class="fa fa-info-circle me-1"></i>
-                              El código <strong>{{ line.skuCode }}</strong> no existe en el catálogo.
-                              Al guardar se creará automáticamente el producto y sus cuentas contables.
+                              Seleccione un producto en la línea para configurar la distribución contable.
                             </div>
                           }
 
@@ -727,11 +710,10 @@
                           }
                           <div class="d-flex gap-2">
                             <button type="button" class="btn btn-sm btn-primary"
-                                    [disabled]="!lineAccountValid() || !line.skuCode.trim()"
+                                    [disabled]="!lineAccountValid() || line.idProduct === null"
                                     (click)="saveLineAccounts($index)">
                               <i class="fa fa-save me-1"></i>
-                              @if (getProductIdForSkuCode(line.skuCode) === null) { Crear producto y distribución }
-                              @else { Guardar distribución }
+                              Guardar distribución
                             </button>
                             <button type="button" class="btn btn-sm btn-default"
                                     (click)="toggleLineAccounts($index)">

@@ -10,9 +10,9 @@
     [bankAccounts]="bankAccounts()"
     [entries]="entries()"
     [accounts]="accounts()"
-    [productSKUs]="productSKUs()"
     [products]="products()"
     [productAccounts]="productAccounts()"
+    [units]="units()"
     [costCenters]="costCenters()"
     (refresh)="loadAll()"
     (create)="onCreate($event)"
@@ -25,8 +25,7 @@
     [lineAccountError]="lineAccError()"
     (createProductAccount)="onCreateProductAccount($event)"
     (updateProductAccount)="onUpdateProductAccount($event)"
-    (deleteProductAccount)="onDeleteProductAccount($event)"
-    (createProductWithAccounts)="onCreateProductWithAccounts($event)">
+    (deleteProductAccount)="onDeleteProductAccount($event)">
   </app-purchase-invoices-mobile>
 } @else {
   <app-purchase-invoices-web
@@ -41,9 +40,9 @@
     [bankAccounts]="bankAccounts()"
     [entries]="entries()"
     [accounts]="accounts()"
-    [productSKUs]="productSKUs()"
     [products]="products()"
     [productAccounts]="productAccounts()"
+    [units]="units()"
     [costCenters]="costCenters()"
     [providers]="providers()"
     (refresh)="loadAll()"
@@ -57,7 +56,6 @@
     [lineAccountError]="lineAccError()"
     (createProductAccount)="onCreateProductAccount($event)"
     (updateProductAccount)="onUpdateProductAccount($event)"
-    (deleteProductAccount)="onDeleteProductAccount($event)"
-    (createProductWithAccounts)="onCreateProductWithAccounts($event)">
+    (deleteProductAccount)="onDeleteProductAccount($event)">
   </app-purchase-invoices-web>
 }

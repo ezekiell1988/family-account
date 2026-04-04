@@ -15,9 +15,9 @@ import {
   BankAccountService,
   AccountingEntryService,
   AccountService,
-  ProductSKUService,
   ProductService,
   ProductAccountService,
+  UnitOfMeasureService,
   CostCenterService,
   ContactService,
   LoggerService,
@@ -29,7 +29,6 @@ import {
   UpdateAccountingEntryRequest,
   CreateProductAccountRequest,
   UpdateProductAccountRequest,
-  CreateProductWithAccountsRequest,
 } from '../../../shared/models';
 import { PurchaseInvoicesWebComponent, PurchaseInvoicesMobileComponent } from './components';
 
@@ -46,12 +45,12 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
   private readonly currSvc    = inject(CurrencyService);
   private readonly bankSvc    = inject(BankAccountService);
   private readonly entrySvc   = inject(AccountingEntryService);
-  private readonly accountSvc = inject(AccountService);
-  private readonly skuSvc         = inject(ProductSKUService);
-  private readonly productSvc     = inject(ProductService);
-  private readonly productAccSvc  = inject(ProductAccountService);
-  private readonly costCenterSvc  = inject(CostCenterService);
-  private readonly contactSvc     = inject(ContactService);
+  private readonly accountSvc    = inject(AccountService);
+  private readonly productSvc    = inject(ProductService);
+  private readonly productAccSvc = inject(ProductAccountService);
+  private readonly unitSvc       = inject(UnitOfMeasureService);
+  private readonly costCenterSvc = inject(CostCenterService);
+  private readonly contactSvc    = inject(ContactService);
   private readonly logger         = inject(LoggerService).getLogger('PurchaseInvoicesPage');
 
   // ── Estado del servicio ──────────────────────────────────────────────────
@@ -66,8 +65,8 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
   bankAccounts  = this.bankSvc.items;
   entries       = this.entrySvc.entries;
   accounts      = this.accountSvc.accounts;
-  productSKUs   = this.skuSvc.items;
   products      = this.productSvc.items;
+  units         = this.unitSvc.items;
   productAccounts = this.productAccSvc.items;
   costCenters   = this.costCenterSvc.items;
   providers     = this.contactSvc.providers;
@@ -98,9 +97,9 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
       this.bankSvc.loadList(),
       this.entrySvc.loadList(),
       this.accountSvc.loadList(),
-      this.skuSvc.loadList(),
       this.productSvc.loadList(),
       this.productAccSvc.loadList(),
+      this.unitSvc.loadList(),
       this.costCenterSvc.loadList(),
       this.contactSvc.loadProviders(),
     ]).pipe(
@@ -240,56 +239,5 @@ export class PurchaseInvoicesPage extends ResponsiveComponent implements OnInit,
       });
   }
 
-  /**
-   * Crea un producto nuevo con sus cuentas contables en cadena:
-   * 1. Crear el SKU
-   * 2. Crear el Product (usando el mismo código y nombre del SKU)
-   * 3. Asociar el SKU al Product
-   * 4. Crear cada distribución contable
-   */
-  onCreateProductWithAccounts(req: CreateProductWithAccountsRequest): void {
-    this.logger.info(`🔄 Creando producto nuevo para SKU: ${req.skuCode}`);
-
-    // Paso 1: crear SKU
-    this.skuSvc.create({ codeProductSKU: req.skuCode, nameProductSKU: req.skuName })
-      .pipe(
-        // Paso 2: crear Product con el mismo código/nombre
-        switchMap(sku =>
-          this.productSvc.create({ codeProduct: req.skuCode, nameProduct: req.skuName })
-            .pipe(
-              // Paso 3: asociar SKU al Product
-              switchMap(product =>
-                this.productSvc.addSKU(product.idProduct, sku.idProductSKU).pipe(
-                  // Paso 4: crear distribuciones contables
-                  switchMap(() => {
-                    const creates$ = req.accounts.map(a =>
-                      this.productAccSvc.create({
-                        idProduct:         product.idProduct,
-                        idAccount:         a.idAccount,
-                        idCostCenter:      a.idCostCenter,
-                        percentageAccount: a.percentageAccount,
-                      })
-                    );
-                    return forkJoin(creates$);
-                  })
-                )
-              )
-            )
-        ),
-        finalize(() => {})
-      )
-      .subscribe({
-        next: () => {
-          this.lineAccError.set(null);
-          this.logger.success(`✅ Producto ${req.skuCode} creado con distribución contable`);
-          // Recargar catálogos para que el nuevo SKU/producto aparezca en los selects
-          forkJoin([
-            this.skuSvc.loadList(),
-            this.productSvc.loadList(),
-            this.productAccSvc.loadList(),
-          ]).subscribe();
-        },
-        error: (e) => { const msg = this.extractApiError(e); this.lineAccError.set(msg); this.logger.error(`❌ Error al crear producto ${req.skuCode}:`, e); },
-      });
-  }
 }
+

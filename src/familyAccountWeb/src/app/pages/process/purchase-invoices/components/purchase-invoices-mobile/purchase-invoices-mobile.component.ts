@@ -62,13 +62,12 @@ import {
   AccountingEntryLineRequest,
   UpdateAccountingEntryRequest,
   AccountDto,
-  ProductSKUDto,
   ProductDto,
   ProductAccountDto,
   CostCenterDto,
   CreateProductAccountRequest,
   UpdateProductAccountRequest,
-  CreateProductWithAccountsRequest,
+  UnitOfMeasureDto,
 } from '../../../../../shared/models';
 import { HeaderComponent, FooterComponent } from '../../../../../components';
 
@@ -80,7 +79,8 @@ interface FormLineAccount {
 }
 
 interface FormLine {
-  skuCode:         string;
+  idProduct:       number | null;
+  idUnit:          number | null;
   descriptionLine: string;
   quantity:        number;
   unitPrice:       number;
@@ -89,7 +89,7 @@ interface FormLine {
 }
 
 function emptyLine(): FormLine {
-  return { skuCode: '', descriptionLine: '', quantity: 1, unitPrice: 0, taxPercent: 13, totalLineAmount: 0 };
+  return { idProduct: null, idUnit: null, descriptionLine: '', quantity: 1, unitPrice: 0, taxPercent: 13, totalLineAmount: 0 };
 }
 
 interface FormEntryLine {
@@ -148,9 +148,9 @@ export class PurchaseInvoicesMobileComponent {
 
   entries       = input<AccountingEntryDto[]>([]);
   accounts      = input<AccountDto[]>([]);
-  productSKUs   = input<ProductSKUDto[]>([]);
   products      = input<ProductDto[]>([]);
   productAccounts = input<ProductAccountDto[]>([]);
+  units            = input<UnitOfMeasureDto[]>([]);
   costCenters      = input<CostCenterDto[]>([]);
   lineAccountError  = input<string | null>(null);
 
@@ -166,7 +166,6 @@ export class PurchaseInvoicesMobileComponent {
   createProductAccount       = output<CreateProductAccountRequest>();
   updateProductAccount       = output<UpdateProductAccountRequest & { id: number }>();
   deleteProductAccount       = output<number>();
-  createProductWithAccounts  = output<CreateProductWithAccountsRequest>();
 
   // ── Estado expandir ───────────────────────────────────────────────
   expandedId = signal<number | null>(null);
@@ -196,16 +195,8 @@ export class PurchaseInvoicesMobileComponent {
     this.accounts().filter(a => a.allowsMovements && a.isActive)
   );
 
-  getProductIdForSkuCode(skuCode: string): number | null {
-    if (!skuCode?.trim()) return null;
-    const code = skuCode.trim().toLowerCase();
-    const sku  = this.productSKUs().find(s => s.codeProductSKU.toLowerCase() === code);
-    if (sku) {
-      const prod = this.products().find(p => p.skus?.some(s => s.idProductSKU === sku.idProductSKU));
-      if (prod) return prod.idProduct;
-    }
-    const fromAccount = this.productAccounts().find(pa => pa.codeProduct.toLowerCase() === code);
-    return fromAccount?.idProduct ?? null;
+  getProductIdForSkuCode(idProduct: number | null): number | null {
+    return idProduct;
   }
 
   toggleLineAccounts(lineIndex: number): void {
@@ -215,7 +206,7 @@ export class PurchaseInvoicesMobileComponent {
       return;
     }
     const line      = this.formLines()[lineIndex];
-    const idProduct = this.getProductIdForSkuCode(line.skuCode);
+    const idProduct = line.idProduct;
     if (idProduct === null) {
       this.lineAccountRows.set([]);
       this.expandedLineAccountIndex.set(lineIndex);
@@ -251,18 +242,9 @@ export class PurchaseInvoicesMobileComponent {
 
   saveLineAccounts(lineIndex: number): void {
     const line      = this.formLines()[lineIndex];
-    const idProduct = this.getProductIdForSkuCode(line.skuCode);
+    const idProduct = line.idProduct;
 
     if (idProduct === null) {
-      this.createProductWithAccounts.emit({
-        skuCode: line.skuCode.trim(),
-        skuName: line.descriptionLine.trim() || line.skuCode.trim(),
-        accounts: this.lineAccountRows().map(r => ({
-          idAccount:         r.idAccount,
-          idCostCenter:      r.idCostCenter,
-          percentageAccount: r.percentageAccount,
-        })),
-      });
       this.expandedLineAccountIndex.set(null);
       this.lineAccountRows.set([]);
       return;
@@ -351,16 +333,6 @@ export class PurchaseInvoicesMobileComponent {
       const updated = [...ls];
       (updated[index] as unknown as Record<string, unknown>)[field] = value;
       const l = updated[index];
-      // Auto-rellenar descripción cuando se ingresa un código SKU conocido
-      if (field === 'skuCode' && typeof value === 'string') {
-        const code = value.trim();
-        const match = this.productSKUs().find(
-          s => s.codeProductSKU.toLowerCase() === code.toLowerCase()
-        );
-        if (match) {
-          updated[index].descriptionLine = match.nameProductSKU;
-        }
-      }
       if (field === 'quantity' || field === 'unitPrice' || field === 'taxPercent') {
         const base = l.quantity * l.unitPrice;
         l.totalLineAmount = Math.round(base * (1 + l.taxPercent / 100) * 100) / 100;
@@ -412,7 +384,8 @@ export class PurchaseInvoicesMobileComponent {
     this.formDescription.set(inv.descriptionInvoice ?? '');
     this.formExchangeRate.set(inv.exchangeRateValue);
     this.formLines.set(inv.lines.map(l => ({
-      skuCode:         l.codeProductSKU ?? '',
+      idProduct:       l.idProduct ?? null,
+      idUnit:          l.idUnit ?? null,
       descriptionLine: l.descriptionLine,
       quantity:        l.quantity,
       unitPrice:       l.unitPrice,
@@ -429,8 +402,10 @@ export class PurchaseInvoicesMobileComponent {
 
   saveForm(): void {
     const lines: PurchaseInvoiceLineRequest[] = this.formLines().map(l => ({
-      skuCode:         l.skuCode.trim() || null,
-      skuName:         l.skuCode.trim() ? l.descriptionLine : null,
+      idProduct:       l.idProduct,
+      idUnit:          l.idUnit,
+      lotNumber:       null,
+      expirationDate:  null,
       descriptionLine: l.descriptionLine,
       quantity:        l.quantity,
       unitPrice:       l.unitPrice,

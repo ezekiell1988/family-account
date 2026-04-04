@@ -1,11 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { tap, catchError, finalize } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { LoggerService } from './logger.service';
-import { ProductDto } from '../shared/models';
-import { CreateProductRequest, UpdateProductRequest } from '../shared/models';
+import { ProductDto, CreateProductRequest, UpdateProductRequest } from '../shared/models';
 
 @Injectable({ providedIn: 'root' })
 export class ProductService {
@@ -34,6 +33,7 @@ export class ProductService {
         this.logger.error('❌ Error al cargar Productos:', err);
         return throwError(() => err);
       }),
+      finalize(() => this.isLoading.set(false)),
     );
   }
 
@@ -97,26 +97,5 @@ export class ProductService {
     );
   }
 
-  // ── ASOCIAR SKU ───────────────────────────────────────────────────
-  addSKU(idProduct: number, idProductSKU: number): Observable<void> {
-    return this.http.post<void>(`${this.base}/${idProduct}/skus/${idProductSKU}`, {}).pipe(
-      tap(() => this.logger.info(`✅ SKU ${idProductSKU} asociado al producto ${idProduct}`)),
-      catchError(err => {
-        this.logger.error('❌ Error al asociar SKU al producto:', err);
-        return throwError(() => err);
-      }),
-    );
-  }
-
-  // ── DESASOCIAR SKU ────────────────────────────────────────────────
-  removeSKU(idProduct: number, idProductSKU: number): Observable<void> {
-    return this.http.delete<void>(`${this.base}/${idProduct}/skus/${idProductSKU}`).pipe(
-      tap(() => this.logger.info(`✅ SKU ${idProductSKU} desasociado del producto ${idProduct}`)),
-      catchError(err => {
-        this.logger.error('❌ Error al desasociar SKU del producto:', err);
-        return throwError(() => err);
-      }),
-    );
-  }
 }
 

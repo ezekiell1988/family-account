@@ -63,3 +63,6 @@ body.ionic-mode {
     left: 0;
   }
 }
+
+/* Utilidades de layout — desktop */
+.mw-search-sm { max-width: 240px; }

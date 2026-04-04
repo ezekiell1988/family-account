@@ -1,0 +1,25 @@
+@if (isMobile()) {
+  <app-product-categories-mobile
+    [categories]="categories()"
+    [isLoading]="categoriesLoading()"
+    [errorMessage]="categoriesError() ?? ''"
+    [deletingId]="deletingCategoryId()"
+    (refresh)="load()"
+    (create)="createCategory($event)"
+    (editSave)="updateCategory($event)"
+    (remove)="deleteCategory($event)"
+    (clearError)="clearCategoryError()"
+  />
+} @else {
+  <app-product-categories-web
+    [categories]="categories()"
+    [isLoading]="categoriesLoading()"
+    [errorMessage]="categoriesError() ?? ''"
+    [deletingId]="deletingCategoryId()"
+    (refresh)="load()"
+    (create)="createCategory($event)"
+    (editSave)="updateCategory($event)"
+    (remove)="deleteCategory($event)"
+    (clearError)="clearCategoryError()"
+  />
+}

@@ -132,13 +132,16 @@
                 <ion-row>
                   <ion-col size="12">
                     <ion-item>
-                      <ion-label position="stacked">Código SKU</ion-label>
-                      <ion-input [value]="line.skuCode"
-                                 (ionChange)="updateLineField($index, 'skuCode', $event.detail.value!)"
-                                 placeholder="Ej. 7501055300427"
-                                 inputmode="text"
-                                 autocomplete="off">
-                      </ion-input>
+                      <ion-label position="stacked">Producto</ion-label>
+                      <ion-select [value]="line.idProduct"
+                                  (ionChange)="updateLineField($index, 'idProduct', $event.detail.value !== null ? +$event.detail.value : null)"
+                                  interface="action-sheet"
+                                  placeholder="Sin producto">
+                        <ion-select-option [value]="null">Sin producto</ion-select-option>
+                        @for (p of products(); track p.idProduct) {
+                          <ion-select-option [value]="p.idProduct">{{ p.codeProduct }} – {{ p.nameProduct }}</ion-select-option>
+                        }
+                      </ion-select>
                     </ion-item>
                   </ion-col>
                   <ion-col size="12">
@@ -208,33 +211,18 @@
                 <ion-card-title style="font-size: 0.95rem">
                   <ion-icon name="book-outline" class="ion-margin-end"></ion-icon>
                   Distribución contable
-                  @if (!line.skuCode.trim()) {
-                    <ion-badge color="medium" class="ion-margin-start">Sin SKU</ion-badge>
-                  } @else if (getProductIdForSkuCode(line.skuCode) === null) {
-                    <ion-badge color="warning" class="ion-margin-start">Producto nuevo</ion-badge>
-                  }
                 </ion-card-title>
               </ion-card-header>
               <ion-card-content>
 
-                @if (!line.skuCode.trim()) {
-                  <!-- Sin SKU ingresado -->
+                @if (line.idProduct === null) {
                   <ion-item color="warning" lines="none" class="ion-margin-bottom" style="border-radius:6px">
                     <ion-icon name="warning-outline" slot="start"></ion-icon>
                     <ion-label class="ion-text-wrap" style="font-size:0.85rem">
-                      Ingrese un código SKU antes de configurar las cuentas contables.
+                      Seleccione un producto antes de configurar las cuentas contables.
                     </ion-label>
                   </ion-item>
                 } @else {
-                  @if (getProductIdForSkuCode(line.skuCode) === null) {
-                    <!-- SKU nuevo -->
-                    <ion-item color="primary" lines="none" class="ion-margin-bottom" style="border-radius:6px">
-                      <ion-icon name="warning-outline" slot="start"></ion-icon>
-                      <ion-label class="ion-text-wrap" style="font-size:0.85rem">
-                        SKU no encontrado en el catálogo. Configure las cuentas y se creará el producto automáticamente.
-                      </ion-label>
-                    </ion-item>
-                  }
 
                   <!-- Filas de distribución -->
                   @for (row of lineAccountRows(); track $index; let ri = $index) {
@@ -331,7 +319,7 @@
                                     [disabled]="!lineAccountValid()"
                                     (click)="saveLineAccounts($index)">
                           <ion-icon slot="start" name="save-outline"></ion-icon>
-                          {{ getProductIdForSkuCode(line.skuCode) === null ? 'Crear producto' : 'Guardar' }}
+                          Guardar
                         </ion-button>
                       </ion-col>
                     </ion-row>

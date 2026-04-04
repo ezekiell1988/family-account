@@ -873,6 +873,27 @@ del sub-componente).
 | Botón icon-only dentro de `ngx-datatable-cell-template` sigue reportado por axe aunque tenga `[attr.aria-label]` y `[attr.title]` | Angular puede no materializar atributos dinámicos antes de que axe escanee el DOM en ese contexto de template | Agregar además `<span class="visually-hidden">Acción {{ row.numberMovement }}</span>` como hijo del botón — texto real en el DOM, siempre disponible para el scanner sin depender del timing de Angular |
 | `<a href="javascript:;">` con solo `<i class="fa ...">` dentro de `ngx-datatable-cell-template` | axe viola `name-role-value` ("Links must have discernible text"): el enlace no tiene texto accesible real | Aplicar el mismo patrón triple que los botones: `[attr.aria-label]`, `[attr.title]` y `<span class="visually-hidden">texto {{ row.id }}</span>` + `aria-hidden="true"` en el `<i>` |
 | `<label>` sin `for` + `<input>` sin `id` en campo readonly | axe viola `label`: la asociación programática es inexistente aunque el campo sea solo-lectura | Agregar `id="campoId"` al input y `for="campoId"` al label, aunque sea readonly |
+| `<input>` de búsqueda con solo `[attr.aria-label]` + `[attr.title]` + `[placeholder]` enlazados a `ngx-translate` | axe viola `forms` ("Element has no title attribute / Element has no placeholder attribute") porque en el momento del escaneo los atributos dinámicos aún no tienen valor (ngx-translate no ha cargado), por lo que axe los detecta vacíos o ausentes | Agregar **siempre** un `<label for="id">` real con `class="visually-hidden"` **antes** del `<input>`. El label con texto estático es suficiente como fallback inmediato. El patrón correcto para `input-group` con búsqueda es: `<label for="busquedaId" class="visually-hidden">Buscar...</label>` seguido del `<input id="busquedaId">`. El texto del label puede ser estático (no necesita `\| translate`) para garantizar que el DOM ya tiene contenido cuando axe escanea. |
+
+**Patrón de input-group de búsqueda accesible (obligatorio):**
+
+```html
+<!-- ✅ CORRECTO — label real con for/id garantiza asociación desde el primer render -->
+<div class="input-group input-group-sm mw-search-sm">
+  <label for="featureSearch" class="visually-hidden">Buscar…</label>
+  <span class="input-group-text"><i class="fa fa-search" aria-hidden="true"></i></span>
+  <input id="featureSearch" type="text" class="form-control"
+    [placeholder]="'FEATURE.SEARCH_PLACEHOLDER' | translate"
+    [value]="filterSearch()"
+    (input)="filterSearch.set($any($event.target).value)"
+    [attr.aria-label]="'FEATURE.SEARCH_PLACEHOLDER' | translate">
+</div>
+
+<!-- ❌ INCORRECTO — solo [attr.aria-label] con translate: axe escanea antes de que cargue -->
+<input type="text" class="form-control"
+  [attr.aria-label]="'FEATURE.SEARCH_PLACEHOLDER' | translate"
+  [attr.title]="'FEATURE.SEARCH_PLACEHOLDER' | translate">
+```
 
 ### Anti-patrones críticos — Mobile (Ionic)
 

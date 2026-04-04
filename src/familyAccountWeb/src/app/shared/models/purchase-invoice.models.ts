@@ -1,13 +1,3 @@
-// ── Producto SKU ──────────────────────────────────────────────────────────────
-export interface ProductSKUDto {
-  idProductSKU:          number;
-  codeProductSKU:        string;
-  nameProductSKU:        string;
-  brandProductSKU:       string | null;
-  descriptionProductSKU: string | null;
-  netContent:            string | null;
-}
-
 // ── Tipo de factura de compra ─────────────────────────────────────────────────
 export interface PurchaseInvoiceTypeDto {
   idPurchaseInvoiceType:       number;
@@ -21,13 +11,18 @@ export interface PurchaseInvoiceTypeDto {
 export interface PurchaseInvoiceLineDto {
   idPurchaseInvoiceLine: number;
   idPurchaseInvoice:     number;
-  idProductSKU:          number | null;
-  codeProductSKU:        string | null;
+  idProduct:             number | null;
+  nameProduct:           string | null;
+  idUnit:                number | null;
+  codeUnit:              string | null;
   descriptionLine:       string;
   quantity:              number;
+  quantityBase:          number;
   unitPrice:             number;
   taxPercent:            number;
   totalLineAmount:       number;
+  lotNumber:             string | null;
+  expirationDate:        string | null;
 }
 
 // ── Factura de compra ─────────────────────────────────────────────────────────
@@ -60,8 +55,10 @@ export interface PurchaseInvoiceDto {
 
 // ── Requests ──────────────────────────────────────────────────────────────────
 export interface PurchaseInvoiceLineRequest {
-  skuCode:         string | null;
-  skuName:         string | null;
+  idProduct:       number | null;
+  idUnit:          number | null;
+  lotNumber:       string | null;
+  expirationDate:  string | null;
   descriptionLine: string;
   quantity:        number;
   unitPrice:       number;
