@@ -27,5 +27,11 @@ public sealed class ProductTypeConfiguration : IEntityTypeConfiguration<ProductT
         builder.HasIndex(pt => pt.NameProductType)
             .IsUnique()
             .HasDatabaseName("UQ_productType_nameProductType");
+
+        builder.HasData(
+            new ProductType { IdProductType = 1, NameProductType = "Materia Prima",         DescriptionProductType = "Insumos o materiales adquiridos para ser utilizados en el proceso productivo. No se venden directamente." },
+            new ProductType { IdProductType = 2, NameProductType = "Producto en Proceso",   DescriptionProductType = "Productos que han iniciado su proceso de fabricación pero aún no están terminados." },
+            new ProductType { IdProductType = 3, NameProductType = "Producto Terminado",    DescriptionProductType = "Productos que han completado el proceso productivo y están listos para la venta." },
+            new ProductType { IdProductType = 4, NameProductType = "Reventa",               DescriptionProductType = "Productos adquiridos listos para la venta sin transformación productiva." });
     }
 }

@@ -3,6 +3,9 @@
     [products]="products()"
     [productTypes]="productTypes()"
     [units]="units()"
+    [allUnits]="units()"
+    [allProducts]="products()"
+    [categories]="categories()"
     [expandedUnits]="expandedProductUnits()"
     [expandedOptionGroups]="expandedProductOptionGroups()"
     [expandedComboSlots]="expandedProductComboSlots()"
@@ -16,6 +19,17 @@
     (removeProduct)="deleteProduct($event)"
     (clearError)="productSvc.clearError()"
     (rowExpanded)="loadDetailFor($event)"
+    (addCategory)="addCategoryToProduct($event)"
+    (removeCategory)="removeCategoryFromProduct($event)"
+    (createUnit)="createProductUnit($event)"
+    (editUnit)="updateProductUnit($event)"
+    (removeUnit)="deleteProductUnit($event)"
+    (createOptionGroup)="createOptionGroup($event)"
+    (editOptionGroup)="updateOptionGroup($event)"
+    (removeOptionGroup)="deleteOptionGroup($event)"
+    (createComboSlot)="createComboSlot($event)"
+    (editComboSlot)="updateComboSlot($event)"
+    (removeComboSlot)="deleteComboSlot($event)"
   />
 } @else {
   <!-- Panel principal: Productos -->

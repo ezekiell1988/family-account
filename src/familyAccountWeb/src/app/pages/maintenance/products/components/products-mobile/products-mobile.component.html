@@ -87,6 +87,20 @@
             <ion-select-option [value]="u.idUnit">{{ u.codeUnit }} · {{ u.nameUnit }}</ion-select-option>
           }
         </ion-select>
+        <ion-select
+          fill="outline"
+          labelPlacement="floating"
+          label="Producto padre (opcional)"
+          [value]="formProductParentId()"
+          (ionChange)="formProductParentId.set($event.detail.value)"
+          class="ion-margin-bottom">
+          <ion-select-option [value]="null">— Sin padre —</ion-select-option>
+          @for (p of allProducts(); track p.idProduct) {
+            @if (p.idProductParent === null && p.idProduct !== editingId()) {
+              <ion-select-option [value]="p.idProduct">{{ p.codeProduct }} · {{ p.nameProduct }}</ion-select-option>
+            }
+          }
+        </ion-select>
         <ion-item lines="none" class="ion-margin-bottom">
           <ion-toggle slot="end"
             [checked]="formHasOptions()"
@@ -195,7 +209,7 @@
         <!-- Detalle expandido -->
         @if (expandedId() === product.idProduct) {
           <div class="ion-padding-horizontal ion-padding-bottom">
-            <!-- Acciones -->
+            <!-- Acciones del producto -->
             <ion-grid class="ion-margin-top">
               <ion-row>
                 <ion-col>
@@ -229,75 +243,565 @@
               </div>
             }
 
-            <!-- Presentaciones (read-only) -->
-            @if (!loadingDetail() && expandedUnits().length > 0) {
-              <ion-card class="ion-margin-top">
-                <ion-card-header>
-                  <ion-card-title>Presentaciones</ion-card-title>
-                </ion-card-header>
-                <ion-card-content>
-                  <ion-list lines="full">
+            @if (!loadingDetail()) {
+              <!-- Tabs de detalle -->
+              <ion-segment
+                [value]="activeDetailTab()"
+                (ionChange)="activeDetailTab.set($any($event.detail.value))"
+                class="ion-margin-top"
+                scrollable>
+                <ion-segment-button value="units">
+                  <ion-icon name="layers-outline" aria-hidden="true"></ion-icon>
+                  <ion-label>Present.</ion-label>
+                </ion-segment-button>
+                <ion-segment-button value="categories">
+                  <ion-icon name="pricetag-outline" aria-hidden="true"></ion-icon>
+                  <ion-label>Categ.</ion-label>
+                </ion-segment-button>
+                @if (product.hasOptions) {
+                  <ion-segment-button value="options">
+                    <ion-icon name="settings-outline" aria-hidden="true"></ion-icon>
+                    <ion-label>Opciones</ion-label>
+                  </ion-segment-button>
+                }
+                @if (product.isCombo) {
+                  <ion-segment-button value="combo">
+                    <ion-icon name="cube-outline" aria-hidden="true"></ion-icon>
+                    <ion-label>Combo</ion-label>
+                  </ion-segment-button>
+                }
+              </ion-segment>
+
+              <!-- Tab: Presentaciones -->
+              @if (activeDetailTab() === 'units') {
+                <div class="ion-margin-top">
+                  <ion-button size="small" color="success" expand="block"
+                    (click)="openCreateUnit(product.idProduct)"
+                    [disabled]="showUnitForm()">
+                    <ion-icon slot="start" name="add-outline" aria-hidden="true"></ion-icon>
+                    Nueva presentación
+                  </ion-button>
+
+                  <!-- Formulario presentación -->
+                  @if (showUnitForm()) {
+                    <ion-card class="ion-margin-top">
+                      <ion-card-header>
+                        <ion-card-title>
+                          {{ editingUnitId() !== null ? 'Editar' : 'Nueva' }} presentación
+                        </ion-card-title>
+                      </ion-card-header>
+                      <ion-card-content>
+                        <ion-select fill="outline" labelPlacement="floating"
+                          label="Unidad"
+                          [value]="formUnitSelectId()"
+                          (ionChange)="formUnitSelectId.set($event.detail.value)"
+                          class="ion-margin-bottom">
+                          @for (u of allUnits(); track u.idUnit) {
+                            <ion-select-option [value]="u.idUnit">{{ u.codeUnit }} — {{ u.nameUnit }}</ion-select-option>
+                          }
+                        </ion-select>
+                        <ion-input fill="outline" labelPlacement="floating" type="number"
+                          label="Factor de conversión" [value]="formUnitConvFactor()"
+                          (ionInput)="formUnitConvFactor.set(+$any($event.target).value)"
+                          min="0.000001" class="ion-margin-bottom">
+                        </ion-input>
+                        <ion-input fill="outline" labelPlacement="floating" type="number"
+                          label="Precio venta" [value]="formUnitSalePrice()"
+                          (ionInput)="formUnitSalePrice.set(+$any($event.target).value)"
+                          min="0" class="ion-margin-bottom">
+                        </ion-input>
+                        <ion-input fill="outline" labelPlacement="floating"
+                          label="Nombre presentación" [value]="formUnitName() ?? ''"
+                          (ionInput)="formUnitName.set($any($event.target).value || null)"
+                          class="ion-margin-bottom">
+                        </ion-input>
+                        <ion-input fill="outline" labelPlacement="floating"
+                          label="Marca" [value]="formUnitBrand() ?? ''"
+                          (ionInput)="formUnitBrand.set($any($event.target).value || null)"
+                          class="ion-margin-bottom">
+                        </ion-input>
+                        <ion-input fill="outline" labelPlacement="floating"
+                          label="Código de barras" [value]="formUnitBarcode() ?? ''"
+                          (ionInput)="formUnitBarcode.set($any($event.target).value || null)"
+                          class="ion-margin-bottom">
+                        </ion-input>
+                        <ion-item lines="none">
+                          <ion-toggle slot="end" [checked]="formUnitIsBase()"
+                            (ionChange)="formUnitIsBase.set($event.detail.checked)"></ion-toggle>
+                          <ion-label>Base</ion-label>
+                        </ion-item>
+                        <ion-item lines="none">
+                          <ion-toggle slot="end" [checked]="formUnitForPurch()"
+                            (ionChange)="formUnitForPurch.set($event.detail.checked)"></ion-toggle>
+                          <ion-label>Para compra</ion-label>
+                        </ion-item>
+                        <ion-item lines="none" class="ion-margin-bottom">
+                          <ion-toggle slot="end" [checked]="formUnitForSale()"
+                            (ionChange)="formUnitForSale.set($event.detail.checked)"></ion-toggle>
+                          <ion-label>Para venta</ion-label>
+                        </ion-item>
+                        <ion-grid>
+                          <ion-row>
+                            <ion-col>
+                              <ion-button expand="block" (click)="submitUnitForm()" [disabled]="!isUnitFormValid()">
+                                <ion-icon slot="start" name="save-outline" aria-hidden="true"></ion-icon>
+                                Guardar
+                              </ion-button>
+                            </ion-col>
+                            <ion-col>
+                              <ion-button expand="block" fill="outline" color="medium" (click)="cancelUnitForm()">
+                                Cancelar
+                              </ion-button>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                      </ion-card-content>
+                    </ion-card>
+                  }
+
+                  <!-- Confirmación eliminar presentación -->
+                  @if (confirmDeleteUnitId() !== null) {
+                    <ion-card color="warning" class="ion-margin-top">
+                      <ion-card-content>
+                        <p><ion-icon name="warning-outline" aria-hidden="true"></ion-icon> ¿Eliminar esta presentación?</p>
+                        <ion-grid>
+                          <ion-row>
+                            <ion-col>
+                              <ion-button expand="block" color="danger" (click)="confirmDeleteUnit()">Eliminar</ion-button>
+                            </ion-col>
+                            <ion-col>
+                              <ion-button expand="block" fill="outline" color="medium" (click)="cancelDeleteUnit()">Cancelar</ion-button>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                      </ion-card-content>
+                    </ion-card>
+                  }
+
+                  @if (expandedUnits().length === 0) {
+                    <ion-note class="ion-padding ion-text-center" color="medium">Sin presentaciones registradas.</ion-note>
+                  }
+                  <ion-list lines="full" class="ion-margin-top">
                     @for (unit of expandedUnits(); track unit.idProductUnit) {
                       <ion-item>
                         <ion-label>
                           <h3>{{ unit.namePresentation ?? unit.codeUnit }}</h3>
-                          <p>Factor: {{ unit.conversionFactor }} · Precio venta: {{ unit.salePrice | number:'1.2-2' }}</p>
+                          <p>Factor: {{ unit.conversionFactor }} · Precio: {{ unit.salePrice | number:'1.2-2' }}</p>
+                          <p>
+                            @if (unit.isBase) { <ion-badge color="warning">Base</ion-badge> }
+                            @if (unit.usedForPurchase) { <ion-badge color="primary">Compra</ion-badge> }
+                            @if (unit.usedForSale) { <ion-badge color="success">Venta</ion-badge> }
+                          </p>
                         </ion-label>
-                        @if (unit.isBase) {
-                          <ion-badge slot="end" color="warning">Base</ion-badge>
-                        }
+                        <div slot="end" class="ion-padding-start">
+                          <ion-button fill="clear" size="small" color="primary"
+                            (click)="openEditUnit(unit)"
+                            [attr.aria-label]="'Editar presentación ' + unit.codeUnit">
+                            <ion-icon slot="icon-only" name="pencil-outline" aria-hidden="true"></ion-icon>
+                          </ion-button>
+                          @if (!unit.isBase) {
+                            <ion-button fill="clear" size="small" color="danger"
+                              (click)="askDeleteUnit(unit.idProductUnit)"
+                              [attr.aria-label]="'Eliminar presentación ' + unit.codeUnit">
+                              <ion-icon slot="icon-only" name="trash-outline" aria-hidden="true"></ion-icon>
+                            </ion-button>
+                          }
+                        </div>
                       </ion-item>
                     }
                   </ion-list>
-                </ion-card-content>
-              </ion-card>
-            }
+                </div>
+              }
 
-            <!-- Opciones (read-only) -->
-            @if (!loadingDetail() && product.hasOptions && expandedOptionGroups().length > 0) {
-              <ion-card class="ion-margin-top">
-                <ion-card-header>
-                  <ion-card-title>Grupos de opciones</ion-card-title>
-                </ion-card-header>
-                <ion-card-content>
-                  @for (group of expandedOptionGroups(); track group.idProductOptionGroup) {
-                    <p class="ion-no-margin"><strong>{{ group.nameGroup }}</strong>
-                      @if (group.isRequired) { <ion-badge color="danger">Obligatorio</ion-badge> }
-                    </p>
-                    <p class="ion-margin-bottom">
-                      @for (item of group.items; track item.idProductOptionItem) {
-                        <ion-badge color="light" class="ion-margin-end">
-                          {{ item.nameItem }}
-                        </ion-badge>
-                      }
-                    </p>
+              <!-- Tab: Categorías -->
+              @if (activeDetailTab() === 'categories') {
+                <div class="ion-margin-top">
+                  <ion-select fill="outline" labelPlacement="floating"
+                    label="Asociar categoría"
+                    [value]="selectedCategoryId()"
+                    (ionChange)="selectedCategoryId.set($event.detail.value)"
+                    class="ion-margin-bottom">
+                    <ion-select-option [value]="null">— Seleccionar —</ion-select-option>
+                    @for (cat of categories(); track cat.idProductCategory) {
+                      <ion-select-option [value]="cat.idProductCategory">{{ cat.nameProductCategory }}</ion-select-option>
+                    }
+                  </ion-select>
+                  <ion-button expand="block" color="primary" size="small"
+                    (click)="handleAddCategory(product.idProduct)"
+                    [disabled]="selectedCategoryId() === null">
+                    <ion-icon slot="start" name="pricetag-outline" aria-hidden="true"></ion-icon>
+                    Asociar
+                  </ion-button>
+                  <ion-list lines="full" class="ion-margin-top">
+                    <ion-item>
+                      <ion-label>
+                        <p>Costo promedio: {{ product.averageCost | number:'1.2-6' }}</p>
+                        <p>Producto padre: {{ product.idProductParent ?? '—' }}</p>
+                      </ion-label>
+                    </ion-item>
+                  </ion-list>
+                </div>
+              }
+
+              <!-- Tab: Opciones -->
+              @if (activeDetailTab() === 'options' && product.hasOptions) {
+                <div class="ion-margin-top">
+                  <ion-button size="small" color="success" expand="block"
+                    (click)="openCreateGroup(product.idProduct)"
+                    [disabled]="showGroupForm()">
+                    <ion-icon slot="start" name="add-outline" aria-hidden="true"></ion-icon>
+                    Nuevo grupo
+                  </ion-button>
+
+                  <!-- Formulario grupo -->
+                  @if (showGroupForm()) {
+                    <ion-card class="ion-margin-top">
+                      <ion-card-header>
+                        <ion-card-title>{{ editingGroupId() !== null ? 'Editar' : 'Nuevo' }} grupo de opciones</ion-card-title>
+                      </ion-card-header>
+                      <ion-card-content>
+                        <ion-input fill="outline" labelPlacement="floating"
+                          label="Nombre del grupo" [value]="formGroupName()"
+                          (ionInput)="formGroupName.set($any($event.target).value)"
+                          maxlength="200" class="ion-margin-bottom">
+                        </ion-input>
+                        <ion-grid>
+                          <ion-row>
+                            <ion-col>
+                              <ion-input fill="outline" labelPlacement="floating" type="number"
+                                label="Mín." [value]="formGroupMin()"
+                                (ionInput)="formGroupMin.set(+$any($event.target).value)" min="0">
+                              </ion-input>
+                            </ion-col>
+                            <ion-col>
+                              <ion-input fill="outline" labelPlacement="floating" type="number"
+                                label="Máx." [value]="formGroupMax()"
+                                (ionInput)="formGroupMax.set(+$any($event.target).value)" min="1">
+                              </ion-input>
+                            </ion-col>
+                            <ion-col>
+                              <ion-input fill="outline" labelPlacement="floating" type="number"
+                                label="Orden" [value]="formGroupSortOrder()"
+                                (ionInput)="formGroupSortOrder.set(+$any($event.target).value)" min="0">
+                              </ion-input>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                        <ion-item lines="none">
+                          <ion-toggle slot="end" [checked]="formGroupRequired()"
+                            (ionChange)="formGroupRequired.set($event.detail.checked)"></ion-toggle>
+                          <ion-label>Obligatorio</ion-label>
+                        </ion-item>
+                        <ion-item lines="none" class="ion-margin-bottom">
+                          <ion-toggle slot="end" [checked]="formGroupAllowSplit()"
+                            (ionChange)="formGroupAllowSplit.set($event.detail.checked)"></ion-toggle>
+                          <ion-label>Permite mitad/mitad</ion-label>
+                        </ion-item>
+
+                        <!-- Items del grupo -->
+                        <p class="ion-no-margin"><strong>Items</strong></p>
+                        @for (item of formGroupItems(); track $index; let idx = $index) {
+                          <ion-card class="ion-margin-bottom">
+                            <ion-card-content>
+                              <ion-input fill="outline" labelPlacement="floating"
+                                label="Nombre item" [value]="item.nameItem"
+                                (ionInput)="updateGroupItem(idx, 'nameItem', $any($event.target).value)"
+                                class="ion-margin-bottom">
+                              </ion-input>
+                              <ion-grid>
+                                <ion-row>
+                                  <ion-col>
+                                    <ion-input fill="outline" labelPlacement="floating" type="number"
+                                      label="Delta precio" [value]="item.priceDelta"
+                                      (ionInput)="updateGroupItem(idx, 'priceDelta', +$any($event.target).value)">
+                                    </ion-input>
+                                  </ion-col>
+                                  <ion-col>
+                                    <ion-input fill="outline" labelPlacement="floating" type="number"
+                                      label="Orden" [value]="item.sortOrder"
+                                      (ionInput)="updateGroupItem(idx, 'sortOrder', +$any($event.target).value)">
+                                    </ion-input>
+                                  </ion-col>
+                                </ion-row>
+                              </ion-grid>
+                              <ion-item lines="none">
+                                <ion-toggle slot="end" [checked]="item.isDefault"
+                                  (ionChange)="updateGroupItem(idx, 'isDefault', $event.detail.checked)"></ion-toggle>
+                                <ion-label>Por defecto</ion-label>
+                              </ion-item>
+                              <ion-button fill="outline" color="danger" size="small" expand="block"
+                                (click)="removeGroupItem(idx)"
+                                [disabled]="formGroupItems().length <= 1">
+                                <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
+                                Quitar item
+                              </ion-button>
+                            </ion-card-content>
+                          </ion-card>
+                        }
+                        <ion-button fill="outline" color="secondary" expand="block" size="small"
+                          (click)="addGroupItem()" class="ion-margin-bottom">
+                          <ion-icon slot="start" name="add-outline" aria-hidden="true"></ion-icon>
+                          + Item
+                        </ion-button>
+                        <ion-grid>
+                          <ion-row>
+                            <ion-col>
+                              <ion-button expand="block" (click)="submitGroupForm()" [disabled]="!isGroupFormValid()">
+                                <ion-icon slot="start" name="save-outline" aria-hidden="true"></ion-icon>
+                                Guardar
+                              </ion-button>
+                            </ion-col>
+                            <ion-col>
+                              <ion-button expand="block" fill="outline" color="medium" (click)="cancelGroupForm()">
+                                Cancelar
+                              </ion-button>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                      </ion-card-content>
+                    </ion-card>
                   }
-                </ion-card-content>
-              </ion-card>
-            }
 
-            <!-- Combo (read-only) -->
-            @if (!loadingDetail() && product.isCombo && expandedComboSlots().length > 0) {
-              <ion-card class="ion-margin-top">
-                <ion-card-header>
-                  <ion-card-title>Slots de combo</ion-card-title>
-                </ion-card-header>
-                <ion-card-content>
-                  <ion-list lines="full">
-                    @for (slot of expandedComboSlots(); track slot.idProductComboSlot) {
-                      <ion-item>
-                        <ion-label>
-                          <h3>{{ slot.nameSlot }}</h3>
-                          <p>x{{ slot.quantity }} · {{ slot.products.length }} producto(s)</p>
-                        </ion-label>
-                        @if (slot.isRequired) {
-                          <ion-badge slot="end" color="danger">Obligatorio</ion-badge>
+                  <!-- Confirmación eliminar grupo -->
+                  @if (confirmDeleteGroupId() !== null) {
+                    <ion-card color="warning" class="ion-margin-top">
+                      <ion-card-content>
+                        <p><ion-icon name="warning-outline" aria-hidden="true"></ion-icon> ¿Eliminar este grupo y sus items?</p>
+                        <ion-grid>
+                          <ion-row>
+                            <ion-col>
+                              <ion-button expand="block" color="danger" (click)="confirmDeleteGroup()">Eliminar</ion-button>
+                            </ion-col>
+                            <ion-col>
+                              <ion-button expand="block" fill="outline" color="medium" (click)="cancelDeleteGroup()">Cancelar</ion-button>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                      </ion-card-content>
+                    </ion-card>
+                  }
+
+                  @if (expandedOptionGroups().length === 0) {
+                    <ion-note class="ion-padding ion-text-center" color="medium">Sin grupos de opciones registrados.</ion-note>
+                  }
+                  @for (group of expandedOptionGroups(); track group.idProductOptionGroup) {
+                    <ion-card class="ion-margin-top">
+                      <ion-card-header>
+                        <ion-card-title>
+                          {{ group.nameGroup }}
+                          @if (group.isRequired) { <ion-badge color="danger">Obligatorio</ion-badge> }
+                          @if (group.allowSplit) { <ion-badge color="tertiary">Mitad</ion-badge> }
+                        </ion-card-title>
+                      </ion-card-header>
+                      <ion-card-content>
+                        <p class="ion-no-margin">{{ group.minSelections }}–{{ group.maxSelections }} selecciones</p>
+                        <div class="ion-margin-top">
+                          @for (item of group.items; track item.idProductOptionItem) {
+                            <ion-badge color="light" class="ion-margin-end">
+                              {{ item.nameItem }}
+                              @if (item.priceDelta !== 0) { (+{{ item.priceDelta | number:'1.2-2' }}) }
+                            </ion-badge>
+                          }
+                        </div>
+                        <ion-grid class="ion-margin-top">
+                          <ion-row>
+                            <ion-col>
+                              <ion-button fill="outline" size="small" color="primary" expand="block"
+                                (click)="openEditGroup(group)"
+                                [attr.aria-label]="'Editar grupo ' + group.nameGroup">
+                                <ion-icon slot="start" name="pencil-outline" aria-hidden="true"></ion-icon>
+                                Editar
+                              </ion-button>
+                            </ion-col>
+                            <ion-col>
+                              <ion-button fill="outline" size="small" color="danger" expand="block"
+                                (click)="askDeleteGroup(group.idProductOptionGroup)"
+                                [attr.aria-label]="'Eliminar grupo ' + group.nameGroup">
+                                <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
+                                Eliminar
+                              </ion-button>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                      </ion-card-content>
+                    </ion-card>
+                  }
+                </div>
+              }
+
+              <!-- Tab: Combo -->
+              @if (activeDetailTab() === 'combo' && product.isCombo) {
+                <div class="ion-margin-top">
+                  <ion-button size="small" color="success" expand="block"
+                    (click)="openCreateSlot(product.idProduct)"
+                    [disabled]="showSlotForm()">
+                    <ion-icon slot="start" name="add-outline" aria-hidden="true"></ion-icon>
+                    Nuevo slot
+                  </ion-button>
+
+                  <!-- Formulario slot -->
+                  @if (showSlotForm()) {
+                    <ion-card class="ion-margin-top">
+                      <ion-card-header>
+                        <ion-card-title>{{ editingSlotId() !== null ? 'Editar' : 'Nuevo' }} slot de combo</ion-card-title>
+                      </ion-card-header>
+                      <ion-card-content>
+                        <ion-input fill="outline" labelPlacement="floating"
+                          label="Nombre del slot" [value]="formSlotName()"
+                          (ionInput)="formSlotName.set($any($event.target).value)"
+                          maxlength="200" class="ion-margin-bottom">
+                        </ion-input>
+                        <ion-grid>
+                          <ion-row>
+                            <ion-col>
+                              <ion-input fill="outline" labelPlacement="floating" type="number"
+                                label="Cantidad" [value]="formSlotQuantity()"
+                                (ionInput)="formSlotQuantity.set(+$any($event.target).value)" min="0.001">
+                              </ion-input>
+                            </ion-col>
+                            <ion-col>
+                              <ion-input fill="outline" labelPlacement="floating" type="number"
+                                label="Orden" [value]="formSlotSortOrder()"
+                                (ionInput)="formSlotSortOrder.set(+$any($event.target).value)" min="0">
+                              </ion-input>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                        <ion-item lines="none" class="ion-margin-bottom">
+                          <ion-toggle slot="end" [checked]="formSlotRequired()"
+                            (ionChange)="formSlotRequired.set($event.detail.checked)"></ion-toggle>
+                          <ion-label>Obligatorio</ion-label>
+                        </ion-item>
+
+                        <!-- Productos del slot -->
+                        <p class="ion-no-margin"><strong>Productos del slot</strong></p>
+                        @for (sp of formSlotProducts(); track $index; let idx = $index) {
+                          <ion-card class="ion-margin-bottom">
+                            <ion-card-content>
+                              <ion-select fill="outline" labelPlacement="floating"
+                                label="Producto"
+                                [value]="sp.idProduct"
+                                (ionChange)="updateSlotProduct(idx, 'idProduct', $event.detail.value)"
+                                class="ion-margin-bottom">
+                                <ion-select-option [value]="0">— Seleccionar —</ion-select-option>
+                                @for (p of allProducts(); track p.idProduct) {
+                                  <ion-select-option [value]="p.idProduct">{{ p.codeProduct }} · {{ p.nameProduct }}</ion-select-option>
+                                }
+                              </ion-select>
+                              <ion-grid>
+                                <ion-row>
+                                  <ion-col>
+                                    <ion-input fill="outline" labelPlacement="floating" type="number"
+                                      label="Ajuste precio" [value]="sp.priceAdjustment"
+                                      (ionInput)="updateSlotProduct(idx, 'priceAdjustment', +$any($event.target).value)">
+                                    </ion-input>
+                                  </ion-col>
+                                  <ion-col>
+                                    <ion-input fill="outline" labelPlacement="floating" type="number"
+                                      label="Orden" [value]="sp.sortOrder"
+                                      (ionInput)="updateSlotProduct(idx, 'sortOrder', +$any($event.target).value)">
+                                    </ion-input>
+                                  </ion-col>
+                                </ion-row>
+                              </ion-grid>
+                              <ion-button fill="outline" color="danger" size="small" expand="block"
+                                (click)="removeSlotProduct(idx)"
+                                [disabled]="formSlotProducts().length <= 1">
+                                <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
+                                Quitar producto
+                              </ion-button>
+                            </ion-card-content>
+                          </ion-card>
                         }
-                      </ion-item>
-                    }
-                  </ion-list>
-                </ion-card-content>
-              </ion-card>
+                        <ion-button fill="outline" color="secondary" expand="block" size="small"
+                          (click)="addSlotProduct()" class="ion-margin-bottom">
+                          <ion-icon slot="start" name="add-outline" aria-hidden="true"></ion-icon>
+                          + Producto
+                        </ion-button>
+                        <ion-grid>
+                          <ion-row>
+                            <ion-col>
+                              <ion-button expand="block" (click)="submitSlotForm()" [disabled]="!isSlotFormValid()">
+                                <ion-icon slot="start" name="save-outline" aria-hidden="true"></ion-icon>
+                                Guardar
+                              </ion-button>
+                            </ion-col>
+                            <ion-col>
+                              <ion-button expand="block" fill="outline" color="medium" (click)="cancelSlotForm()">
+                                Cancelar
+                              </ion-button>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                      </ion-card-content>
+                    </ion-card>
+                  }
+
+                  <!-- Confirmación eliminar slot -->
+                  @if (confirmDeleteSlotId() !== null) {
+                    <ion-card color="warning" class="ion-margin-top">
+                      <ion-card-content>
+                        <p><ion-icon name="warning-outline" aria-hidden="true"></ion-icon> ¿Eliminar este slot de combo?</p>
+                        <ion-grid>
+                          <ion-row>
+                            <ion-col>
+                              <ion-button expand="block" color="danger" (click)="confirmDeleteSlot()">Eliminar</ion-button>
+                            </ion-col>
+                            <ion-col>
+                              <ion-button expand="block" fill="outline" color="medium" (click)="cancelDeleteSlot()">Cancelar</ion-button>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                      </ion-card-content>
+                    </ion-card>
+                  }
+
+                  @if (expandedComboSlots().length === 0) {
+                    <ion-note class="ion-padding ion-text-center" color="medium">Sin slots registrados.</ion-note>
+                  }
+                  @for (slot of expandedComboSlots(); track slot.idProductComboSlot) {
+                    <ion-card class="ion-margin-top">
+                      <ion-card-header>
+                        <ion-card-title>
+                          {{ slot.nameSlot }}
+                          <ion-badge color="secondary">x{{ slot.quantity }}</ion-badge>
+                          @if (slot.isRequired) { <ion-badge color="danger">Obligatorio</ion-badge> }
+                        </ion-card-title>
+                      </ion-card-header>
+                      <ion-card-content>
+                        <div>
+                          @for (p of slot.products; track p.idProductComboSlotProduct) {
+                            <ion-badge color="light" class="ion-margin-end">
+                              {{ p.nameProduct }}
+                              @if (p.priceAdjustment !== 0) { ({{ p.priceAdjustment | number:'1.2-2' }}) }
+                            </ion-badge>
+                          }
+                        </div>
+                        <ion-grid class="ion-margin-top">
+                          <ion-row>
+                            <ion-col>
+                              <ion-button fill="outline" size="small" color="primary" expand="block"
+                                (click)="openEditSlot(slot)"
+                                [attr.aria-label]="'Editar slot ' + slot.nameSlot">
+                                <ion-icon slot="start" name="pencil-outline" aria-hidden="true"></ion-icon>
+                                Editar
+                              </ion-button>
+                            </ion-col>
+                            <ion-col>
+                              <ion-button fill="outline" size="small" color="danger" expand="block"
+                                (click)="askDeleteSlot(slot.idProductComboSlot)"
+                                [attr.aria-label]="'Eliminar slot ' + slot.nameSlot">
+                                <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
+                                Eliminar
+                              </ion-button>
+                            </ion-col>
+                          </ion-row>
+                        </ion-grid>
+                      </ion-card-content>
+                    </ion-card>
+                  }
+                </div>
+              }
             }
 
           </div>
