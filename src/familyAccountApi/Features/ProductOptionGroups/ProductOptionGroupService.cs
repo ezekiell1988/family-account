@@ -72,6 +72,11 @@ public sealed class ProductOptionGroupService(AppDbContext db) : IProductOptionG
         if (!request.IsRequired && request.MinSelections != 0)
             return (null!, "Si el grupo no es requerido, MinSelections debe ser 0.");
 
+        // V5: no more IsDefault=true items than MaxSelections
+        var defaultCount = request.Items.Count(i => i.IsDefault);
+        if (defaultCount > request.MaxSelections)
+            return (null!, $"El número de ítems marcados como predeterminados ({defaultCount}) no puede ser mayor que MaxSelections ({request.MaxSelections}).");
+
         var group = new ProductOptionGroup
         {
             IdProduct      = request.IdProduct,
@@ -119,6 +124,11 @@ public sealed class ProductOptionGroupService(AppDbContext db) : IProductOptionG
         // V4
         if (!request.IsRequired && request.MinSelections != 0)
             return (null!, "Si el grupo no es requerido, MinSelections debe ser 0.");
+
+        // V5: no more IsDefault=true items than MaxSelections
+        var defaultCount = request.Items.Count(i => i.IsDefault);
+        if (defaultCount > request.MaxSelections)
+            return (null!, $"El número de ítems marcados como predeterminados ({defaultCount}) no puede ser mayor que MaxSelections ({request.MaxSelections}).");
 
         group.NameGroup     = request.NameGroup;
         group.IsRequired    = request.IsRequired;

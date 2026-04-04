@@ -68,6 +68,14 @@ public sealed class ProductComboSlotService(AppDbContext db) : IProductComboSlot
         if (productIds.Distinct().Count() != productIds.Count)
             return (null!, "No se puede repetir el mismo producto en el mismo slot.");
 
+        // V9: no se permiten combos anidados
+        var combosInSlot = await db.Product.AsNoTracking()
+            .Where(p => productIds.Contains(p.IdProduct) && p.IsCombo)
+            .Select(p => p.NameProduct)
+            .ToListAsync(ct);
+        if (combosInSlot.Count > 0)
+            return (null!, $"Los siguientes productos son combos y no pueden asignarse a un slot: {string.Join(", ", combosInSlot)}.");
+
         var slot = new ProductComboSlot
         {
             IdProductCombo = request.IdProductCombo,
@@ -109,6 +117,14 @@ public sealed class ProductComboSlotService(AppDbContext db) : IProductComboSlot
         var productIds = request.Products.Select(p => p.IdProduct).ToList();
         if (productIds.Distinct().Count() != productIds.Count)
             return (null!, "No se puede repetir el mismo producto en el mismo slot.");
+
+        // V9: no se permiten combos anidados
+        var combosInSlot = await db.Product.AsNoTracking()
+            .Where(p => productIds.Contains(p.IdProduct) && p.IsCombo)
+            .Select(p => p.NameProduct)
+            .ToListAsync(ct);
+        if (combosInSlot.Count > 0)
+            return (null!, $"Los siguientes productos son combos y no pueden asignarse a un slot: {string.Join(", ", combosInSlot)}.");
 
         slot.NameSlot   = request.NameSlot;
         slot.Quantity   = request.Quantity;

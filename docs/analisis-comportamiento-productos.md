@@ -2,7 +2,7 @@
 
 > Fecha: 4 de abril de 2026  
 > Rama: `main`  
-> Alcance: Entidades, servicios y endpoints relacionados con el flujo de productos.
+> Alcance: Entidades, servicios y endpoints relacionados con el flujo de productos, incluyendo productos configurables y combos.
 
 ---
 
@@ -10,8 +10,8 @@
 
 | Entidad | Módulo API | CRUD completo | Observaciones |
 |---|---|---|---|
-| `Product` | `/products` | ✅ | CRUD expuesto a Admin |
-| `ProductUnit` | `/product-units` | ✅ | Filter by product + búsqueda por barcode |
+| `Product` | `/products` | ✅ | CRUD expuesto a Admin. Incluye `HasOptions` e `IsCombo` |
+| `ProductUnit` | `/product-units` | ✅ | Filter by product + búsqueda por barcode. Incluye `SalePrice` |
 | `ProductCategory` | `/product-categories` | ✅ | Incluye asociación M:N con producto |
 | `ProductProductCategory` | — | Implícito | Gestionado desde ProductCategories |
 | `ProductAccount` | `/product-accounts` | ✅ | CRUD + filter by product |
@@ -20,6 +20,10 @@
 | `ProductType` | `/product-types` | Solo lectura | Catálogo de sistema, sin CRUD |
 | `InventoryLot` | `/inventory-lots` | Solo lectura | Se crea desde factura/ajuste (ver §3) |
 | `InventoryAdjustment` | `/inventory-adjustments` | ✅ | Flujo Borrador → Confirmado → Anulado |
+| `ProductOptionGroup` | `/product-option-groups` | ✅ | CRUD completo. Items implícitos (se crean/destruyen con el grupo) |
+| `ProductOptionItem` | — | Implícito | Se crea/destruye con el grupo |
+| `ProductComboSlot` | `/product-combo-slots` | ✅ | CRUD completo. Productos del slot implícitos |
+| `ProductComboSlotProduct` | — | Implícito | Productos elegibles por slot |
 
 ---
 
@@ -31,6 +35,9 @@
 - `AverageCost` **nunca** se expone en `CreateProductRequest` ni `UpdateProductRequest`. Se inicializa en `0` y su actualización queda totalmente delegada a los procesos de confirmación de ajustes de inventario (§3.2).
 - `IdProductParent` permite variantes hasta 1 nivel de profundidad, pero el servicio **no valida** que el padre referenciado no tenga a su vez un padre (la restricción de "máximo 1 nivel" existe solo como comentario en la configuración EF).
 - `DeleteAsync` usa `ExecuteDeleteAsync` directo. Si hay lotes (`inventoryLot`), ajustes o líneas de factura vinculados, la FK de la BD lanzará una excepción genérica sin mensaje de negocio útil.
+- `HasOptions` (`bool`, default `false`): indica que el producto tiene grupos de opciones configurables por el cliente. El modelo de datos ya existe pero el servicio **no valida** que, si `HasOptions=true`, el producto tenga al menos un `ProductOptionGroup` asociado.
+- `IsCombo` (`bool`, default `false`): indica que el producto es un combo con slots. El servicio **no valida** que, si `IsCombo=true`, el producto tenga al menos un `ProductComboSlot` asociado.
+- Un producto puede tener `HasOptions=true` e `IsCombo=false` (pizza configurable), o `IsCombo=true` con slots que apunten a productos con `HasOptions=true`. La combinación `HasOptions=true` y `IsCombo=true` en el mismo producto **no está validada** en el servicio.
 
 ### 2.2 `ProductUnit` — Presentaciones con factor de conversión
 
@@ -38,6 +45,7 @@
 - El servicio **no valida** que cuando `IsBase = true`, `ConversionFactor = 1.0` y `IdUnit = product.IdUnit`.
 - `UpdateAsync` permite cambiar `IsBase` y `ConversionFactor` sin ninguna verificación. Esto puede dejar un producto sin unidad base o con dos unidades base simultáneas.
 - Las restricciones solo existen a nivel de BD (índice único `UQ_productUnit_idProduct_idUnit`), por lo que el error de violación llegaría como excepción genérica de SQL, no como validación semántica.
+- `SalePrice` (`decimal(18,4)`, default `0`): precio base de venta para esta presentación. El precio final en combos y productos configurables se calcula sumando los `PriceDelta` de los `ProductOptionItem` seleccionados. El servicio actualmente **no valida** que `SalePrice >= 0`.
 
 ### 2.3 `ProductRecipe` — BOM (Bill of Materials)
 
@@ -52,7 +60,46 @@
 - Cuando la factura se confirma, el asiento SÍ usa estos porcentajes: `rawAmount = TotalLineAmount * PercentageAccount / 100m`. Si la suma no es 100, el DR del asiento no coincide con el total de la línea.
 - Los porcentajes negativos están permitidos en el modelo (crean líneas CR internas), lo que es correcto para casos de contra-asientos, pero no está documentado en los DTOs.
 
-### 2.5 `InventoryLot` — Lotes de inventario
+### 2.5 `ProductOptionGroup` y `ProductOptionItem` — Opciones configurables
+
+Entidades con configuración EF, módulo de endpoints, servicio e interfaces completamente implementados en `/product-option-groups`.
+
+**`ProductOptionGroup`**:
+- Agrupa opciones de un producto con `HasOptions=true`. Un producto puede tener N grupos (ej: "Elige tu masa", "Elige tu tamaño").
+- `IsRequired` + `MinSelections` + `MaxSelections` definen la cardinalidad de la elección. El servicio **valida** `MaxSelections >= MinSelections` y que `MinSelections = 0` cuando `IsRequired = false`.
+- `AllowSplit`: cuando `true`, en modo mitad/mitad el cliente puede asignar cada selección a `half1`, `half2` o `whole`. Aplica a grupos de sabor y adicionales.
+- La FK hacia `product` usa `CASCADE`. El servicio **valida** que el producto padre tenga `HasOptions=true`.
+- El servicio **valida** que el grupo tenga al menos 1 ítem.
+
+**`ProductOptionItem`**:
+- Cada fila es una opción dentro de un grupo (ej: "Masa Delgada", "Masa Gruesa").
+- `PriceDelta` ajusta el precio base de la `ProductUnit` seleccionada. Puede ser positivo, negativo o cero.
+- `IsDefault`: marca la opción pre-seleccionada al abrir el selector. El servicio **valida** que el conteo de ítems con `IsDefault=true` no exceda `MaxSelections` del grupo.
+- La FK hacia `productOptionGroup` usa `CASCADE`.
+- Create/Update son **atómicos**: el grupo y sus ítems se gestionan en un solo request (replace-all en Update).
+
+### 2.6 `ProductComboSlot` y `ProductComboSlotProduct` — Combos con slots
+
+Entidades con configuración EF, módulo de endpoints, servicio e interfaces completamente implementados en `/product-combo-slots`.
+
+**`ProductComboSlot`**:
+- Define un "hueco" dentro de un combo (`IsCombo=true`). Un combo "2 Pizzas + Bebida" tiene 3 slots.
+- `Quantity` es la cantidad de ese slot dentro del combo (ej: 1 pizza, 1 bebida).
+- `IsRequired` indica si el cliente debe llenar ese slot.
+- La FK hacia `product` usa `CASCADE`. El servicio **valida** que el producto padre tenga `IsCombo=true`.
+- El servicio **valida** que el slot tenga al menos 1 producto permitido.
+
+**`ProductComboSlotProduct`**:
+- Lista de productos permitidos para un slot. El cliente elige uno de esta lista.
+- Índice único `UQ_productComboSlotProduct_idSlot_idProduct`: un producto no puede repetirse en el mismo slot (validado también en servicio antes del insert).
+- `PriceAdjustment`: ajuste adicional al precio del combo por elegir ese producto en el slot.
+- FK hacia `product` usa `RESTRICT` (no se puede eliminar un producto que está asignado a un slot de combo).
+- El servicio **valida** que ningún producto del slot tenga `IsCombo=true` (sin combos anidados).
+- Create/Update son **atómicos**: el slot y sus productos se gestionan en un solo request (replace-all en Update).
+
+---
+
+### 2.7 `InventoryLot` — Lotes de inventario
 
 Los lotes se crean por dos vías actualmente:
 
@@ -68,7 +115,7 @@ El flujo actual obliga al usuario a crear manualmente un `InventoryAdjustment` p
 - Duplica trabajo operativo.
 - Deja el system en un estado inconsistente: la factura está "Confirmada" pero el inventario cero.
 
-### 2.6 Cálculo de `AverageCost` (Costo Promedio Ponderado)
+### 2.8 Cálculo de `AverageCost` (Costo Promedio Ponderado)
 
 El recálculo ocurre en `InventoryAdjustmentService.ConfirmAsync` cuando:
 - `QuantityDelta > 0` (entrada), o
@@ -85,7 +132,7 @@ product.AverageCost = totalQty > 0 ? totalCost / totalQty : 0
 
 **Ausencia**: Cuando la salida (`QuantityDelta < 0`) reduce a cero el stock total, `AverageCost` queda en el último valor calculado, no en 0. Esto puede ser intencionado (mantener referencia de costo) pero no está documentado.
 
-### 2.7 `QuantityBase` en `PurchaseInvoiceLine`
+### 2.9 `QuantityBase` en `PurchaseInvoiceLine`
 
 La entidad `PurchaseInvoiceLine` tiene dos campos:
 - `Quantity`: cantidad en la unidad de la presentación comprada (ej: 2 CAJAS).
@@ -93,7 +140,7 @@ La entidad `PurchaseInvoiceLine` tiene dos campos:
 
 **Gap**: En `MapLine()`, `QuantityBase = l.Quantity` — se asigna siempre el mismo valor que `Quantity` sin aplicar el `ConversionFactor` de la `ProductUnit` correspondiente. La conversión nunca ocurre en el API; `QuantityBase` es actualmente redundante y contiene el mismo dato.
 
-### 2.8 Flujo de estados
+### 2.10 Flujo de estados
 
 #### Factura de Compra
 ```
@@ -128,6 +175,10 @@ Borrador ──(Confirmar)──► Confirmado
 | V5 | `ProductRecipeService` | `IdProductInput` no puede ser igual a `IdProductOutput` |
 | V6 | `ProductAccountService` | Suma de `PercentageAccount` por producto debe ser 100 |
 | V7 | `ProductService Delete` | Mensaje claro si el producto tiene lotes o facturas asociadas |
+| V8 | `ProductUnitService` | `SalePrice >= 0` |
+| V9 | `ProductService` | Si `HasOptions=true`, debe existir al menos 1 `ProductOptionGroup` |
+| V10 | `ProductService` | Si `IsCombo=true`, debe existir al menos 1 `ProductComboSlot` |
+| V11 | `ProductService` | La combinación `HasOptions=true` e `IsCombo=true` en el mismo producto requiere política explícita |
 
 ### 3.2 Gaps de lógica de negocio
 
@@ -138,6 +189,7 @@ Borrador ──(Confirmar)──► Confirmado
 | L3 | `InventoryAdjustmentService.CancelAsync` | No revierte deltas de inventario ni `AverageCost` |
 | L4 | `PurchaseInvoiceService.CancelAsync` | No revierte inventario (derivado de L1) |
 | L5 | `ProductRecipeService` | Sin detección de ciclos en ingredientes |
+| L6 | `ProductOptionGroup` / `ProductComboSlot` | Precio final de un configurado/combo no está calculado en ningún endpoint (`SalePrice + PriceDelta + PriceAdjustment`); no existe todavía un endpoint de "calcular precio" |
 
 ### 3.3 Gaps de API / respuesta
 
@@ -147,6 +199,7 @@ Borrador ──(Confirmar)──► Confirmado
 | A2 | `ProductResponse` | No incluye lista de categorías ni count de `ProductUnits` |
 | A3 | `GET /inventory-lots` | No hay endpoint de stock total expuesto públicamente (`GetStockTotalAsync` existe en servicio pero no en módulo) |
 | A4 | `ProductType` | Sin seed explícito en API; se asume que los 4 tipos se crean vía migración |
+| A5 | `ProductResponse` | No incluye colecciones inline de `ProductOptionGroups` ni `ProductComboSlots` (se obtienen por endpoints separados) |
 
 ---
 
@@ -159,6 +212,8 @@ Borrador ──(Confirmar)──► Confirmado
 - **Auto-creación de movimiento bancario** al confirmar factura con `CounterpartFromBankMovement=true` y sin movimiento previo vinculado.
 - **Asociación M:N producto-categoría** vía `POST /product-categories/{id}/products/{idProduct}`.
 - **`ProductRecipe` con líneas**: Creación atómica de receta + ingredientes en un solo request.
+- **CRUD de `ProductOptionGroup` + `ProductOptionItem`**: `GET /by-product/{id}`, `GET /{id}`, `POST`, `PUT`, `DELETE`. Creación/actualización atómica con ítems. Validaciones: producto con `HasOptions=true`, `MaxSelections >= MinSelections`, conteo de `IsDefault` <= `MaxSelections`.
+- **CRUD de `ProductComboSlot` + `ProductComboSlotProduct`**: `GET /by-combo/{id}`, `GET /{id}`, `POST`, `PUT`, `DELETE`. Creación/actualización atómica. Validaciones: producto con `IsCombo=true`, sin combos anidados en slots, sin duplicados en slot.
 
 ---
 
@@ -176,15 +231,20 @@ Antes de modificar cualquier parte del flujo conviene considerar:
 
 5. **Anulación con rollback de inventario** (L3, L4) requiere decidir la política: ¿se crea un ajuste negativo automático, o se bloquea la anulación si hay consumos posteriores del lote?
 
+6. **`ProductOptionGroup.AllowSplit`** requiere definir cómo se representa la asignación mitad/mitad a nivel de pedido. Esta lógica no existe todavía en ninguna entidad de línea de pedido/factura.
+
+7. **Precio final en productos configurables**: el precio de venta de un configurado es `ProductUnit.SalePrice + SUM(ProductOptionItem.PriceDelta de los items seleccionados)`. Si un producto pertenece a un slot de combo, el precio del slot puede sobreescribir o sumarse al precio base; la política exacta aún no está definida en el servicio.
+
+8. **Combos con `MaxSelections > 1` en un slot**: el modelo soporta que el cliente elija N productos en un mismo slot. Esto implica que el `Quantity` del slot se reparte entre los N productos elegidos, o se multiplica; esta semántica no está documentada.
+
 ---
 
 ## 6. Resumen ejecutivo
 
-El sistema tiene el modelo de datos correcto y bien estructurado. Los endpoints CRUD funcionan. El flujo contable de facturas opera correctamente. Los gaps principales son:
+El sistema tiene el modelo de datos correcto y bien estructurado. Los endpoints CRUD base funcionan. El flujo contable de facturas opera correctamente. El modelo de productos configurables y combos está definido en BD pero aún sin endpoints. Los gaps principales son:
 
 - **Inventario desconectado de facturas**: confirmar una compra no mueve el inventario.
 - **Sin validaciones de dominio** en `ProductUnit`, `ProductRecipe` y `ProductAccount` para las reglas críticas de negocio.
 - **`QuantityBase` inoperante**: la conversión de unidades nunca se ejecuta.
 - **Anulaciones sin rollback de inventario**.
-
-Estos cuatro puntos son los candidatos prioritarios para un plan de cambios.
+- **Sin endpoint de precio calculado**: La fórmula `SalePrice + ∑PriceDelta + PriceAdjustment` para configurados y combos no está centralizada en ningún endpoint.
