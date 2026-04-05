@@ -19,6 +19,7 @@ public sealed class ProductService(AppDbContext db) : IProductService
         p.AverageCost,
         p.HasOptions,
         p.IsCombo,
+        p.IsVariantParent,
         p.ReorderPoint,
         p.SafetyStock,
         p.ReorderQuantity,
@@ -59,6 +60,7 @@ public sealed class ProductService(AppDbContext db) : IProductService
             AverageCost     = 0m,
             HasOptions      = request.HasOptions,
             IsCombo         = request.IsCombo,
+            IsVariantParent = request.IsVariantParent,
             ReorderPoint    = request.ReorderPoint,
             SafetyStock     = request.SafetyStock,
             ReorderQuantity = request.ReorderQuantity
@@ -89,6 +91,7 @@ public sealed class ProductService(AppDbContext db) : IProductService
         product.IdProductParent = request.IdProductParent;
         product.HasOptions      = request.HasOptions;
         product.IsCombo         = request.IsCombo;
+        product.IsVariantParent = request.IsVariantParent;
         product.ReorderPoint    = request.ReorderPoint;
         product.SafetyStock     = request.SafetyStock;
         product.ReorderQuantity = request.ReorderQuantity;
@@ -152,5 +155,153 @@ public sealed class ProductService(AppDbContext db) : IProductService
             })
             .Select(ToResponse)
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<VariantSummary>> GetVariantsAsync(int idProductParent, CancellationToken ct = default)
+    {
+        var variants = await db.Product
+            .AsNoTracking()
+            .Where(p => p.IdProductParent == idProductParent)
+            .Include(p => p.ProductVariantAttributes)
+                .ThenInclude(va => va.IdAttributeValueNavigation)
+                    .ThenInclude(av => av.IdProductAttributeNavigation)
+            .OrderBy(p => p.NameProduct)
+            .ToListAsync(ct);
+
+        return variants.Select(p => new VariantSummary(
+            p.IdProduct,
+            p.NameProduct,
+            p.CodeProduct,
+            p.ProductVariantAttributes
+                .OrderBy(va => va.IdAttributeValueNavigation.IdProductAttributeNavigation.SortOrder)
+                .Select(va => new VariantAttributeSummary(
+                    va.IdAttributeValueNavigation.IdProductAttributeNavigation.NameAttribute,
+                    va.IdAttributeValueNavigation.NameValue))
+                .ToList()
+        )).ToList();
+    }
+
+    public async Task<(GenerateVariantsResponse? Result, string? Error)> GenerateVariantsAsync(
+        int idProductParent, GenerateVariantsRequest request, CancellationToken ct = default)
+    {
+        var parent = await db.Product
+            .Include(p => p.ProductAttributes)
+                .ThenInclude(a => a.AttributeValues)
+            .FirstOrDefaultAsync(p => p.IdProduct == idProductParent, ct);
+
+        if (parent is null)
+            return (null, "Producto padre no encontrado.");
+
+        var attrGroups = parent.ProductAttributes
+            .OrderBy(a => a.SortOrder)
+            .Select(a => a.AttributeValues
+                .OrderBy(v => v.SortOrder)
+                .ToList())
+            .ToList();
+
+        if (attrGroups.Count == 0 || attrGroups.Any(g => g.Count == 0))
+            return (null, "El producto padre debe tener al menos un atributo con al menos un valor para generar variantes.");
+
+        // Producto cartesiano
+        IEnumerable<IReadOnlyList<AttributeValue>> combinations = new[] { Array.Empty<AttributeValue>() as IReadOnlyList<AttributeValue> };
+        foreach (var group in attrGroups)
+        {
+            combinations = combinations
+                .SelectMany(combo => group.Select(val => (IReadOnlyList<AttributeValue>)combo.Append(val).ToList()));
+        }
+        var allCombinations = combinations.ToList();
+
+        // Variantes ya existentes: conjunto de IdAttributeValue por producto hijo
+        var existingVariantSets = await db.ProductVariantAttribute
+            .Where(va => va.IdProductNavigation.IdProductParent == idProductParent)
+            .GroupBy(va => va.IdProduct)
+            .Select(g => g.Select(va => va.IdAttributeValue).ToHashSet())
+            .ToListAsync(ct);
+
+        static string Normalize(string s) =>
+            s.ToUpperInvariant().Replace(' ', '-');
+
+        int created = 0;
+        int skipped = 0;
+        var createdVariants = new List<Product>();
+
+        foreach (var combo in allCombinations)
+        {
+            var comboIds = combo.Select(v => v.IdAttributeValue).ToHashSet();
+            if (existingVariantSets.Any(existing => existing.SetEquals(comboIds)))
+            {
+                skipped++;
+                continue;
+            }
+
+            var suffixes = combo.Select(v => Normalize(v.NameValue));
+            var nameSuffix  = string.Join(" ", combo.Select(v => v.NameValue));
+            var codeSuffix  = string.Join("-", suffixes);
+
+            var variant = new Product
+            {
+                CodeProduct     = $"{Normalize(request.CodePrefix)}-{codeSuffix}",
+                NameProduct     = $"{parent.NameProduct} {nameSuffix}",
+                IdProductType   = request.IdProductType,
+                IdUnit          = request.IdUnit,
+                IdProductParent = idProductParent,
+                AverageCost     = 0m,
+                IsVariantParent = false,
+                HasOptions      = false,
+                IsCombo         = false
+            };
+
+            db.Product.Add(variant);
+            await db.SaveChangesAsync(ct);
+
+            foreach (var val in combo)
+            {
+                db.ProductVariantAttribute.Add(new ProductVariantAttribute
+                {
+                    IdProduct        = variant.IdProduct,
+                    IdAttributeValue = val.IdAttributeValue
+                });
+            }
+
+            createdVariants.Add(variant);
+            created++;
+        }
+
+        if (createdVariants.Count > 0)
+        {
+            parent.IsVariantParent = true;
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        // Cargar atributos de variantes creadas para la respuesta
+        var variantIds = createdVariants.Select(v => v.IdProduct).ToList();
+        var variantAttrs = await db.ProductVariantAttribute
+            .AsNoTracking()
+            .Where(va => variantIds.Contains(va.IdProduct))
+            .Include(va => va.IdAttributeValueNavigation)
+                .ThenInclude(av => av.IdProductAttributeNavigation)
+            .ToListAsync(ct);
+
+        var attrsByVariant = variantAttrs
+            .GroupBy(va => va.IdProduct)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var variantSummaries = createdVariants.Select(v =>
+        {
+            var attrs = attrsByVariant.TryGetValue(v.IdProduct, out var list) ? list : [];
+            return new VariantSummary(
+                v.IdProduct,
+                v.NameProduct,
+                v.CodeProduct,
+                attrs
+                    .OrderBy(va => va.IdAttributeValueNavigation.IdProductAttributeNavigation.SortOrder)
+                    .Select(va => new VariantAttributeSummary(
+                        va.IdAttributeValueNavigation.IdProductAttributeNavigation.NameAttribute,
+                        va.IdAttributeValueNavigation.NameValue))
+                    .ToList());
+        }).ToList();
+
+        return (new GenerateVariantsResponse(created, skipped, variantSummaries), null);
     }
 }

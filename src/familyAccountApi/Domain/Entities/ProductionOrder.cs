@@ -10,10 +10,12 @@ public sealed class ProductionOrder
     public DateOnly? DateRequired         { get; set; }   // Fecha requerida de entrega
     public string   StatusProductionOrder { get; set; } = null!;  // "Borrador"|"Pendiente"|"EnProceso"|"Completado"|"Anulado"
     public string?  DescriptionOrder      { get; set; }
+    public int?     IdWarehouse           { get; set; }   // Bodega de consumo de MP y entrada del PT
     public DateTime CreatedAt             { get; set; }
 
     public FiscalPeriod  IdFiscalPeriodNavigation { get; set; } = null!;
     public SalesOrder?   IdSalesOrderNavigation   { get; set; }
+    public Warehouse?    IdWarehouseNavigation    { get; set; }
 
     public ICollection<ProductionOrderLine>          ProductionOrderLines          { get; set; } = [];
     public ICollection<InventoryAdjustment>          InventoryAdjustments          { get; set; } = [];

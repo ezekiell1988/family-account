@@ -60,6 +60,11 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasDefaultValue(false)
             .HasComment("Indica que el producto es un combo compuesto de slots con productos elegibles.");
 
+        builder.Property(p => p.IsVariantParent)
+            .IsRequired()
+            .HasDefaultValue(false)
+            .HasComment("Indica que el producto es un padre que agrupa variantes por atributos (talla, color, etc.). Los padres no tienen stock propio.");
+
         builder.Property(p => p.ReorderPoint)
             .HasPrecision(12, 4)
             .HasComment("Punto de reorden: stock mínimo que dispara una alerta de reabastecimiento. NULL si no aplica.");

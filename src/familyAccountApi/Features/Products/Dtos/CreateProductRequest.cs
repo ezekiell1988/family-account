@@ -30,6 +30,9 @@ public sealed record CreateProductRequest
     [Description("Indica que el producto es un combo de slots")]
     public bool IsCombo { get; init; } = false;
 
+    [Description("Indica que el producto es un padre que agrupa variantes por atributos. Normalmente lo establece automáticamente el endpoint generate.")]
+    public bool IsVariantParent { get; init; } = false;
+
     [Range(0, double.MaxValue)]
     [Description("Punto de reorden: stock mínimo para disparar alerta de reabastecimiento (opcional)")]
     public decimal? ReorderPoint { get; init; }

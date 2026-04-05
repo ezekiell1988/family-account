@@ -17,6 +17,7 @@ using FamilyAccountApi.Features.ExchangeRates;
 using FamilyAccountApi.Features.FiscalPeriods;
 using FamilyAccountApi.Features.Health;
 using FamilyAccountApi.Features.ProductCategories;
+using FamilyAccountApi.Features.ProductAttributes;
 using FamilyAccountApi.Features.Products;
 using FamilyAccountApi.Features.ProductAccounts;
 using FamilyAccountApi.Features.ProductTypes;
@@ -50,6 +51,7 @@ public static class FeaturesExtensions
             .AddUnitsOfMeasureModule()
             .AddProductTypesModule()
             .AddProductsModule()
+            .AddProductAttributesModule()
             .AddProductCategoriesModule()
             .AddProductUnitsModule()
             .AddProductRecipesModule()
@@ -96,6 +98,7 @@ public static class FeaturesExtensions
         v1.MapUnitsOfMeasureEndpoints();
         v1.MapProductTypesEndpoints();
         v1.MapProductsEndpoints();
+        v1.MapProductAttributesEndpoints();
         v1.MapProductCategoriesEndpoints();
         v1.MapProductUnitsEndpoints();
         v1.MapProductRecipesEndpoints();

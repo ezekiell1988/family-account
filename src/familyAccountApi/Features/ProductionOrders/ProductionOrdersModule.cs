@@ -79,8 +79,11 @@ public static class ProductionOrdersModule
             [FromBody] UpdateProductionOrderStatusRequest request,
             IProductionOrderService svc, CancellationToken ct) =>
         {
-            var (ok, error) = await svc.UpdateStatusAsync(id, request, ct);
-            return ok ? Results.Ok() : Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = [error!] });
+            var (ok, error, warnings) = await svc.UpdateStatusAsync(id, request, ct);
+            if (!ok) return Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = [error!] });
+            if (warnings is { Count: > 0 })
+                return Results.Ok(new { warnings });
+            return Results.Ok();
         }).WithTags("ProductionOrders");
 
         group.MapDelete("/{id:int}", async (

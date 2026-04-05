@@ -9,8 +9,11 @@ public sealed record CreateProductionOrderRequest
     [Description("FK al período fiscal")]
     public required int IdFiscalPeriod { get; init; }
 
-    [Description("FK al pedido de venta. NULL = Modalidad A (producción para stock).")]
+[Description("FK al pedido de venta. NULL = Modalidad A (producción para stock).")]
     public int? IdSalesOrder { get; init; }
+
+    [Description("Bodega de producción (consumo de MP y entrada del PT). Requerido para poder completar la orden.")]
+    public int? IdWarehouse { get; init; }
 
     [Required]
     [Description("Fecha de la orden")]

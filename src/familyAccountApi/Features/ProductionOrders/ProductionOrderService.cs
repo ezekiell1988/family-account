@@ -19,6 +19,8 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
             po.DateRequired,
             po.StatusProductionOrder,
             po.DescriptionOrder,
+            po.IdWarehouse,
+            po.IdWarehouseNavigation != null ? po.IdWarehouseNavigation.NameWarehouse : null,
             po.CreatedAt,
             po.ProductionOrderLines.Select(l => new ProductionOrderLineResponse(
                 l.IdProductionOrderLine,
@@ -58,6 +60,7 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
         {
             IdFiscalPeriod         = request.IdFiscalPeriod,
             IdSalesOrder           = request.IdSalesOrder,
+            IdWarehouse            = request.IdWarehouse,
             NumberProductionOrder  = "BORRADOR",
             DateOrder              = request.DateOrder,
             DateRequired           = request.DateRequired,
@@ -98,6 +101,7 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
 
         entity.IdFiscalPeriod   = request.IdFiscalPeriod;
         entity.IdSalesOrder     = request.IdSalesOrder;
+        entity.IdWarehouse      = request.IdWarehouse;
         entity.DateOrder        = request.DateOrder;
         entity.DateRequired     = request.DateRequired;
         entity.DescriptionOrder = request.DescriptionOrder;
@@ -119,13 +123,16 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
         return (await GetByIdAsync(idProductionOrder, ct))!;
     }
 
-    public async Task<(bool Ok, string? Error)> UpdateStatusAsync(int idProductionOrder, UpdateProductionOrderStatusRequest request, CancellationToken ct = default)
+    public async Task<(bool Ok, string? Error, IReadOnlyList<string>? Warnings)> UpdateStatusAsync(int idProductionOrder, UpdateProductionOrderStatusRequest request, CancellationToken ct = default)
     {
-        var entity = await db.ProductionOrder.FindAsync([idProductionOrder], ct);
-        if (entity is null) return (false, "Orden de producción no encontrada.");
+        var entity = await db.ProductionOrder
+            .Include(po => po.ProductionOrderLines)
+                .ThenInclude(l => l.IdProductNavigation)
+            .FirstOrDefaultAsync(po => po.IdProductionOrder == idProductionOrder, ct);
 
-        // Transiciones válidas
-        var current = entity.StatusProductionOrder;
+        if (entity is null) return (false, "Orden de producción no encontrada.", null);
+
+        var current   = entity.StatusProductionOrder;
         var newStatus = request.StatusProductionOrder;
 
         var allowed = (current, newStatus) switch
@@ -139,7 +146,7 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
             _ => false
         };
 
-        if (!allowed) return (false, $"Transición inválida: {current} → {newStatus}.");
+        if (!allowed) return (false, $"Transición inválida: {current} → {newStatus}.", null);
 
         // Al confirmar la orden (Borrador → Pendiente), asigna número correlativo
         if (current == "Borrador" && newStatus == "Pendiente")
@@ -149,8 +156,282 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
         }
 
         entity.StatusProductionOrder = newStatus;
+
+        // ── Al completar: movimientos de inventario ───────────────────────
+        if (newStatus == "Completado")
+        {
+            var (ok, error, warnings) = await CompleteProductionAsync(entity, request, ct);
+            if (!ok) return (false, error, null);
+            await db.SaveChangesAsync(ct);
+            return (true, null, warnings);
+        }
+
         await db.SaveChangesAsync(ct);
-        return (true, null);
+        return (true, null, null);
+    }
+
+    // ── Lógica de completado de producción ────────────────────────────────
+    private async Task<(bool Ok, string? Error, IReadOnlyList<string> Warnings)> CompleteProductionAsync(
+        ProductionOrder entity, UpdateProductionOrderStatusRequest request, CancellationToken ct)
+    {
+        var warehouseId = request.IdWarehouse ?? entity.IdWarehouse;
+        if (warehouseId is null)
+            return (false, "La orden no tiene bodega asignada. Envíe idWarehouse en el request o actualice la orden.", []);
+
+        var warnings = new List<string>();
+
+        var adjustmentType = await db.InventoryAdjustmentType
+            .FirstAsync(t => t.CodeInventoryAdjustmentType == "PRODUCCION", ct);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var realQtyByLine = request.Lines?
+            .ToDictionary(l => l.IdProductionOrderLine, l => l.QuantityProduced)
+            ?? new Dictionary<int, decimal>();
+
+        foreach (var line in entity.ProductionOrderLines)
+        {
+            var quantityProduced = realQtyByLine.TryGetValue(line.IdProductionOrderLine, out var rq)
+                ? rq
+                : line.QuantityRequired;
+
+            var recipe = await db.ProductRecipe
+                .Include(r => r.ProductRecipeLines)
+                    .ThenInclude(rl => rl.IdProductInputNavigation)
+                .FirstOrDefaultAsync(r => r.IdProductOutput == line.IdProduct && r.IsActive, ct);
+
+            if (recipe is null)
+            {
+                warnings.Add($"Producto '{line.IdProductNavigation.NameProduct}' (ID={line.IdProduct}) no tiene receta activa. Sin movimiento de MP.");
+                await CreateFinishedGoodsLotAsync(line.IdProduct, quantityProduced, 0m, warehouseId.Value, null, ct);
+                line.QuantityProduced += quantityProduced;
+                await db.SaveChangesAsync(ct);
+                continue;
+            }
+
+            var factor = recipe.QuantityOutput > 0 ? quantityProduced / recipe.QuantityOutput : 1m;
+
+            // Crear ajuste de inventario tipo PRODUCCION
+            var adjPrefix = $"AJ-{today:yyyyMMdd}";
+            var adjCount  = await db.InventoryAdjustment
+                .CountAsync(ia => ia.NumberAdjustment.StartsWith(adjPrefix) && ia.StatusAdjustment == "Confirmado", ct);
+
+            var adjustment = new InventoryAdjustment
+            {
+                IdFiscalPeriod            = entity.IdFiscalPeriod,
+                IdInventoryAdjustmentType = adjustmentType.IdInventoryAdjustmentType,
+                IdCurrency                = 1,
+                ExchangeRateValue         = 1m,
+                NumberAdjustment          = $"{adjPrefix}-{(adjCount + 1):D3}",
+                DateAdjustment            = today,
+                DescriptionAdjustment     = $"Consumo MP — {entity.NumberProductionOrder} — {line.IdProductNavigation.NameProduct}",
+                StatusAdjustment          = "Confirmado",
+                IdProductionOrder         = entity.IdProductionOrder,
+                CreatedAt                 = DateTime.UtcNow
+            };
+
+            db.InventoryAdjustment.Add(adjustment);
+            await db.SaveChangesAsync(ct);
+
+            decimal totalMpCost   = 0m;
+            var snapshotLines     = new List<ProductionSnapshotLine>();
+
+            foreach (var recipeLine in recipe.ProductRecipeLines.OrderBy(r => r.SortOrder))
+            {
+                var qtyNeeded  = Math.Round(recipeLine.QuantityInput * factor, 4);
+                var remaining  = qtyNeeded;
+
+                // Consumir FEFO
+                var lots = await db.InventoryLot
+                    .Include(il => il.Product)
+                    .Where(il => il.IdProduct   == recipeLine.IdProductInput
+                              && il.IdWarehouse == warehouseId
+                              && il.StatusLot   == "Disponible")
+                    .OrderBy(il => il.ExpirationDate == null ? 1 : 0)
+                    .ThenBy(il => il.ExpirationDate)
+                    .ThenBy(il => il.IdInventoryLot)
+                    .ToListAsync(ct);
+
+                foreach (var lot in lots)
+                {
+                    if (remaining <= 0m) break;
+                    var consume = Math.Min(remaining, lot.QuantityAvailable);
+                    totalMpCost           += Math.Round(consume * lot.UnitCost, 6);
+                    lot.QuantityAvailable -= consume;
+                    remaining             -= consume;
+
+                    adjustment.InventoryAdjustmentLines.Add(new InventoryAdjustmentLine
+                    {
+                        IdInventoryLot  = lot.IdInventoryLot,
+                        QuantityDelta   = -consume,
+                        DescriptionLine = $"Consumo MP {recipeLine.IdProductInputNavigation.NameProduct} — {entity.NumberProductionOrder}"
+                    });
+                }
+
+                // Stock insuficiente: forzar negativo en el lote más antiguo
+                if (remaining > 0m)
+                {
+                    warnings.Add($"Stock insuficiente de '{recipeLine.IdProductInputNavigation.NameProduct}' " +
+                                 $"(ID={recipeLine.IdProductInput}): faltaron {remaining:0.####} unidades base.");
+
+                    var debtLot = await db.InventoryLot
+                        .Include(il => il.Product)
+                        .Where(il => il.IdProduct == recipeLine.IdProductInput && il.IdWarehouse == warehouseId)
+                        .OrderBy(il => il.IdInventoryLot)
+                        .FirstOrDefaultAsync(ct);
+
+                    if (debtLot is not null)
+                    {
+                        totalMpCost              += Math.Round(remaining * debtLot.UnitCost, 6);
+                        debtLot.QuantityAvailable -= remaining;
+                        adjustment.InventoryAdjustmentLines.Add(new InventoryAdjustmentLine
+                        {
+                            IdInventoryLot  = debtLot.IdInventoryLot,
+                            QuantityDelta   = -remaining,
+                            DescriptionLine = $"Deuda MP {recipeLine.IdProductInputNavigation.NameProduct} — {entity.NumberProductionOrder} (stock insuf.)"
+                        });
+                    }
+                    // Si no existe ningún lote, el consumo queda sin respaldo contable (se avisa en la advertencia)
+                }
+
+                // qtyConsumed = lo que entrará en el snapshot (toda la cantidad planificada, incluyendo la deuda)
+                snapshotLines.Add(new ProductionSnapshotLine
+                {
+                    IdProductRecipeLine = recipeLine.IdProductRecipeLine,
+                    IdProductInput      = recipeLine.IdProductInput,
+                    QuantityCalculated  = qtyNeeded,
+                    QuantityReal        = qtyNeeded,   // siempre producimos la cantidad declarada
+                    SortOrder           = recipeLine.SortOrder
+                });
+            }
+
+            await db.SaveChangesAsync(ct);
+
+            await GenerateAdjustmentEntryAsync(adjustment, adjustmentType, entity.IdFiscalPeriod, today, ct);
+
+            // Costo unitario del PT
+            var unitCostPt = quantityProduced > 0 ? Math.Round(totalMpCost / quantityProduced, 6) : 0m;
+
+            // Crear lote del producto terminado
+            await CreateFinishedGoodsLotAsync(
+                line.IdProduct, quantityProduced, unitCostPt, warehouseId.Value,
+                adjustment.IdInventoryAdjustment, ct);
+
+            // Recalcular WAC del producto terminado
+            var ptProduct = await db.Product.FirstAsync(p => p.IdProduct == line.IdProduct, ct);
+            var allPtLots = await db.InventoryLot
+                .Where(il => il.IdProduct == line.IdProduct)
+                .ToListAsync(ct);
+
+            var totalQty  = allPtLots.Sum(il => il.QuantityAvailable);
+            var totalCost = allPtLots.Sum(il => il.QuantityAvailable * il.UnitCost);
+            ptProduct.AverageCost = totalQty > 0 ? Math.Round(totalCost / totalQty, 6) : unitCostPt;
+
+            line.QuantityProduced += quantityProduced;
+
+            // Crear ProductionSnapshot
+            var snapshot = new ProductionSnapshot
+            {
+                IdInventoryAdjustment = adjustment.IdInventoryAdjustment,
+                IdProductRecipe       = recipe.IdProductRecipe,
+                QuantityCalculated    = Math.Round(recipe.QuantityOutput * factor, 4),
+                QuantityReal          = quantityProduced,
+                CreatedAt             = DateTime.UtcNow
+            };
+            foreach (var sl in snapshotLines) snapshot.ProductionSnapshotLines.Add(sl);
+            db.ProductionSnapshot.Add(snapshot);
+            await db.SaveChangesAsync(ct);
+        }
+
+        return (true, null, warnings);
+    }
+
+    private async Task<InventoryLot> CreateFinishedGoodsLotAsync(
+        int idProduct, decimal quantity, decimal unitCost, int idWarehouse,
+        int? idInventoryAdjustment, CancellationToken ct)
+    {
+        var lot = new InventoryLot
+        {
+            IdProduct             = idProduct,
+            UnitCost              = unitCost,
+            QuantityAvailable     = quantity,
+            QuantityReserved      = 0m,
+            StatusLot             = "Disponible",
+            SourceType            = "Producción",
+            IdInventoryAdjustment = idInventoryAdjustment,
+            IdWarehouse           = idWarehouse,
+            CreatedAt             = DateTime.UtcNow
+        };
+        db.InventoryLot.Add(lot);
+        await db.SaveChangesAsync(ct);
+        return lot;
+    }
+
+    private async Task GenerateAdjustmentEntryAsync(
+        InventoryAdjustment adjustment, InventoryAdjustmentType adjustmentType,
+        int idFiscalPeriod, DateOnly date, CancellationToken ct)
+    {
+        if (adjustmentType.IdAccountInventoryDefault is null) return;
+
+        var adjWithLots = await db.InventoryAdjustment
+            .Include(ia => ia.InventoryAdjustmentLines)
+                .ThenInclude(l => l.IdInventoryLotNavigation!)
+                    .ThenInclude(il => il.Product)
+            .FirstAsync(ia => ia.IdInventoryAdjustment == adjustment.IdInventoryAdjustment, ct);
+
+        var entryLines = new List<AccountingEntryLine>();
+
+        foreach (var line in adjWithLots.InventoryAdjustmentLines.Where(l => l.QuantityDelta < 0))
+        {
+            var lot    = line.IdInventoryLotNavigation!;
+            var amount = Math.Round(Math.Abs(line.QuantityDelta) * lot.UnitCost, 2);
+            if (amount == 0m || adjustmentType.IdAccountCounterpartExit is null) continue;
+
+            var desc = line.DescriptionLine ?? $"Consumo MP — {lot.Product.NameProduct}";
+
+            entryLines.Add(new AccountingEntryLine
+            {
+                IdAccount       = adjustmentType.IdAccountCounterpartExit.Value,
+                DebitAmount     = amount,
+                CreditAmount    = 0m,
+                DescriptionLine = desc
+            });
+            entryLines.Add(new AccountingEntryLine
+            {
+                IdAccount       = adjustmentType.IdAccountInventoryDefault.Value,
+                DebitAmount     = 0m,
+                CreditAmount    = amount,
+                DescriptionLine = desc
+            });
+        }
+
+        if (entryLines.Count == 0) return;
+
+        var entry = new AccountingEntry
+        {
+            IdFiscalPeriod    = idFiscalPeriod,
+            IdCurrency        = adjustment.IdCurrency,
+            NumberEntry       = $"AJ-{adjustment.IdInventoryAdjustment:D6}",
+            DateEntry         = date,
+            DescriptionEntry  = adjustment.DescriptionAdjustment ?? $"Ajuste producción {adjustment.NumberAdjustment}",
+            StatusEntry       = "Publicado",
+            ReferenceEntry    = adjustment.NumberAdjustment,
+            ExchangeRateValue = adjustment.ExchangeRateValue,
+            OriginModule      = "ProductionOrder",
+            IdOriginRecord    = adjustment.IdProductionOrder,
+            CreatedAt         = DateTime.UtcNow
+        };
+
+        foreach (var l in entryLines) entry.AccountingEntryLines.Add(l);
+        db.AccountingEntry.Add(entry);
+        await db.SaveChangesAsync(ct);
+
+        db.InventoryAdjustmentEntry.Add(new InventoryAdjustmentEntry
+        {
+            IdInventoryAdjustment = adjustment.IdInventoryAdjustment,
+            IdAccountingEntry     = entry.IdAccountingEntry
+        });
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<bool> DeleteAsync(int idProductionOrder, CancellationToken ct = default)

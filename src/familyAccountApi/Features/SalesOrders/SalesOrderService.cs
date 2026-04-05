@@ -115,9 +115,30 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
 
     public async Task<(bool Ok, string? Error)> ConfirmAsync(int idSalesOrder, CancellationToken ct = default)
     {
-        var entity = await db.SalesOrder.FindAsync([idSalesOrder], ct);
+        var entity = await db.SalesOrder
+            .Include(s => s.SalesOrderLines)
+            .FirstOrDefaultAsync(s => s.IdSalesOrder == idSalesOrder, ct);
         if (entity is null) return (false, "Pedido no encontrado.");
         if (entity.StatusOrder != "Borrador") return (false, "Solo se puede confirmar un pedido en estado Borrador.");
+
+        // Validar que ninguna línea use un producto padre con variantes
+        var productIds = entity.SalesOrderLines
+            .Select(l => l.IdProduct)
+            .Distinct()
+            .ToList();
+
+        if (productIds.Count > 0)
+        {
+            var parentProducts = await db.Product
+                .AsNoTracking()
+                .Where(p => productIds.Contains(p.IdProduct) && p.IsVariantParent)
+                .Select(p => p.NameProduct)
+                .ToListAsync(ct);
+
+            if (parentProducts.Count > 0)
+                return (false,
+                    $"El pedido contiene producto(s) padre con variantes: {string.Join(", ", parentProducts)}. Debe seleccionar una variante específica en cada línea.");
+        }
 
         entity.StatusOrder = "Confirmado";
         entity.NumberOrder = await GenerateNumberAsync(ct);

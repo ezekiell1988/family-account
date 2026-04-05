@@ -13,4 +13,14 @@ public interface IProductService
     /// Devuelve los productos con ReorderPoint configurado cuyo stock total esté por debajo del umbral.
     /// </summary>
     Task<IReadOnlyList<ProductResponse>> GetBelowReorderPointAsync(CancellationToken ct = default);
+    /// <summary>
+    /// Retorna los productos hijos (variantes) de un producto padre con sus atributos expandidos.
+    /// </summary>
+    Task<IReadOnlyList<VariantSummary>> GetVariantsAsync(int idProductParent, CancellationToken ct = default);
+    /// <summary>
+    /// Genera el producto cartesiano de los atributos del padre y crea variantes hijas.
+    /// Omite combinaciones que ya existen.
+    /// </summary>
+    Task<(GenerateVariantsResponse? Result, string? Error)> GenerateVariantsAsync(
+        int idProductParent, GenerateVariantsRequest request, CancellationToken ct = default);
 }

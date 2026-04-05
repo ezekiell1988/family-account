@@ -11,8 +11,9 @@ public sealed class Product
     public decimal AverageCost     { get; set; }
     public byte[]  RowVersion      { get; set; } = null!;
 
-    public bool    HasOptions { get; set; } = false;
-    public bool    IsCombo    { get; set; } = false;
+    public bool    HasOptions      { get; set; } = false;
+    public bool    IsCombo         { get; set; } = false;
+    public bool    IsVariantParent { get; set; } = false;
 
     public decimal? ReorderPoint    { get; set; }
     public decimal? SafetyStock     { get; set; }
@@ -24,10 +25,12 @@ public sealed class Product
     public UnitOfMeasure IdUnitNavigation        { get; set; } = null!;
     public Product?      IdProductParentNavigation { get; set; }
 
-    public ICollection<Product>              Variants                 { get; set; } = [];
-    public ICollection<ProductUnit>          ProductUnits             { get; set; } = [];
+    public ICollection<Product>              Variants                  { get; set; } = [];
+    public ICollection<ProductUnit>          ProductUnits              { get; set; } = [];
     public ICollection<ProductProductCategory> ProductProductCategories { get; set; } = [];
-    public ICollection<ProductAccount>       ProductAccounts          { get; set; } = [];
-    public ICollection<ProductOptionGroup>   ProductOptionGroups      { get; set; } = [];
-    public ICollection<ProductComboSlot>     ProductComboSlots        { get; set; } = [];
+    public ICollection<ProductAccount>       ProductAccounts           { get; set; } = [];
+    public ICollection<ProductOptionGroup>   ProductOptionGroups       { get; set; } = [];
+    public ICollection<ProductComboSlot>     ProductComboSlots         { get; set; } = [];
+    public ICollection<ProductAttribute>     ProductAttributes         { get; set; } = [];
+    public ICollection<ProductVariantAttribute> ProductVariantAttributes { get; set; } = [];
 }

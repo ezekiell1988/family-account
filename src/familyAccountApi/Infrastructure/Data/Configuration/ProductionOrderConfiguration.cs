@@ -50,6 +50,9 @@ public sealed class ProductionOrderConfiguration : IEntityTypeConfiguration<Prod
             .HasMaxLength(500)
             .HasComment("Observaciones opcionales.");
 
+        builder.Property(po => po.IdWarehouse)
+            .HasComment("Bodega de producción: consumo de materias primas y entrada del producto terminado.");
+
         builder.Property(po => po.CreatedAt)
             .IsRequired()
             .HasDefaultValueSql("GETUTCDATE()")
@@ -66,6 +69,10 @@ public sealed class ProductionOrderConfiguration : IEntityTypeConfiguration<Prod
             .HasFilter("[idSalesOrder] IS NOT NULL")
             .HasDatabaseName("IX_productionOrder_idSalesOrder");
 
+        builder.HasIndex(po => po.IdWarehouse)
+            .HasFilter("[idWarehouse] IS NOT NULL")
+            .HasDatabaseName("IX_productionOrder_idWarehouse");
+
         builder.HasOne(po => po.IdFiscalPeriodNavigation)
             .WithMany()
             .HasForeignKey(po => po.IdFiscalPeriod)
@@ -74,6 +81,11 @@ public sealed class ProductionOrderConfiguration : IEntityTypeConfiguration<Prod
         builder.HasOne(po => po.IdSalesOrderNavigation)
             .WithMany(so => so.ProductionOrders)
             .HasForeignKey(po => po.IdSalesOrder)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(po => po.IdWarehouseNavigation)
+            .WithMany()
+            .HasForeignKey(po => po.IdWarehouse)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

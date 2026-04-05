@@ -12,6 +12,7 @@ public sealed record ProductResponse(
     decimal  AverageCost,
     bool     HasOptions,
     bool     IsCombo,
+    bool     IsVariantParent,
     decimal? ReorderPoint,
     decimal? SafetyStock,
     decimal? ReorderQuantity,

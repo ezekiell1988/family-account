@@ -11,6 +11,8 @@ public sealed record ProductionOrderResponse(
     DateOnly? DateRequired,
     string    StatusProductionOrder,
     string?   DescriptionOrder,
+    int?      IdWarehouse,
+    string?   WarehouseName,
     DateTime  CreatedAt,
     IReadOnlyList<ProductionOrderLineResponse> Lines);
 

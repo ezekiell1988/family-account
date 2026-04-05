@@ -10,6 +10,6 @@ public interface IProductionOrderService
     Task<ProductionOrderResponse?> GetByIdAsync(int idProductionOrder, CancellationToken ct = default);
     Task<ProductionOrderResponse> CreateAsync(CreateProductionOrderRequest request, CancellationToken ct = default);
     Task<ProductionOrderResponse?> UpdateAsync(int idProductionOrder, UpdateProductionOrderRequest request, CancellationToken ct = default);
-    Task<(bool Ok, string? Error)> UpdateStatusAsync(int idProductionOrder, UpdateProductionOrderStatusRequest request, CancellationToken ct = default);
+    Task<(bool Ok, string? Error, IReadOnlyList<string>? Warnings)> UpdateStatusAsync(int idProductionOrder, UpdateProductionOrderStatusRequest request, CancellationToken ct = default);
     Task<bool> DeleteAsync(int idProductionOrder, CancellationToken ct = default);
 }

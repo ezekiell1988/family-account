@@ -12,6 +12,9 @@ public sealed record UpdateProductionOrderRequest
     [Description("FK al pedido de venta. NULL = Modalidad A.")]
     public int? IdSalesOrder { get; init; }
 
+    [Description("Bodega de producción (consumo de MP y entrada del PT).")]
+    public int? IdWarehouse { get; init; }
+
     [Required]
     [Description("Fecha de la orden")]
     public required DateOnly DateOrder { get; init; }
@@ -36,4 +39,23 @@ public sealed record UpdateProductionOrderStatusRequest
         ErrorMessage = "Estado inválido. Valores válidos: Pendiente, EnProceso, Completado, Anulado")]
     [Description("Nuevo estado de la orden")]
     public required string StatusProductionOrder { get; init; }
+
+    [Description("Override de bodega al completar. Si no se envía, se usa la bodega registrada en la orden.")]
+    public int? IdWarehouse { get; init; }
+
+    [Description("Cantidades reales producidas por línea al completar. Si se omite una línea se usa QuantityRequired.")]
+    public IReadOnlyList<CompleteProductionOrderLineRequest>? Lines { get; init; }
+}
+
+public sealed record CompleteProductionOrderLineRequest
+{
+    [Required]
+    [Description("FK a la línea de la orden de producción")]
+    public required int IdProductionOrderLine { get; init; }
+
+    [Required]
+    [Range(typeof(decimal), "0.0001", "999999999.9999",
+        ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
+    [Description("Cantidad realmente producida en unidad base")]
+    public required decimal QuantityProduced { get; init; }
 }

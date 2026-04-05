@@ -47,10 +47,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<BankStatementImport>      BankStatementImport      => Set<BankStatementImport>();
     public DbSet<BankStatementTransaction> BankStatementTransaction => Set<BankStatementTransaction>();
     public DbSet<ProductAccount>           ProductAccount           => Set<ProductAccount>();
-    public DbSet<ProductOptionGroup>       ProductOptionGroup       => Set<ProductOptionGroup>();
-    public DbSet<ProductOptionItem>        ProductOptionItem        => Set<ProductOptionItem>();
-    public DbSet<ProductComboSlot>         ProductComboSlot         => Set<ProductComboSlot>();
-    public DbSet<ProductComboSlotProduct>  ProductComboSlotProduct  => Set<ProductComboSlotProduct>();
+    public DbSet<ProductOptionGroup>          ProductOptionGroup          => Set<ProductOptionGroup>();
+    public DbSet<ProductOptionItem>           ProductOptionItem           => Set<ProductOptionItem>();
+    public DbSet<ProductComboSlot>            ProductComboSlot            => Set<ProductComboSlot>();
+    public DbSet<ProductComboSlotProduct>     ProductComboSlotProduct     => Set<ProductComboSlotProduct>();
+    public DbSet<ProductAttribute>            ProductAttribute            => Set<ProductAttribute>();
+    public DbSet<AttributeValue>              AttributeValue              => Set<AttributeValue>();
+    public DbSet<ProductVariantAttribute>     ProductVariantAttribute     => Set<ProductVariantAttribute>();
     public DbSet<PriceList>                PriceList                => Set<PriceList>();
     public DbSet<PriceListItem>            PriceListItem            => Set<PriceListItem>();
     public DbSet<SalesOrder>               SalesOrder               => Set<SalesOrder>();

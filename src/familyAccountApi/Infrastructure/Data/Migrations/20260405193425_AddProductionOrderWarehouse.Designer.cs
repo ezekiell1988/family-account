@@ -4,6 +4,7 @@ using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260405193425_AddProductionOrderWarehouse")]
+    partial class AddProductionOrderWarehouse
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1425,47 +1428,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             t.HasComment("Líneas del asiento contable. Cada línea afecta una cuenta contable con un monto al débito o al crédito.");
 
                             t.HasCheckConstraint("CK_accountingEntryLine_singleSidedAmount", "((debitAmount > 0 AND creditAmount = 0) OR (debitAmount = 0 AND creditAmount > 0))");
-                        });
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AttributeValue", b =>
-                {
-                    b.Property<int>("IdAttributeValue")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("idAttributeValue")
-                        .HasComment("Identificador único del valor de atributo");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdAttributeValue"));
-
-                    b.Property<int>("IdProductAttribute")
-                        .HasColumnType("int")
-                        .HasColumnName("idProductAttribute")
-                        .HasComment("Atributo al que pertenece este valor");
-
-                    b.Property<string>("NameValue")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("nameValue")
-                        .HasComment("Nombre del valor (ej: S, M, L, Azul, Rojo)");
-
-                    b.Property<int>("SortOrder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0)
-                        .HasColumnName("sortOrder")
-                        .HasComment("Orden de presentación del valor dentro del atributo");
-
-                    b.HasKey("IdAttributeValue");
-
-                    b.HasIndex("IdProductAttribute", "NameValue")
-                        .IsUnique()
-                        .HasDatabaseName("UQ_attributeValue_idProductAttribute_nameValue");
-
-                    b.ToTable("attributeValue", t =>
-                        {
-                            t.HasComment("Valores posibles para cada atributo de producto padre (ej: S, M, L para el atributo Talla)");
                         });
                 });
 
@@ -3736,13 +3698,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("isCombo")
                         .HasComment("Indica que el producto es un combo compuesto de slots con productos elegibles.");
 
-                    b.Property<bool>("IsVariantParent")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false)
-                        .HasColumnName("isVariantParent")
-                        .HasComment("Indica que el producto es un padre que agrupa variantes por atributos (talla, color, etc.). Los padres no tienen stock propio.");
-
                     b.Property<string>("NameProduct")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -3850,47 +3805,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("productAccount", t =>
                         {
                             t.HasComment("Distribución contable por producto: define la cuenta de gasto y el centro de costo para cada porcentaje del total de la línea de factura. La suma de PercentageAccount por IdProduct debe ser exactamente 100.");
-                        });
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductAttribute", b =>
-                {
-                    b.Property<int>("IdProductAttribute")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("idProductAttribute")
-                        .HasComment("Identificador único del atributo del producto");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductAttribute"));
-
-                    b.Property<int>("IdProduct")
-                        .HasColumnType("int")
-                        .HasColumnName("idProduct")
-                        .HasComment("Producto padre al que pertenece este atributo");
-
-                    b.Property<string>("NameAttribute")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("nameAttribute")
-                        .HasComment("Nombre del atributo (ej: Talla, Color, Material)");
-
-                    b.Property<int>("SortOrder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0)
-                        .HasColumnName("sortOrder")
-                        .HasComment("Orden de presentación del atributo dentro del producto padre");
-
-                    b.HasKey("IdProductAttribute");
-
-                    b.HasIndex("IdProduct", "NameAttribute")
-                        .IsUnique()
-                        .HasDatabaseName("UQ_productAttribute_idProduct_nameAttribute");
-
-                    b.ToTable("productAttribute", t =>
-                        {
-                            t.HasComment("Atributos definibles por producto padre que describen dimensiones de variación (ej: Talla, Color)");
                         });
                 });
 
@@ -4464,40 +4378,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("productUnit", t =>
                         {
                             t.HasComment("Presentaciones de compra/venta de un producto con su factor de conversión a la unidad base. Reemplaza productSKU + productProductSKU. El campo codeBarcode permite escanear EAN para pre-llenar líneas de factura.");
-                        });
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductVariantAttribute", b =>
-                {
-                    b.Property<int>("IdProductVariantAttribute")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("idProductVariantAttribute")
-                        .HasComment("Identificador único del vínculo variante-atributo");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductVariantAttribute"));
-
-                    b.Property<int>("IdAttributeValue")
-                        .HasColumnType("int")
-                        .HasColumnName("idAttributeValue")
-                        .HasComment("Valor de atributo que forma parte de la combinación de esta variante");
-
-                    b.Property<int>("IdProduct")
-                        .HasColumnType("int")
-                        .HasColumnName("idProduct")
-                        .HasComment("Producto variante hijo al que pertenece este vínculo");
-
-                    b.HasKey("IdProductVariantAttribute");
-
-                    b.HasIndex("IdAttributeValue");
-
-                    b.HasIndex("IdProduct", "IdAttributeValue")
-                        .IsUnique()
-                        .HasDatabaseName("UQ_productVariantAttribute_idProduct_idAttributeValue");
-
-                    b.ToTable("productVariantAttribute", t =>
-                        {
-                            t.HasComment("Vincula una variante hija con los valores de atributo que la definen (ej: Camisa Oxford M + Azul)");
                         });
                 });
 
@@ -6520,17 +6400,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdCostCenterNavigation");
                 });
 
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AttributeValue", b =>
-                {
-                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductAttribute", "IdProductAttributeNavigation")
-                        .WithMany("AttributeValues")
-                        .HasForeignKey("IdProductAttribute")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("IdProductAttributeNavigation");
-                });
-
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.BankAccount", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountNavigation")
@@ -6976,17 +6845,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdProductNavigation");
                 });
 
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductAttribute", b =>
-                {
-                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
-                        .WithMany("ProductAttributes")
-                        .HasForeignKey("IdProduct")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("IdProductNavigation");
-                });
-
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductComboSlot", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductComboNavigation")
@@ -7105,25 +6963,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("UnitOfMeasure");
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductVariantAttribute", b =>
-                {
-                    b.HasOne("FamilyAccountApi.Domain.Entities.AttributeValue", "IdAttributeValueNavigation")
-                        .WithMany("ProductVariantAttributes")
-                        .HasForeignKey("IdAttributeValue")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
-                        .WithMany("ProductVariantAttributes")
-                        .HasForeignKey("IdProduct")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("IdAttributeValueNavigation");
-
-                    b.Navigation("IdProductNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionOrder", b =>
@@ -7760,11 +7599,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("AccountingEntryLines");
                 });
 
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AttributeValue", b =>
-                {
-                    b.Navigation("ProductVariantAttributes");
-                });
-
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Bank", b =>
                 {
                     b.Navigation("BankAccounts");
@@ -7856,8 +7690,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 {
                     b.Navigation("ProductAccounts");
 
-                    b.Navigation("ProductAttributes");
-
                     b.Navigation("ProductComboSlots");
 
                     b.Navigation("ProductOptionGroups");
@@ -7866,14 +7698,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.Navigation("ProductUnits");
 
-                    b.Navigation("ProductVariantAttributes");
-
                     b.Navigation("Variants");
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductAttribute", b =>
-                {
-                    b.Navigation("AttributeValues");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductCategory", b =>

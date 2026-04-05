@@ -47,6 +47,15 @@ public static class ProductsModule
             .WithSummary("Productos con ReorderPoint configurado cuyo stock total está por debajo del umbral. " +
                          "Útil para alertas de reabastecimiento.");
 
+        group.MapGet("/{id:int}/variants.json", GetVariants)
+            .WithName("GetProductVariants")
+            .WithSummary("Obtener variantes hijas de un producto padre con sus atributos expandidos");
+
+        group.MapPost("/{id:int}/variants/generate", GenerateVariants)
+            .WithName("GenerateProductVariants")
+            .WithSummary("Genera el producto cartesiano de atributos y crea variantes hijas automáticamente")
+            .RequireAuthorization("Admin");
+
         return app;
     }
 
@@ -137,5 +146,36 @@ public static class ProductsModule
     {
         var items = await service.GetBelowReorderPointAsync(ct);
         return TypedResults.Ok(items);
+    }
+
+    private static async Task<Ok<IReadOnlyList<VariantSummary>>> GetVariants(
+        int id,
+        IProductService service,
+        CancellationToken ct)
+    {
+        var items = await service.GetVariantsAsync(id, ct);
+        return TypedResults.Ok(items);
+    }
+
+    private static async Task<Results<Ok<GenerateVariantsResponse>, NotFound, UnprocessableEntity<ProblemDetails>, ValidationProblem>> GenerateVariants(
+        int id,
+        GenerateVariantsRequest request,
+        IProductService service,
+        CancellationToken ct)
+    {
+        var (result, error) = await service.GenerateVariantsAsync(id, request, ct);
+
+        if (error == "Producto padre no encontrado.")
+            return TypedResults.NotFound();
+
+        if (error is not null)
+            return TypedResults.UnprocessableEntity(new ProblemDetails
+            {
+                Title  = "No se pueden generar variantes",
+                Detail = error,
+                Status = StatusCodes.Status422UnprocessableEntity
+            });
+
+        return TypedResults.Ok(result!);
     }
 }

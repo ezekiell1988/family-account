@@ -447,10 +447,16 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
                 .AsNoTracking()
                 .Include(p => p.IdProductTypeNavigation)
                 .Where(p => p.IdProduct == invoiceLine.IdProduct.Value)
-                .Select(p => new { p.IsCombo, p.IdProductTypeNavigation.TrackInventory })
+                .Select(p => new { p.IsCombo, p.IsVariantParent, p.NameProduct, p.IdProductTypeNavigation.TrackInventory })
                 .FirstOrDefaultAsync(CancellationToken.None);
 
             if (prodType is null || !prodType.TrackInventory) continue;
+
+            if (prodType.IsVariantParent)
+                return (false,
+                    $"El producto '{prodType.NameProduct}' es un producto padre con variantes. Debe seleccionar una variante específica en la línea.",
+                    null);
+
             if (prodType.IsCombo) continue;
 
             var hasRecipe = await db.ProductRecipe.AnyAsync(
