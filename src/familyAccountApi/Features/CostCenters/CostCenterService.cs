@@ -72,10 +72,11 @@ public sealed class CostCenterService(AppDbContext db) : ICostCenterService
 
     public async Task<bool> DeleteAsync(int idCostCenter, CancellationToken ct = default)
     {
-        var deleted = await db.CostCenter
-            .Where(cc => cc.IdCostCenter == idCostCenter)
-            .ExecuteDeleteAsync(ct);
+        var entity = await db.CostCenter.FindAsync([idCostCenter], ct);
+        if (entity is null) return false;
 
-        return deleted > 0;
+        entity.IsActive = false;
+        await db.SaveChangesAsync(ct);
+        return true;
     }
 }

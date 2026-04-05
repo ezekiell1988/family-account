@@ -1,7 +1,6 @@
 using FamilyAccountApi.Features.CostCenters.Dtos;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace FamilyAccountApi.Features.CostCenters;
 
@@ -97,22 +96,10 @@ public static class CostCentersModule
         }
     }
 
-    private static async Task<Results<NoContent, NotFound, Conflict<ProblemDetails>>> Delete(
+    private static async Task<Results<NoContent, NotFound>> Delete(
         int id, ICostCenterService service, CancellationToken ct)
     {
-        try
-        {
-            var deleted = await service.DeleteAsync(id, ct);
-            return deleted ? TypedResults.NoContent() : TypedResults.NotFound();
-        }
-        catch (DbUpdateException)
-        {
-            return TypedResults.Conflict(new ProblemDetails
-            {
-                Title  = "Centro de costo en uso",
-                Detail = "No se puede eliminar el centro de costo porque está referenciado en líneas de asientos contables.",
-                Status = StatusCodes.Status409Conflict
-            });
-        }
+        var deleted = await service.DeleteAsync(id, ct);
+        return deleted ? TypedResults.NoContent() : TypedResults.NotFound();
     }
 }

@@ -320,13 +320,17 @@ SalesInvoiceLine  (combo — IsComboParent, precio total)
 
 ---
 
-#### O1 — `InventoryAdjustmentType` seed usa IDs de cuentas hardcodeados (109-115)
+#### ~~O1 — `InventoryAdjustmentType` seed usa IDs de cuentas hardcodeados (109-115)~~ ✅ NO APLICA
 
-Los seeds referencian `IdAccount = 109, 110, 111, 113, 114, 115` directamente. Si el seed de cuentas cambia o se ejecuta en distinto orden, estos ajustes quedan con FKs inválidas silenciosamente. Considerar verificar en tests de integración que estas cuentas existan.
+> **No aplica con EF `HasData`**: EF ordena los inserts automáticamente (primero `Account`, luego `InventoryAdjustmentType`), eliminando el riesgo de violación de FK durante el seed. Cualquier cambio al seed de `Account` genera una migración visible que haría fallar `database update` de forma ruidosa vía FK RESTRICT. El escenario "silencioso" descrito solo aplica a scripts SQL manuales o seeds en proyectos separados — ninguno de los dos es el caso aquí (todo en un solo `AppDbContext`).
+
+~~Los seeds referencian `IdAccount = 109, 110, 111, 113, 114, 115` directamente. Si el seed de cuentas cambia o se ejecuta en distinto orden, estos ajustes quedan con FKs inválidas silenciosamente. Considerar verificar en tests de integración que estas cuentas existan.~~
 
 ---
 
-#### O2 — `ProductAccount.IdCostCenter` SetNull en cascade
+#### O2 — `ProductAccount.IdCostCenter` SetNull en cascade ✅ IMPLEMENTADO
+
+> **Resuelto** (abril 2026): `CostCenterService.DeleteAsync` ya no ejecuta un `DELETE` físico. Ahora hace soft-delete: busca la entidad y setea `IsActive = false`. El endpoint `DELETE /cost-centers/{id}` retorna `204 No Content` si el centro existía, o `404 Not Found` si ya no existe — sin riesgo de FK violation ni de nullificar `ProductAccount.IdCostCenter` silenciosamente. `IsActive` ya estaba en el modelo y en `CostCenterConfiguration` (`HasDefaultValue(true)`), por lo que **no se requirió migración**.
 
 Si se elimina un centro de costo, los `ProductAccount` quedan con `idCostCenter = NULL` sin alerta. El asiento contable generado omitirá el centro de costo sin error visible. Considerar un soft-delete en `CostCenter` en lugar de permitir delete físico.
 
