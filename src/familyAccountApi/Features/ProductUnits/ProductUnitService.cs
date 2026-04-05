@@ -56,6 +56,38 @@ public sealed class ProductUnitService(AppDbContext db) : IProductUnitService
 
     public async Task<ProductUnitResponse> CreateAsync(CreateProductUnitRequest request, CancellationToken ct = default)
     {
+        // V8: SalePrice no puede ser negativo
+        if (request.SalePrice < 0)
+            throw new InvalidOperationException("El precio de venta (SalePrice) no puede ser negativo.");
+
+        if (request.IsBase)
+        {
+            // V2: solo puede existir 1 unidad base por producto
+            var alreadyHasBase = await db.ProductUnit
+                .AnyAsync(pu => pu.IdProduct == request.IdProduct && pu.IsBase, ct);
+            if (alreadyHasBase)
+                throw new InvalidOperationException(
+                    "El producto ya tiene una presentación base (IsBase = true). Solo puede existir una unidad base por producto.");
+
+            // V3: IsBase requiere ConversionFactor = 1 y IdUnit = Product.IdUnit
+            if (request.ConversionFactor != 1m)
+                throw new InvalidOperationException(
+                    "La presentación base (IsBase = true) debe tener ConversionFactor = 1.");
+
+            var product = await db.Product.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.IdProduct == request.IdProduct, ct);
+            if (product is not null && request.IdUnit != product.IdUnit)
+                throw new InvalidOperationException(
+                    "La unidad de la presentación base (IsBase = true) debe coincidir con la unidad base del producto (Product.IdUnit).");
+        }
+        else
+        {
+            // V3: ConversionFactor debe ser > 0 para presentaciones no-base
+            if (request.ConversionFactor <= 0)
+                throw new InvalidOperationException(
+                    "El factor de conversión debe ser mayor que 0.");
+        }
+
         var entity = new ProductUnit
         {
             IdProduct         = request.IdProduct,
@@ -85,6 +117,37 @@ public sealed class ProductUnitService(AppDbContext db) : IProductUnitService
             .FirstOrDefaultAsync(pu => pu.IdProductUnit == idProductUnit, ct);
 
         if (entity is null) return null;
+
+        // V8: SalePrice no puede ser negativo
+        if (request.SalePrice < 0)
+            throw new InvalidOperationException("El precio de venta (SalePrice) no puede ser negativo.");
+
+        if (request.IsBase)
+        {
+            // V2: verificar que no haya otra base para el mismo producto (excluir la fila actual)
+            var alreadyHasBase = await db.ProductUnit
+                .AnyAsync(pu => pu.IdProduct == entity.IdProduct && pu.IsBase && pu.IdProductUnit != idProductUnit, ct);
+            if (alreadyHasBase)
+                throw new InvalidOperationException(
+                    "El producto ya tiene una presentación base (IsBase = true). Solo puede existir una unidad base por producto.");
+
+            // V3: IsBase requiere ConversionFactor = 1 y la unidad no cambia (IdUnit del entity)
+            if (request.ConversionFactor != 1m)
+                throw new InvalidOperationException(
+                    "La presentación base (IsBase = true) debe tener ConversionFactor = 1.");
+
+            var product = await db.Product.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.IdProduct == entity.IdProduct, ct);
+            if (product is not null && entity.IdUnit != product.IdUnit)
+                throw new InvalidOperationException(
+                    "La unidad de esta presentación no coincide con la unidad base del producto. No se puede marcar como IsBase = true.");
+        }
+        else
+        {
+            if (request.ConversionFactor <= 0)
+                throw new InvalidOperationException(
+                    "El factor de conversión debe ser mayor que 0.");
+        }
 
         entity.ConversionFactor  = request.ConversionFactor;
         entity.IsBase            = request.IsBase;

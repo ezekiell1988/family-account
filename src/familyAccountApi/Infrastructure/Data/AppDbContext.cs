@@ -22,8 +22,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ProductRecipe>            ProductRecipe            => Set<ProductRecipe>();
     public DbSet<ProductRecipeLine>        ProductRecipeLine        => Set<ProductRecipeLine>();
     public DbSet<InventoryLot>             InventoryLot             => Set<InventoryLot>();
+    public DbSet<InventoryAdjustmentType>  InventoryAdjustmentType  => Set<InventoryAdjustmentType>();
     public DbSet<InventoryAdjustment>      InventoryAdjustment      => Set<InventoryAdjustment>();
     public DbSet<InventoryAdjustmentLine>  InventoryAdjustmentLine  => Set<InventoryAdjustmentLine>();
+    public DbSet<InventoryAdjustmentEntry> InventoryAdjustmentEntry => Set<InventoryAdjustmentEntry>();
     public DbSet<Account>                  Account                  => Set<Account>();
     public DbSet<FiscalPeriod>             FiscalPeriod             => Set<FiscalPeriod>();
     public DbSet<AccountingEntry>          AccountingEntry          => Set<AccountingEntry>();
@@ -50,6 +52,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<PurchaseInvoiceLine>      PurchaseInvoiceLine      => Set<PurchaseInvoiceLine>();
     public DbSet<PurchaseInvoiceEntry>     PurchaseInvoiceEntry     => Set<PurchaseInvoiceEntry>();
     public DbSet<PurchaseInvoiceLineEntry> PurchaseInvoiceLineEntry => Set<PurchaseInvoiceLineEntry>();
+    public DbSet<SalesInvoiceType>         SalesInvoiceType         => Set<SalesInvoiceType>();
+    public DbSet<SalesInvoice>             SalesInvoice             => Set<SalesInvoice>();
+    public DbSet<SalesInvoiceLine>         SalesInvoiceLine         => Set<SalesInvoiceLine>();
+    public DbSet<SalesInvoiceEntry>        SalesInvoiceEntry        => Set<SalesInvoiceEntry>();
+    public DbSet<SalesInvoiceLineEntry>    SalesInvoiceLineEntry    => Set<SalesInvoiceLineEntry>();
     public DbSet<Company>                  Company                  => Set<Company>();
     public DbSet<CompanyDomain>            CompanyDomain            => Set<CompanyDomain>();
     public DbSet<CompanyWhatsapp>          CompanyWhatsapp          => Set<CompanyWhatsapp>();

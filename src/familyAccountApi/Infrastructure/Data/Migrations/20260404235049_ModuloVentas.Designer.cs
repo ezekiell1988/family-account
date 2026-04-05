@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260404203734_AddProductConfigurableAndCombo")]
-    partial class AddProductConfigurableAndCombo
+    [Migration("20260404235049_ModuloVentas")]
+    partial class ModuloVentas
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1099,6 +1099,138 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             LevelAccount = 3,
                             NameAccount = "Diferencial Cambiario Desfavorable",
                             TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 108,
+                            AllowsMovements = false,
+                            CodeAccount = "1.1.07",
+                            IdAccountParent = 7,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Inventario",
+                            TypeAccount = "Activo"
+                        },
+                        new
+                        {
+                            IdAccount = 109,
+                            AllowsMovements = true,
+                            CodeAccount = "1.1.07.01",
+                            IdAccountParent = 108,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "Inventario de Mercadería",
+                            TypeAccount = "Activo"
+                        },
+                        new
+                        {
+                            IdAccount = 110,
+                            AllowsMovements = true,
+                            CodeAccount = "1.1.07.02",
+                            IdAccountParent = 108,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "Materias Primas",
+                            TypeAccount = "Activo"
+                        },
+                        new
+                        {
+                            IdAccount = 111,
+                            AllowsMovements = true,
+                            CodeAccount = "1.1.07.03",
+                            IdAccountParent = 108,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "Productos en Proceso",
+                            TypeAccount = "Activo"
+                        },
+                        new
+                        {
+                            IdAccount = 112,
+                            AllowsMovements = false,
+                            CodeAccount = "5.14",
+                            IdAccountParent = 5,
+                            IsActive = true,
+                            LevelAccount = 2,
+                            NameAccount = "Ajustes de Inventario",
+                            TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 113,
+                            AllowsMovements = true,
+                            CodeAccount = "5.14.01",
+                            IdAccountParent = 112,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Faltantes de Inventario (Merma)",
+                            TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 114,
+                            AllowsMovements = true,
+                            CodeAccount = "5.14.02",
+                            IdAccountParent = 112,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Sobrantes de Inventario",
+                            TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 115,
+                            AllowsMovements = true,
+                            CodeAccount = "5.14.03",
+                            IdAccountParent = 112,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Costos de Producción",
+                            TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 116,
+                            AllowsMovements = false,
+                            CodeAccount = "4.5",
+                            IdAccountParent = 4,
+                            IsActive = true,
+                            LevelAccount = 2,
+                            NameAccount = "Ingresos por Ventas",
+                            TypeAccount = "Ingreso"
+                        },
+                        new
+                        {
+                            IdAccount = 117,
+                            AllowsMovements = true,
+                            CodeAccount = "4.5.01",
+                            IdAccountParent = 116,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Ingresos por Ventas — Mercadería",
+                            TypeAccount = "Ingreso"
+                        },
+                        new
+                        {
+                            IdAccount = 118,
+                            AllowsMovements = false,
+                            CodeAccount = "5.15",
+                            IdAccountParent = 5,
+                            IsActive = true,
+                            LevelAccount = 2,
+                            NameAccount = "Costo de Ventas",
+                            TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 119,
+                            AllowsMovements = true,
+                            CodeAccount = "5.15.01",
+                            IdAccountParent = 118,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Costo de Ventas — Mercadería",
+                            TypeAccount = "Gasto"
                         });
                 });
 
@@ -1704,6 +1836,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("idPurchaseInvoice")
                         .HasComment("FK opcional a la factura de compra vinculada a este documento de soporte");
 
+                    b.Property<int?>("IdSalesInvoice")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoice")
+                        .HasComment("FK opcional a la factura de venta vinculada a este documento de soporte");
+
                     b.Property<string>("NumberDocument")
                         .HasMaxLength(100)
                         .IsUnicode(false)
@@ -1717,7 +1854,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(20)")
                         .HasColumnName("typeDocument")
-                        .HasComment("Tipo de documento: 'FacturaCompra', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'");
+                        .HasComment("Tipo de documento: 'FacturaCompra', 'FacturaVenta', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'");
 
                     b.HasKey("IdBankMovementDocument");
 
@@ -1728,11 +1865,15 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasDatabaseName("IX_bankMovementDocument_idPurchaseInvoice")
                         .HasFilter("[idPurchaseInvoice] IS NOT NULL");
 
+                    b.HasIndex("IdSalesInvoice")
+                        .HasDatabaseName("IX_bankMovementDocument_idSalesInvoice")
+                        .HasFilter("[idSalesInvoice] IS NOT NULL");
+
                     b.ToTable("bankMovementDocument", t =>
                         {
                             t.HasComment("Documentos de soporte vinculados a un movimiento bancario");
 
-                            t.HasCheckConstraint("CK_bankMovementDocument_typeDocument", "typeDocument IN ('FacturaCompra', 'Recibo', 'Transferencia', 'Cheque', 'Otro')");
+                            t.HasCheckConstraint("CK_bankMovementDocument_typeDocument", "typeDocument IN ('FacturaCompra', 'FacturaVenta', 'Recibo', 'Transferencia', 'Cheque', 'Otro')");
                         });
                 });
 
@@ -2912,10 +3053,26 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("descriptionAdjustment")
                         .HasComment("Motivo o descripción del ajuste (ej: Conteo físico mensual, Corrida lote 26032002, NC proveedor).");
 
+                    b.Property<decimal>("ExchangeRateValue")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("exchangeRateValue")
+                        .HasComment("Tipo de cambio vigente al momento del ajuste. 1.0 para moneda local.");
+
+                    b.Property<int>("IdCurrency")
+                        .HasColumnType("int")
+                        .HasColumnName("idCurrency")
+                        .HasComment("FK a la moneda del ajuste. Se usa en el asiento contable generado.");
+
                     b.Property<int>("IdFiscalPeriod")
                         .HasColumnType("int")
                         .HasColumnName("idFiscalPeriod")
                         .HasComment("FK al período fiscal al que corresponde este ajuste.");
+
+                    b.Property<int>("IdInventoryAdjustmentType")
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryAdjustmentType")
+                        .HasComment("FK al tipo de ajuste. Determina las cuentas contables del asiento generado al confirmar.");
 
                     b.Property<string>("NumberAdjustment")
                         .IsRequired()
@@ -2933,17 +3090,16 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("statusAdjustment")
                         .HasComment("Estado del ajuste: Borrador | Confirmado | Anulado.");
 
-                    b.Property<string>("TypeAdjustment")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("typeAdjustment")
-                        .HasComment("Tipo de ajuste: Conteo Físico | Producción | Ajuste de Costo.");
-
                     b.HasKey("IdInventoryAdjustment");
+
+                    b.HasIndex("IdCurrency")
+                        .HasDatabaseName("IX_inventoryAdjustment_idCurrency");
 
                     b.HasIndex("IdFiscalPeriod")
                         .HasDatabaseName("IX_inventoryAdjustment_idFiscalPeriod");
+
+                    b.HasIndex("IdInventoryAdjustmentType")
+                        .HasDatabaseName("IX_inventoryAdjustment_idInventoryAdjustmentType");
 
                     b.HasIndex("NumberAdjustment")
                         .IsUnique()
@@ -2951,11 +3107,44 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.ToTable("inventoryAdjustment", t =>
                         {
-                            t.HasComment("Documento de ajuste de inventario. Cubre tres casos: Conteo Físico (corrección teórico vs real), Producción (corrida V1: consume MP/PP y genera PP/PT) y Ajuste de Costo (corrige unitCost sin mover cantidades). Único mecanismo válido para modificar inventoryLot fuera de una factura.");
+                            t.HasComment("Documento de ajuste de inventario. El tipo (idInventoryAdjustmentType) define las cuentas contables para generar el asiento al confirmar. Estados: Borrador → Confirmado → Anulado.");
 
                             t.HasCheckConstraint("CK_inventoryAdjustment_statusAdjustment", "statusAdjustment IN ('Borrador', 'Confirmado', 'Anulado')");
+                        });
+                });
 
-                            t.HasCheckConstraint("CK_inventoryAdjustment_typeAdjustment", "typeAdjustment IN ('Conteo Físico', 'Producción', 'Ajuste de Costo')");
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentEntry", b =>
+                {
+                    b.Property<int>("IdInventoryAdjustmentEntry")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryAdjustmentEntry")
+                        .HasComment("Identificador único autoincremental del vínculo ajuste-asiento.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdInventoryAdjustmentEntry"));
+
+                    b.Property<int>("IdAccountingEntry")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountingEntry")
+                        .HasComment("FK al asiento contable vinculado al ajuste.");
+
+                    b.Property<int>("IdInventoryAdjustment")
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryAdjustment")
+                        .HasComment("FK al ajuste de inventario.");
+
+                    b.HasKey("IdInventoryAdjustmentEntry");
+
+                    b.HasIndex("IdAccountingEntry")
+                        .HasDatabaseName("IX_inventoryAdjustmentEntry_idAccountingEntry");
+
+                    b.HasIndex("IdInventoryAdjustment", "IdAccountingEntry")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_inventoryAdjustmentEntry_idInventoryAdjustment_idAccountingEntry");
+
+                    b.ToTable("inventoryAdjustmentEntry", t =>
+                        {
+                            t.HasComment("Tabla auxiliar N:M entre inventoryAdjustment y accountingEntry. Un ajuste puede vincularse a más de un asiento: el asiento inicial de confirmación y cualquier asiento de reversión posterior. Nunca se modifica un asiento confirmado; se agregan nuevas filas en esta tabla.");
                         });
                 });
 
@@ -3007,6 +3196,107 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("inventoryAdjustmentLine", t =>
                         {
                             t.HasComment("Líneas del ajuste de inventario. Cada línea referencia un lote específico: quantityDelta positivo = entrada, negativo = salida, cero = ajuste de costo puro. Si quantityDelta > 0, unitCostNew es requerido.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentType", b =>
+                {
+                    b.Property<int>("IdInventoryAdjustmentType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryAdjustmentType")
+                        .HasComment("Identificador único autoincremental del tipo de ajuste.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdInventoryAdjustmentType"));
+
+                    b.Property<string>("CodeInventoryAdjustmentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("codeInventoryAdjustmentType")
+                        .HasComment("Código único del tipo: 'CONTEO', 'PRODUCCION', 'AJUSTE_COSTO'.");
+
+                    b.Property<int?>("IdAccountCounterpartEntry")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountCounterpartEntry")
+                        .HasComment("FK a la cuenta contrapartida para entradas (delta > 0) o ajuste de costo al alza. Actúa como CR del asiento. Ej: 'Ajuste Favorable de Inventario'.");
+
+                    b.Property<int?>("IdAccountCounterpartExit")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountCounterpartExit")
+                        .HasComment("FK a la cuenta contrapartida para salidas (delta < 0) o ajuste de costo a la baja. Actúa como DR del asiento. Ej: 'Gasto por Merma', 'Costo de Producción'.");
+
+                    b.Property<int?>("IdAccountInventoryDefault")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountInventoryDefault")
+                        .HasComment("FK a la cuenta de activo de inventario. DR en entradas (delta+), CR en salidas (delta-). Si es null, no se genera asiento contable al confirmar.");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("isActive")
+                        .HasComment("Indica si el tipo está activo y disponible para nuevos ajustes.");
+
+                    b.Property<string>("NameInventoryAdjustmentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("nameInventoryAdjustmentType")
+                        .HasComment("Nombre descriptivo del tipo (ej. 'Conteo Físico', 'Producción', 'Ajuste de Costo').");
+
+                    b.HasKey("IdInventoryAdjustmentType");
+
+                    b.HasIndex("CodeInventoryAdjustmentType")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_inventoryAdjustmentType_codeInventoryAdjustmentType");
+
+                    b.HasIndex("IdAccountCounterpartEntry")
+                        .HasDatabaseName("IX_inventoryAdjustmentType_idAccountCounterpartEntry")
+                        .HasFilter("[idAccountCounterpartEntry] IS NOT NULL");
+
+                    b.HasIndex("IdAccountCounterpartExit")
+                        .HasDatabaseName("IX_inventoryAdjustmentType_idAccountCounterpartExit")
+                        .HasFilter("[idAccountCounterpartExit] IS NOT NULL");
+
+                    b.HasIndex("IdAccountInventoryDefault")
+                        .HasDatabaseName("IX_inventoryAdjustmentType_idAccountInventoryDefault")
+                        .HasFilter("[idAccountInventoryDefault] IS NOT NULL");
+
+                    b.ToTable("inventoryAdjustmentType", t =>
+                        {
+                            t.HasComment("Catálogo de tipos de ajuste de inventario. Define las cuentas contables usadas para generar el asiento al confirmar un ajuste: cuenta de inventario (activo), cuenta contrapartida de entrada y cuenta contrapartida de salida.");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdInventoryAdjustmentType = 1,
+                            CodeInventoryAdjustmentType = "CONTEO",
+                            IdAccountCounterpartEntry = 114,
+                            IdAccountCounterpartExit = 113,
+                            IdAccountInventoryDefault = 109,
+                            IsActive = true,
+                            NameInventoryAdjustmentType = "Conteo Físico"
+                        },
+                        new
+                        {
+                            IdInventoryAdjustmentType = 2,
+                            CodeInventoryAdjustmentType = "PRODUCCION",
+                            IdAccountCounterpartEntry = 115,
+                            IdAccountCounterpartExit = 115,
+                            IdAccountInventoryDefault = 111,
+                            IsActive = true,
+                            NameInventoryAdjustmentType = "Producción"
+                        },
+                        new
+                        {
+                            IdInventoryAdjustmentType = 3,
+                            CodeInventoryAdjustmentType = "AJUSTE_COSTO",
+                            IdAccountCounterpartEntry = 114,
+                            IdAccountCounterpartExit = 113,
+                            IdAccountInventoryDefault = 109,
+                            IsActive = true,
+                            NameInventoryAdjustmentType = "Ajuste de Costo"
                         });
                 });
 
@@ -3656,6 +3946,32 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             t.HasComment("Tipo de producto según la fase productiva: Materia Prima, Producto en Proceso, Producto Terminado o Reventa. Catálogo de sistema, sin CRUD expuesto al usuario.");
                         });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductType = 1,
+                            DescriptionProductType = "Insumos o materiales adquiridos para ser utilizados en el proceso productivo. No se venden directamente.",
+                            NameProductType = "Materia Prima"
+                        },
+                        new
+                        {
+                            IdProductType = 2,
+                            DescriptionProductType = "Productos que han iniciado su proceso de fabricación pero aún no están terminados.",
+                            NameProductType = "Producto en Proceso"
+                        },
+                        new
+                        {
+                            IdProductType = 3,
+                            DescriptionProductType = "Productos que han completado el proceso productivo y están listos para la venta.",
+                            NameProductType = "Producto Terminado"
+                        },
+                        new
+                        {
+                            IdProductType = 4,
+                            DescriptionProductType = "Productos adquiridos listos para la venta sin transformación productiva.",
+                            NameProductType = "Reventa"
+                        });
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductUnit", b =>
@@ -4217,6 +4533,404 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoice", b =>
+                {
+                    b.Property<int>("IdSalesInvoice")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoice")
+                        .HasComment("Identificador único autoincremental de la factura de venta.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoice"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación del registro.");
+
+                    b.Property<DateOnly>("DateInvoice")
+                        .HasColumnType("date")
+                        .HasColumnName("dateInvoice")
+                        .HasComment("Fecha del documento de venta.");
+
+                    b.Property<string>("DescriptionInvoice")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("descriptionInvoice")
+                        .HasComment("Observaciones opcionales del documento.");
+
+                    b.Property<decimal>("ExchangeRateValue")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("exchangeRateValue")
+                        .HasComment("Tipo de cambio vigente al momento de la venta.");
+
+                    b.Property<int?>("IdBankAccount")
+                        .HasColumnType("int")
+                        .HasColumnName("idBankAccount");
+
+                    b.Property<int?>("IdContact")
+                        .HasColumnType("int")
+                        .HasColumnName("idContact");
+
+                    b.Property<int>("IdCurrency")
+                        .HasColumnType("int")
+                        .HasColumnName("idCurrency");
+
+                    b.Property<int>("IdFiscalPeriod")
+                        .HasColumnType("int")
+                        .HasColumnName("idFiscalPeriod");
+
+                    b.Property<int>("IdSalesInvoiceType")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceType");
+
+                    b.Property<string>("NumberInvoice")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("numberInvoice")
+                        .HasComment("Número correlativo: FV-YYYYMMDD-NNN (asignado al confirmar; en Borrador = 'BORRADOR').");
+
+                    b.Property<string>("StatusInvoice")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(15)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(15)")
+                        .HasDefaultValue("Borrador")
+                        .HasColumnName("statusInvoice")
+                        .HasComment("Estado: Borrador | Confirmado | Anulado.");
+
+                    b.Property<decimal>("SubTotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("subTotalAmount")
+                        .HasComment("Subtotal sin impuesto.");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("taxAmount")
+                        .HasComment("Monto total de impuesto.");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("totalAmount")
+                        .HasComment("Total del documento (subtotal + impuesto).");
+
+                    b.HasKey("IdSalesInvoice");
+
+                    b.HasIndex("IdBankAccount");
+
+                    b.HasIndex("IdContact")
+                        .HasDatabaseName("IX_salesInvoice_idContact")
+                        .HasFilter("[idContact] IS NOT NULL");
+
+                    b.HasIndex("IdCurrency");
+
+                    b.HasIndex("IdFiscalPeriod")
+                        .HasDatabaseName("IX_salesInvoice_idFiscalPeriod");
+
+                    b.HasIndex("IdSalesInvoiceType");
+
+                    b.HasIndex("NumberInvoice")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_salesInvoice_numberInvoice");
+
+                    b.ToTable("salesInvoice", t =>
+                        {
+                            t.HasComment("Cabecera de la factura de venta. Flujo: Borrador → Confirmado (genera asiento + COGS + descuenta lote) → Anulado (revierte).");
+
+                            t.HasCheckConstraint("CK_salesInvoice_statusInvoice", "statusInvoice IN ('Borrador', 'Confirmado', 'Anulado')");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceEntry", b =>
+                {
+                    b.Property<int>("IdSalesInvoiceEntry")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceEntry")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoiceEntry"));
+
+                    b.Property<int>("IdAccountingEntry")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountingEntry");
+
+                    b.Property<int>("IdSalesInvoice")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoice");
+
+                    b.HasKey("IdSalesInvoiceEntry");
+
+                    b.HasIndex("IdAccountingEntry");
+
+                    b.HasIndex("IdSalesInvoice", "IdAccountingEntry")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_salesInvoiceEntry_idSalesInvoice_idAccountingEntry");
+
+                    b.ToTable("salesInvoiceEntry", t =>
+                        {
+                            t.HasComment("Tabla pivot N:M salesInvoice ↔ accountingEntry.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", b =>
+                {
+                    b.Property<int>("IdSalesInvoiceLine")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLine")
+                        .HasComment("Identificador único autoincremental de la línea.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoiceLine"));
+
+                    b.Property<string>("DescriptionLine")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("descriptionLine")
+                        .HasComment("Descripción del producto o servicio de la línea.");
+
+                    b.Property<int?>("IdInventoryLot")
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryLot");
+
+                    b.Property<int?>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct");
+
+                    b.Property<int>("IdSalesInvoice")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoice");
+
+                    b.Property<int?>("IdUnit")
+                        .HasColumnType("int")
+                        .HasColumnName("idUnit");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("quantity")
+                        .HasComment("Cantidad en la unidad de venta seleccionada.");
+
+                    b.Property<decimal?>("QuantityBase")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("quantityBase")
+                        .HasComment("Cantidad en unidad base, calculada al confirmar: Quantity × ConversionFactor.");
+
+                    b.Property<decimal>("TaxPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("taxPercent")
+                        .HasComment("Porcentaje de impuesto aplicado a esta línea.");
+
+                    b.Property<decimal>("TotalLineAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("totalLineAmount")
+                        .HasComment("Total de la línea incluyendo impuesto.");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("unitCost")
+                        .HasComment("Costo unitario snapshot del lote en el momento de confirmar (para calcular COGS).");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("unitPrice")
+                        .HasComment("Precio unitario de venta en la presentación seleccionada.");
+
+                    b.HasKey("IdSalesInvoiceLine");
+
+                    b.HasIndex("IdInventoryLot");
+
+                    b.HasIndex("IdProduct");
+
+                    b.HasIndex("IdSalesInvoice");
+
+                    b.HasIndex("IdUnit");
+
+                    b.ToTable("salesInvoiceLine", t =>
+                        {
+                            t.HasComment("Línea de la factura de venta. IdInventoryLot es obligatorio para productos con stock; se descuenta al confirmar.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineEntry", b =>
+                {
+                    b.Property<int>("IdSalesInvoiceLineEntry")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLineEntry")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoiceLineEntry"));
+
+                    b.Property<int>("IdAccountingEntryLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountingEntryLine");
+
+                    b.Property<int>("IdSalesInvoiceLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLine");
+
+                    b.HasKey("IdSalesInvoiceLineEntry");
+
+                    b.HasIndex("IdAccountingEntryLine");
+
+                    b.HasIndex("IdSalesInvoiceLine", "IdAccountingEntryLine")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_salesInvoiceLineEntry_idSalesInvoiceLine_idAccountingEntryLine");
+
+                    b.ToTable("salesInvoiceLineEntry", t =>
+                        {
+                            t.HasComment("Tabla pivot N:M salesInvoiceLine ↔ accountingEntryLine.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceType", b =>
+                {
+                    b.Property<int>("IdSalesInvoiceType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceType")
+                        .HasComment("Identificador único autoincremental del tipo de factura de venta.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoiceType"));
+
+                    b.Property<string>("CodeSalesInvoiceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("codeSalesInvoiceType")
+                        .HasComment("Código único del tipo: 'CONTADO_CRC', 'CONTADO_USD', 'CREDITO'.");
+
+                    b.Property<bool>("CounterpartFromBankMovement")
+                        .HasColumnType("bit")
+                        .HasColumnName("counterpartFromBankMovement")
+                        .HasComment("true = la cuenta DR del asiento proviene del BankMovement vinculado; false = cuenta Caja fija por moneda.");
+
+                    b.Property<int?>("IdAccountCOGS")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountCOGS")
+                        .HasComment("Cuenta DR de costo de ventas (COGS) al reconocer el costo.");
+
+                    b.Property<int?>("IdAccountCounterpartCRC")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountCounterpartCRC")
+                        .HasComment("FK a la cuenta Caja CRC. Solo aplica cuando CounterpartFromBankMovement = false.");
+
+                    b.Property<int?>("IdAccountCounterpartUSD")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountCounterpartUSD")
+                        .HasComment("FK a la cuenta Caja USD. Solo aplica cuando CounterpartFromBankMovement = false.");
+
+                    b.Property<int?>("IdAccountInventory")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountInventory")
+                        .HasComment("Cuenta CR de inventario al reconocer el costo de ventas.");
+
+                    b.Property<int?>("IdAccountSalesRevenue")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountSalesRevenue")
+                        .HasComment("Cuenta CR de ingresos por ventas (fallback cuando el producto no tiene ProductAccount configurado).");
+
+                    b.Property<int?>("IdBankMovementType")
+                        .HasColumnType("int")
+                        .HasColumnName("idBankMovementType")
+                        .HasComment("FK al tipo de movimiento bancario para auto-crear el BankMovement al confirmar. Solo si CounterpartFromBankMovement = true.");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("isActive")
+                        .HasComment("Indica si el tipo de factura de venta está activo.");
+
+                    b.Property<string>("NameSalesInvoiceType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("nameSalesInvoiceType")
+                        .HasComment("Nombre descriptivo del tipo de factura de venta.");
+
+                    b.HasKey("IdSalesInvoiceType");
+
+                    b.HasIndex("CodeSalesInvoiceType")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_salesInvoiceType_codeSalesInvoiceType");
+
+                    b.HasIndex("IdAccountCOGS");
+
+                    b.HasIndex("IdAccountCounterpartCRC")
+                        .HasDatabaseName("IX_salesInvoiceType_idAccountCounterpartCRC")
+                        .HasFilter("[idAccountCounterpartCRC] IS NOT NULL");
+
+                    b.HasIndex("IdAccountCounterpartUSD")
+                        .HasDatabaseName("IX_salesInvoiceType_idAccountCounterpartUSD")
+                        .HasFilter("[idAccountCounterpartUSD] IS NOT NULL");
+
+                    b.HasIndex("IdAccountInventory");
+
+                    b.HasIndex("IdAccountSalesRevenue");
+
+                    b.HasIndex("IdBankMovementType")
+                        .HasDatabaseName("IX_salesInvoiceType_idBankMovementType")
+                        .HasFilter("[idBankMovementType] IS NOT NULL");
+
+                    b.ToTable("salesInvoiceType", t =>
+                        {
+                            t.HasComment("Catálogo de tipos de factura de venta. Define contrapartida (Caja o BankMovement) y cuentas contables predeterminadas para ingresos y COGS.");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdSalesInvoiceType = 1,
+                            CodeSalesInvoiceType = "CONTADO_CRC",
+                            CounterpartFromBankMovement = false,
+                            IdAccountCOGS = 119,
+                            IdAccountCounterpartCRC = 106,
+                            IdAccountInventory = 109,
+                            IdAccountSalesRevenue = 117,
+                            IsActive = true,
+                            NameSalesInvoiceType = "Venta Contado CRC"
+                        },
+                        new
+                        {
+                            IdSalesInvoiceType = 2,
+                            CodeSalesInvoiceType = "CONTADO_USD",
+                            CounterpartFromBankMovement = false,
+                            IdAccountCOGS = 119,
+                            IdAccountCounterpartUSD = 107,
+                            IdAccountInventory = 109,
+                            IdAccountSalesRevenue = 117,
+                            IsActive = true,
+                            NameSalesInvoiceType = "Venta Contado USD"
+                        },
+                        new
+                        {
+                            IdSalesInvoiceType = 3,
+                            CodeSalesInvoiceType = "CREDITO",
+                            CounterpartFromBankMovement = true,
+                            IdAccountCOGS = 119,
+                            IdAccountInventory = 109,
+                            IdAccountSalesRevenue = 117,
+                            IsActive = true,
+                            NameSalesInvoiceType = "Venta a Crédito"
+                        });
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UnitOfMeasure", b =>
                 {
                     b.Property<int>("IdUnit")
@@ -4600,9 +5314,16 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasForeignKey("IdPurchaseInvoice")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoice", "IdSalesInvoiceNavigation")
+                        .WithMany("BankMovementDocuments")
+                        .HasForeignKey("IdSalesInvoice")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("IdBankMovementNavigation");
 
                     b.Navigation("IdPurchaseInvoiceNavigation");
+
+                    b.Navigation("IdSalesInvoiceNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.BankMovementType", b =>
@@ -4748,13 +5469,48 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustment", b =>
                 {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Currency", "IdCurrencyNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdCurrency")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("FamilyAccountApi.Domain.Entities.FiscalPeriod", "IdFiscalPeriodNavigation")
                         .WithMany()
                         .HasForeignKey("IdFiscalPeriod")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryAdjustmentType", "IdInventoryAdjustmentTypeNavigation")
+                        .WithMany("InventoryAdjustments")
+                        .HasForeignKey("IdInventoryAdjustmentType")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdCurrencyNavigation");
+
                     b.Navigation("IdFiscalPeriodNavigation");
+
+                    b.Navigation("IdInventoryAdjustmentTypeNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentEntry", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.AccountingEntry", "IdAccountingEntryNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountingEntry")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryAdjustment", "IdInventoryAdjustmentNavigation")
+                        .WithMany("InventoryAdjustmentEntries")
+                        .HasForeignKey("IdInventoryAdjustment")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdAccountingEntryNavigation");
+
+                    b.Navigation("IdInventoryAdjustmentNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentLine", b =>
@@ -4774,6 +5530,30 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdInventoryAdjustmentNavigation");
 
                     b.Navigation("IdInventoryLotNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentType", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountCounterpartEntryNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountCounterpartEntry")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountCounterpartExitNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountCounterpartExit")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountInventoryDefaultNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountInventoryDefault")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IdAccountCounterpartEntryNavigation");
+
+                    b.Navigation("IdAccountCounterpartExitNavigation");
+
+                    b.Navigation("IdAccountInventoryDefaultNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryLot", b =>
@@ -5105,6 +5885,162 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdDefaultExpenseAccountNavigation");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoice", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.BankAccount", "IdBankAccountNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdBankAccount")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Contact", "IdContactNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdContact")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Currency", "IdCurrencyNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdCurrency")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.FiscalPeriod", "IdFiscalPeriodNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdFiscalPeriod")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoiceType", "IdSalesInvoiceTypeNavigation")
+                        .WithMany("SalesInvoices")
+                        .HasForeignKey("IdSalesInvoiceType")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdBankAccountNavigation");
+
+                    b.Navigation("IdContactNavigation");
+
+                    b.Navigation("IdCurrencyNavigation");
+
+                    b.Navigation("IdFiscalPeriodNavigation");
+
+                    b.Navigation("IdSalesInvoiceTypeNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceEntry", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.AccountingEntry", "IdAccountingEntryNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountingEntry")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoice", "IdSalesInvoiceNavigation")
+                        .WithMany("SalesInvoiceEntries")
+                        .HasForeignKey("IdSalesInvoice")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdAccountingEntryNavigation");
+
+                    b.Navigation("IdSalesInvoiceNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryLot", "IdInventoryLotNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdInventoryLot")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoice", "IdSalesInvoiceNavigation")
+                        .WithMany("SalesInvoiceLines")
+                        .HasForeignKey("IdSalesInvoice")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.UnitOfMeasure", "IdUnitNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdUnit")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IdInventoryLotNavigation");
+
+                    b.Navigation("IdProductNavigation");
+
+                    b.Navigation("IdSalesInvoiceNavigation");
+
+                    b.Navigation("IdUnitNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineEntry", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.AccountingEntryLine", "IdAccountingEntryLineNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountingEntryLine")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", "IdSalesInvoiceLineNavigation")
+                        .WithMany("SalesInvoiceLineEntries")
+                        .HasForeignKey("IdSalesInvoiceLine")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdAccountingEntryLineNavigation");
+
+                    b.Navigation("IdSalesInvoiceLineNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceType", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountCOGSNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountCOGS")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountCounterpartCRCNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountCounterpartCRC")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountCounterpartUSDNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountCounterpartUSD")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountInventoryNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountInventory")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountSalesRevenueNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountSalesRevenue")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.BankMovementType", "IdBankMovementTypeNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdBankMovementType")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IdAccountCOGSNavigation");
+
+                    b.Navigation("IdAccountCounterpartCRCNavigation");
+
+                    b.Navigation("IdAccountCounterpartUSDNavigation");
+
+                    b.Navigation("IdAccountInventoryNavigation");
+
+                    b.Navigation("IdAccountSalesRevenueNavigation");
+
+                    b.Navigation("IdBankMovementTypeNavigation");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UserPin", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.User", "User")
@@ -5216,7 +6152,14 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustment", b =>
                 {
+                    b.Navigation("InventoryAdjustmentEntries");
+
                     b.Navigation("InventoryAdjustmentLines");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentType", b =>
+                {
+                    b.Navigation("InventoryAdjustments");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryLot", b =>
@@ -5286,6 +6229,25 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Role", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoice", b =>
+                {
+                    b.Navigation("BankMovementDocuments");
+
+                    b.Navigation("SalesInvoiceEntries");
+
+                    b.Navigation("SalesInvoiceLines");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", b =>
+                {
+                    b.Navigation("SalesInvoiceLineEntries");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceType", b =>
+                {
+                    b.Navigation("SalesInvoices");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UnitOfMeasure", b =>

@@ -71,6 +71,18 @@ public sealed class ProductAccountService(AppDbContext db) : IProductAccountServ
 
     public async Task<ProductAccountResponse> CreateAsync(CreateProductAccountRequest request, CancellationToken ct = default)
     {
+        // V6: porcentaje debe ser > 0 y la suma para el producto no puede superar 100
+        if (request.PercentageAccount <= 0)
+            throw new InvalidOperationException("El porcentaje de la cuenta debe ser mayor que 0.");
+
+        var existingSum = await db.ProductAccount
+            .Where(pa => pa.IdProduct == request.IdProduct)
+            .SumAsync(pa => pa.PercentageAccount, CancellationToken.None);
+
+        if (existingSum + request.PercentageAccount > 100)
+            throw new InvalidOperationException(
+                $"La suma de porcentajes para este producto sería {existingSum + request.PercentageAccount:F2}%, que supera el 100%. Reduzca el porcentaje nuevo o ajuste los existentes.");
+
         var entity = new ProductAccount
         {
             IdProduct         = request.IdProduct,
@@ -89,6 +101,18 @@ public sealed class ProductAccountService(AppDbContext db) : IProductAccountServ
     {
         var entity = await db.ProductAccount.FindAsync([idProductAccount], ct);
         if (entity is null) return null;
+
+        // V6: validar porcentaje y suma
+        if (request.PercentageAccount <= 0)
+            throw new InvalidOperationException("El porcentaje de la cuenta debe ser mayor que 0.");
+
+        var existingSum = await db.ProductAccount
+            .Where(pa => pa.IdProductAccount != idProductAccount && pa.IdProduct == entity.IdProduct)
+            .SumAsync(pa => pa.PercentageAccount, CancellationToken.None);
+
+        if (existingSum + request.PercentageAccount > 100)
+            throw new InvalidOperationException(
+                $"La suma de porcentajes para este producto sería {existingSum + request.PercentageAccount:F2}%, que supera el 100%. Reduzca el porcentaje o ajuste las distribuciones existentes.");
 
         entity.IdAccount         = request.IdAccount;
         entity.IdCostCenter      = request.IdCostCenter;

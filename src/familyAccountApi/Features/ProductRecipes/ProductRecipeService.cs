@@ -65,6 +65,20 @@ public sealed class ProductRecipeService(AppDbContext db) : IProductRecipeServic
 
     public async Task<ProductRecipeResponse> CreateAsync(CreateProductRecipeRequest request, CancellationToken ct = default)
     {
+        // V4: el producto output no puede ser de tipo Materia Prima (Id=1) o Reventa (Id=4)
+        var outputProduct = await db.Product.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.IdProduct == request.IdProductOutput, ct);
+        if (outputProduct is null)
+            throw new InvalidOperationException($"Producto output {request.IdProductOutput} no encontrado.");
+        if (outputProduct.IdProductType is 1 or 4)
+            throw new InvalidOperationException(
+                "El producto output no puede ser de tipo 'Materia Prima' o 'Reventa'. Use 'Producto en Proceso' o 'Producto Terminado'.");
+
+        // V5: ningún insumo puede ser igual al producto output (sin auto-referencia)
+        if (request.Lines.Any(l => l.IdProductInput == request.IdProductOutput))
+            throw new InvalidOperationException(
+                "Un insumo de la receta no puede ser el mismo producto que el output.");
+
         var recipe = new ProductRecipe
         {
             IdProductOutput   = request.IdProductOutput,
@@ -97,6 +111,18 @@ public sealed class ProductRecipeService(AppDbContext db) : IProductRecipeServic
             .FirstOrDefaultAsync(r => r.IdProductRecipe == idProductRecipe, ct);
 
         if (recipe is null) return null;
+
+        // V4: el producto output no puede ser Materia Prima (Id=1) ni Reventa (Id=4)
+        var outputProduct = await db.Product.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.IdProduct == recipe.IdProductOutput, ct);
+        if (outputProduct?.IdProductType is 1 or 4)
+            throw new InvalidOperationException(
+                "El producto output no puede ser de tipo 'Materia Prima' o 'Reventa'.");
+
+        // V5: ningún insumo puede ser igual al producto output
+        if (request.Lines.Any(l => l.IdProductInput == recipe.IdProductOutput))
+            throw new InvalidOperationException(
+                "Un insumo de la receta no puede ser el mismo producto que el output.");
 
         recipe.NameRecipe        = request.NameRecipe;
         recipe.QuantityOutput    = request.QuantityOutput;

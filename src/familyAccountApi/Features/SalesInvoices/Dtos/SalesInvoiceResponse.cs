@@ -1,0 +1,28 @@
+namespace FamilyAccountApi.Features.SalesInvoices.Dtos;
+
+public sealed record SalesInvoiceResponse(
+    int      IdSalesInvoice,
+    int      IdFiscalPeriod,
+    string   NamePeriod,
+    int      IdCurrency,
+    string   CodeCurrency,
+    string   NameCurrency,
+    int      IdSalesInvoiceType,
+    string   CodeSalesInvoiceType,
+    string   NameSalesInvoiceType,
+    bool     CounterpartFromBankMovement,
+    int?     IdContact,
+    string?  NameContact,
+    int?     IdBankAccount,
+    string?  CodeBankAccount,
+    string   NumberInvoice,
+    DateOnly DateInvoice,
+    decimal  SubTotalAmount,
+    decimal  TaxAmount,
+    decimal  TotalAmount,
+    string   StatusInvoice,
+    string?  DescriptionInvoice,
+    decimal  ExchangeRateValue,
+    DateTime CreatedAt,
+    int?     IdAccountingEntry,
+    IReadOnlyList<SalesInvoiceLineResponse> Lines);

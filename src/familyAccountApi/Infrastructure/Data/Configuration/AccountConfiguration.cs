@@ -229,7 +229,27 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
 
             // ── 5.13 Gastos Financieros ───────────────────────────────────────
             new Account { IdAccount = 103, CodeAccount = "5.13",    NameAccount = "Gastos Financieros",                 TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 104, CodeAccount = "5.13.01", NameAccount = "Diferencial Cambiario Desfavorable", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 103, AllowsMovements = true,  IsActive = true }
+            new Account { IdAccount = 104, CodeAccount = "5.13.01", NameAccount = "Diferencial Cambiario Desfavorable", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 103, AllowsMovements = true,  IsActive = true },
+
+            // ── 1.1.07 Inventario ─────────────────────────────────────────────
+            new Account { IdAccount = 108, CodeAccount = "1.1.07",    NameAccount = "Inventario",                TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 109, CodeAccount = "1.1.07.01", NameAccount = "Inventario de Mercadería", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 108, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 110, CodeAccount = "1.1.07.02", NameAccount = "Materias Primas",          TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 108, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 111, CodeAccount = "1.1.07.03", NameAccount = "Productos en Proceso",     TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 108, AllowsMovements = true,  IsActive = true },
+
+            // ── 5.14 Ajustes de Inventario ────────────────────────────────────
+            new Account { IdAccount = 112, CodeAccount = "5.14",    NameAccount = "Ajustes de Inventario",          TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 113, CodeAccount = "5.14.01", NameAccount = "Faltantes de Inventario (Merma)", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 112, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 114, CodeAccount = "5.14.02", NameAccount = "Sobrantes de Inventario",         TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 112, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 115, CodeAccount = "5.14.03", NameAccount = "Costos de Producción",            TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 112, AllowsMovements = true,  IsActive = true },
+
+            // ── 4.5 Ingresos por Ventas (módulo de ventas) ───────────────────
+            new Account { IdAccount = 116, CodeAccount = "4.5",     NameAccount = "Ingresos por Ventas",              TypeAccount = "Ingreso", LevelAccount = 2, IdAccountParent = 4,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 117, CodeAccount = "4.5.01",  NameAccount = "Ingresos por Ventas — Mercadería", TypeAccount = "Ingreso", LevelAccount = 3, IdAccountParent = 116, AllowsMovements = true,  IsActive = true },
+
+            // ── 5.15 Costo de Ventas (módulo de ventas) ──────────────────────
+            new Account { IdAccount = 118, CodeAccount = "5.15",    NameAccount = "Costo de Ventas",                  TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 119, CodeAccount = "5.15.01", NameAccount = "Costo de Ventas — Mercadería",     TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 118, AllowsMovements = true,  IsActive = true }
         );
     }
 }

@@ -72,15 +72,29 @@ public static class ProductRecipesModule
     private static async Task<Results<Created<ProductRecipeResponse>, ValidationProblem>> Create(
         CreateProductRecipeRequest request, IProductRecipeService service, CancellationToken ct)
     {
-        var item = await service.CreateAsync(request, ct);
-        return TypedResults.Created($"/api/v1/product-recipes/{item.IdProductRecipe}.json", item);
+        try
+        {
+            var item = await service.CreateAsync(request, ct);
+            return TypedResults.Created($"/api/v1/product-recipes/{item.IdProductRecipe}.json", item);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { [""] = [ex.Message] });
+        }
     }
 
-    private static async Task<Results<Ok<ProductRecipeResponse>, NotFound>> Update(
+    private static async Task<Results<Ok<ProductRecipeResponse>, NotFound, ValidationProblem>> Update(
         int id, UpdateProductRecipeRequest request, IProductRecipeService service, CancellationToken ct)
     {
-        var item = await service.UpdateAsync(id, request, ct);
-        return item is not null ? TypedResults.Ok(item) : TypedResults.NotFound();
+        try
+        {
+            var item = await service.UpdateAsync(id, request, ct);
+            return item is not null ? TypedResults.Ok(item) : TypedResults.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { [""] = [ex.Message] });
+        }
     }
 
     private static async Task<Results<NoContent, NotFound>> Delete(

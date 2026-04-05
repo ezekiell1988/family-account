@@ -8,5 +8,5 @@ public interface IProductService
     Task<ProductResponse?> GetByIdAsync(int idProduct, CancellationToken ct = default);
     Task<ProductResponse> CreateAsync(CreateProductRequest request, CancellationToken ct = default);
     Task<ProductResponse?> UpdateAsync(int idProduct, UpdateProductRequest request, CancellationToken ct = default);
-    Task<bool> DeleteAsync(int idProduct, CancellationToken ct = default);
+    Task<(bool Deleted, string? ConflictMessage)> DeleteAsync(int idProduct, CancellationToken ct = default);
 }

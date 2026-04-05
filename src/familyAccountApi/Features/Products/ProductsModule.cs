@@ -109,12 +109,19 @@ public static class ProductsModule
         }
     }
 
-    private static async Task<Results<NoContent, NotFound>> Delete(
+    private static async Task<Results<NoContent, NotFound, Conflict<ProblemDetails>>> Delete(
         int id,
         IProductService service,
         CancellationToken ct)
     {
-        var deleted = await service.DeleteAsync(id, ct);
+        var (deleted, conflict) = await service.DeleteAsync(id, ct);
+        if (conflict is not null)
+            return TypedResults.Conflict(new ProblemDetails
+            {
+                Title  = "Conflicto de dependencias",
+                Detail = conflict,
+                Status = StatusCodes.Status409Conflict
+            });
         return deleted
             ? TypedResults.NoContent()
             : TypedResults.NotFound();

@@ -30,8 +30,20 @@ public sealed record CreateInventoryAdjustmentRequest
     public required int IdFiscalPeriod { get; init; }
 
     [Required]
-    [Description("Tipo de ajuste: Conteo Físico | Producción | Ajuste de Costo")]
-    public required string TypeAdjustment { get; init; }
+    [Range(1, int.MaxValue)]
+    [Description("ID del tipo de ajuste (ver /inventory-adjustment-types)")]
+    public required int IdInventoryAdjustmentType { get; init; }
+
+    [Required]
+    [Range(1, int.MaxValue)]
+    [Description("ID de la moneda del ajuste")]
+    public required int IdCurrency { get; init; }
+
+    [Required]
+    [Range(typeof(decimal), "0.000001", "999999999.999999",
+        ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
+    [Description("Tipo de cambio vigente. Usar 1.0 para moneda local.")]
+    public required decimal ExchangeRateValue { get; init; }
 
     [Required]
     [Description("Fecha del evento")]

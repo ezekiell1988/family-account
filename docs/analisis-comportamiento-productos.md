@@ -1,8 +1,8 @@
 # Análisis de Comportamiento Actual — Sistema de Productos
 
-> Fecha: 4 de abril de 2026  
+> Fecha: 4 de abril de 2026 (actualizado: 5 de abril de 2026)  
 > Rama: `main`  
-> Alcance: Entidades, servicios y endpoints relacionados con el flujo de productos, incluyendo productos configurables y combos.
+> Alcance: Entidades, servicios y endpoints relacionados con el flujo de productos, inventario, facturas de compra y el nuevo módulo de facturas de venta.
 
 ---
 
@@ -18,12 +18,19 @@
 | `ProductRecipe` | `/product-recipes` | ✅ | CRUD + filter by output |
 | `ProductRecipeLine` | — | Implícito | Se crea/destruye con la receta |
 | `ProductType` | `/product-types` | Solo lectura | Catálogo de sistema, sin CRUD |
-| `InventoryLot` | `/inventory-lots` | Solo lectura | Se crea desde factura/ajuste (ver §3) |
-| `InventoryAdjustment` | `/inventory-adjustments` | ✅ | Flujo Borrador → Confirmado → Anulado |
+| `InventoryLot` | `/inventory-lots` | Solo lectura | Se crea al confirmar `PurchaseInvoice` o `InventoryAdjustment` (ver §2.7) |
+| `InventoryAdjustment` | `/inventory-adjustments` | ✅ | Flujo Borrador → Confirmado → Anulado. Genera asiento contable al confirmar si el tipo tiene cuentas configuradas |
+| `InventoryAdjustmentType` | `/inventory-adjustment-types` | ✅ | Catálogo CRUD. Define cuentas contables: inventario, contrapartida entrada y contrapartida salida. Seed con 3 tipos (CONTEO, PRODUCCION, AJUSTE_COSTO) con cuentas preconfiguradas |
+| `InventoryAdjustmentEntry` | — | Implícito | Tabla pivot N:M entre `inventoryAdjustment` y `accountingEntry`. Se crea automáticamente al confirmar si el tipo tiene cuentas configuradas |
 | `ProductOptionGroup` | `/product-option-groups` | ✅ | CRUD completo. Items implícitos (se crean/destruyen con el grupo) |
 | `ProductOptionItem` | — | Implícito | Se crea/destruye con el grupo |
 | `ProductComboSlot` | `/product-combo-slots` | ✅ | CRUD completo. Productos del slot implícitos |
 | `ProductComboSlotProduct` | — | Implícito | Productos elegibles por slot |
+| `SalesInvoiceType` | `/sales-invoice-types` | ✅ | Catálogo CRUD. Define contrapartida, cuentas contables de ingresos y COGS. Seed con 3 tipos |
+| `SalesInvoice` | `/sales-invoices` | ✅ | Flujo Borrador → Confirmado → Anulado. Genera asiento contable + COGS al confirmar |
+| `SalesInvoiceLine` | — | Implícito | Se crea/destruye con la factura. Snapshots UnitCost y QuantityBase al confirmar |
+| `SalesInvoiceEntry` | — | Implícito | Pivot N:M entre `salesInvoice` y `accountingEntry` |
+| `SalesInvoiceLineEntry` | — | Implícito | Pivot N:M entre `salesInvoiceLine` y `accountingEntryLine` |
 
 ---
 
@@ -41,24 +48,31 @@
 
 ### 2.2 `ProductUnit` — Presentaciones con factor de conversión
 
-- El servicio **no valida** la invariante principal del modelo: exactamente 1 `IsBase = true` por producto.
-- El servicio **no valida** que cuando `IsBase = true`, `ConversionFactor = 1.0` y `IdUnit = product.IdUnit`.
-- `UpdateAsync` permite cambiar `IsBase` y `ConversionFactor` sin ninguna verificación. Esto puede dejar un producto sin unidad base o con dos unidades base simultáneas.
-- Las restricciones solo existen a nivel de BD (índice único `UQ_productUnit_idProduct_idUnit`), por lo que el error de violación llegaría como excepción genérica de SQL, no como validación semántica.
-- `SalePrice` (`decimal(18,4)`, default `0`): precio base de venta para esta presentación. El precio final en combos y productos configurables se calcula sumando los `PriceDelta` de los `ProductOptionItem` seleccionados. El servicio actualmente **no valida** que `SalePrice >= 0`.
+✅ **Validaciones implementadas (5-abr-2026):**
+
+- `IsBase = true` → el servicio **verifica** que no exista otra unidad base para el mismo producto (V2).  
+- `IsBase = true` → el servicio **exige** `ConversionFactor = 1.0` y que `IdUnit == product.IdUnit` (V3).  
+- `IsBase = false` → el servicio **exige** `ConversionFactor > 0`.  
+- **`SalePrice < 0`** rechazado con `InvalidOperationException` (V8).  
+- Los errores de validación devuelven `422 ValidationProblem` en lugar de excepción de BD.
+
+Nota: el índice único `UQ_productUnit_idProduct_idUnit` en BD sigue siendo la última barrera para duplicados; sigue llegando como `409 Conflict` desde el módulo.
 
 ### 2.3 `ProductRecipe` — BOM (Bill of Materials)
 
-- El servicio **no valida** que `IdProductOutput` sea de tipo "Producto en Proceso" o "Producto Terminado". Una receta puede crearse con un output de tipo "Materia Prima" o "Reventa", contradiciendo las reglas de negocio del modelo.
-- El servicio **no valida** que ninguna `ProductRecipeLine` apunte al mismo producto que `IdProductOutput` (ingrediente = output es un error de datos).
-- No hay detección de ciclos (producto A requiere B, producto B requiere A).
-- `UpdateAsync` reemplaza todas las líneas con las nuevas (`RemoveRange` + nuevo listado), lo que es correcto en comportamiento pero puede ser pesado para recetas largas.
+✅ **Validaciones implementadas (5-abr-2026):**
+
+- El servicio **valida** que `IdProductOutput` sea solo de tipo "Producto en Proceso" (id=2) o "Producto Terminado" (id=3). Tipos "Materia Prima" (id=1) o "Reventa" (id=4) son rechazados con `422 ValidationProblem` (V4).
+- El servicio **valida** que ninguna `ProductRecipeLine` tenga `IdProductInput == IdProductOutput` (V5).
+- No hay detección de ciclos (producto A requiere B, producto B requiere A) — gap L5 pendiente.
+- `UpdateAsync` reemplaza todas las líneas con las nuevas (`RemoveRange` + nuevo listado), lo que es correcto en comportamiento.
 
 ### 2.4 `ProductAccount` — Distribución contable
 
-- El servicio **no valida** que la suma de `PercentageAccount` por producto sea exactamente 100. Es posible configurar una distribución incompleta (ej: 40% + 30% = 70%) y luego confirmar una factura con ese producto.
-- Cuando la factura se confirma, el asiento SÍ usa estos porcentajes: `rawAmount = TotalLineAmount * PercentageAccount / 100m`. Si la suma no es 100, el DR del asiento no coincide con el total de la línea.
-- Los porcentajes negativos están permitidos en el modelo (crean líneas CR internas), lo que es correcto para casos de contra-asientos, pero no está documentado en los DTOs.
+✅ **Validación implementada (5-abr-2026):** El servicio **valida** que la suma acumulada de `PercentageAccount` por producto no supere 100 al crear o actualizar. Una distribución incompleta (ej: 40+30=70) se permite para habilitar ingreso incremental, pero superar 100 lanza `422 ValidationProblem` (V6).
+
+- Cuando la factura se confirma, el asiento SÍ usa estos porcentajes: `rawAmount = TotalLineAmount * PercentageAccount / 100m`. Si la suma es menor que 100, el CR del asiento no cubre el total de la línea (comportamiento permitido pero documentado).
+- Los porcentajes negativos están permitidos en el modelo (crean líneas DR internas de contrapartida).
 
 ### 2.5 `ProductOptionGroup` y `ProductOptionItem` — Opciones configurables
 
@@ -97,23 +111,70 @@ Entidades con configuración EF, módulo de endpoints, servicio e interfaces com
 - El servicio **valida** que ningún producto del slot tenga `IsCombo=true` (sin combos anidados).
 - Create/Update son **atómicos**: el slot y sus productos se gestionan en un solo request (replace-all en Update).
 
+### 2.6.b `InventoryAdjustmentType` — Tipos de ajuste con configuración contable
+
+Nuevo catálogo creado el 4-abr-2026. Reemplaza el campo `TypeAdjustment` (string libre con CHECK constraint) que tenía `InventoryAdjustment`.
+
+**`InventoryAdjustmentType`**:
+- Cada tipo define 3 cuentas contables opcionales: `IdAccountInventoryDefault` (activo de inventario), `IdAccountCounterpartEntry` (contrapartida entrada) y `IdAccountCounterpartExit` (contrapartida salida).
+- Si `IdAccountInventoryDefault` es `null`, el servicio **omite** la generación del asiento al confirmar (comportamiento legacy compatible).
+- El servicio **valida** en `ConfirmAsync` que si la cuenta de inventario está configurada, las contrapartidas requeridas según el tipo de línea también lo estén; si falta alguna, lanza `InvalidOperationException` con mensaje descriptivo.
+- CRUD completo expuesto en `/inventory-adjustment-types` con endpoint adicional `GET /active.json`.
+
+**Lógica del asiento al confirmar un ajuste** (nueva en `InventoryAdjustmentService.ConfirmAsync`):
+
+| Caso de línea | DR | CR |
+|---|---|---|
+| `QuantityDelta > 0` (entrada) | `IdAccountInventoryDefault` × (qty × costo) | `IdAccountCounterpartEntry` |
+| `QuantityDelta < 0` (salida) | `IdAccountCounterpartExit` × (qty × costo) | `IdAccountInventoryDefault` |
+| `QuantityDelta = 0` + `UnitCostNew` al alza | `IdAccountInventoryDefault` × diff | `IdAccountCounterpartEntry` |
+| `QuantityDelta = 0` + `UnitCostNew` a la baja | `IdAccountCounterpartExit` × \|diff\| | `IdAccountInventoryDefault` |
+| `QuantityDelta = 0` + `UnitCostNew` sin cambio | sin movimiento contable | — |
+
+El asiento queda vinculado al ajuste mediante `InventoryAdjustmentEntry` (misma estructura que `PurchaseInvoiceEntry`). `OriginModule = "InventoryAdjustment"`.
+
+**Seed inicial** (IdAccounts configuradas desde la migración):
+
+| Id | Código | Nombre | Inventario | Contrapartida Entrada | Contrapartida Salida |
+|---|---|---|---|---|---|
+| 1 | CONTEO | Conteo Físico | 109 Inventario Mercadería | 114 Sobrantes | 113 Faltantes/Merma |
+| 2 | PRODUCCION | Producción | 111 Productos en Proceso | 115 Costos de Producción | 115 Costos de Producción |
+| 3 | AJUSTE_COSTO | Ajuste de Costo | 109 Inventario Mercadería | 114 Sobrantes | 113 Faltantes/Merma |
+
+**Nuevas cuentas contables agregadas al plan** (seed en `AccountConfiguration`):
+
+| IdAccount | Código | Nombre | Tipo |
+|---|---|---|---|
+| 108 | `1.1.07` | Inventario | Activo (agrupadora) |
+| 109 | `1.1.07.01` | Inventario de Mercadería | Activo |
+| 110 | `1.1.07.02` | Materias Primas | Activo |
+| 111 | `1.1.07.03` | Productos en Proceso | Activo |
+| 112 | `5.14` | Ajustes de Inventario | Gasto (agrupadora) |
+| 113 | `5.14.01` | Faltantes de Inventario (Merma) | Gasto |
+| 114 | `5.14.02` | Sobrantes de Inventario | Gasto |
+| 115 | `5.14.03` | Costos de Producción | Gasto |
+
 ---
 
 ### 2.7 `InventoryLot` — Lotes de inventario
 
-Los lotes se crean por dos vías actualmente:
+Los lotes se crean por dos vías:
 
 | Vía | ¿Crea lote? | Actualiza `AverageCost`? |
 |---|---|---|
-| Confirmación de `PurchaseInvoice` | ❌ **NO** | ❌ NO |
-| Confirmación de `InventoryAdjustment` (delta > 0) | ❌ NO (modifica lote existente) | ✅ SÍ |
+| Confirmación de `PurchaseInvoice` ✅ | ✅ **SÍ** (L1 resuelto 5-abr-2026) | ✅ SÍ (WACC) |
+| Confirmación de `InventoryAdjustment` (delta > 0) | ✅ SÍ (modifica/crea lote según estado) | ✅ SÍ |
+| Confirmación de `SalesInvoice` | ✅ Decrementa lote existente | ✅ SÍ (WACC) |
 
-**Gap crítico**: La confirmación de una factura de compra (`PurchaseInvoiceService.ConfirmAsync`) genera el asiento contable y crea el movimiento bancario, pero **no materializa el inventario**. Los campos `LotNumber` y `ExpirationDate` que vienen en `PurchaseInvoiceLine` se guardan en la línea pero nunca se copian a un `InventoryLot`.
+**Implementación L1 (5-abr-2026):** `PurchaseInvoiceService.ConfirmAsync` ahora, tras generar el asiento contable y actualizar el estado, itera cada línea con `IdProduct` e `IdUnit`, resuelve el `ConversionFactor` desde `ProductUnit`, crea un `InventoryLot` con:
+- `SourceType = "Compra"`
+- `QuantityAvailable = Quantity × ConversionFactor`
+- `UnitCost = UnitPrice / ConversionFactor`
+- `IdPurchaseInvoice` poblado (trazabilidad completa)
 
-El flujo actual obliga al usuario a crear manualmente un `InventoryAdjustment` para ingresar el stock, lo que:
-- Rompe la trazabilidad (`inventoryLot.IdPurchaseInvoice` quedará siempre NULL en ese flujo).
-- Duplica trabajo operativo.
-- Deja el system en un estado inconsistente: la factura está "Confirmada" pero el inventario cero.
+Luego recalcula `product.AverageCost` WACC con todos los lotes del producto.
+
+`InventoryLot.SourceType` valores en uso: `"Compra"`, `"Ajuste"`, `"Venta"` (nuevo — al crear lote al confirmar venta se haría con este valor, actualmente solo se decrementa el lote pasado por `IdInventoryLot`).
 
 ### 2.8 Cálculo de `AverageCost` (Costo Promedio Ponderado)
 
@@ -138,7 +199,7 @@ La entidad `PurchaseInvoiceLine` tiene dos campos:
 - `Quantity`: cantidad en la unidad de la presentación comprada (ej: 2 CAJAS).
 - `QuantityBase`: cantidad en la unidad base del producto (ej: 48 unidades).
 
-**Gap**: En `MapLine()`, `QuantityBase = l.Quantity` — se asigna siempre el mismo valor que `Quantity` sin aplicar el `ConversionFactor` de la `ProductUnit` correspondiente. La conversión nunca ocurre en el API; `QuantityBase` es actualmente redundante y contiene el mismo dato.
+✅ **Implementado (5-abr-2026, L2):** `MapLinesAsync` ahora resuelve el `ProductUnit` para el par `IdProduct + IdUnit`, calcula `QuantityBase = Math.Round(Quantity × ConversionFactor, 6)` y devuelve error si no existe la presentación. Si la línea no tiene producto/unidad, `QuantityBase` queda `null`. En `ConfirmAsync` se actualiza la línea trackeada con el valor final calculado.
 
 ### 2.10 Flujo de estados
 
@@ -148,8 +209,8 @@ Borrador ──(Confirmar)──► Confirmado
     │                         │
     └──(Eliminar: solo Borrador)   └──(Anular)──► Anulado
 ```
-- Al anular: se anulan los asientos contables vinculados.  
-- Al anular: **no hay rollback de inventario** (por el gap §2.5, el inventario nunca se creó desde la factura).
+- Al confirmar: genera asiento contable + crea `InventoryLot` por línea + actualiza `AverageCost` WACC.  
+- Al anular: se anulan los asientos contables vinculados. No revierte inventario (gap L4 — derivado de que se crea lote al confirmar, revertirlo requería ajuste negativo automático o bloqueo si ya hay salidas posteriores).
 
 #### Ajuste de Inventario
 ```
@@ -157,8 +218,39 @@ Borrador ──(Confirmar)──► Confirmado
                               │
                          └──(Anular)──► Anulado
 ```
-- Al confirmar: aplica `QuantityDelta` a cada lote y recalcula `AverageCost`.
-- Al anular: **no revierte** los deltas de inventario (marca como Anulado pero no hay rollback).
+- Al confirmar: aplica `QuantityDelta` a cada lote y recalcula `AverageCost`. Genera asiento contable si el tipo tiene cuentas configuradas.  
+- Al anular ✅ **(L3 resuelto 5-abr-2026):** Revierte `QuantityDelta` en cada lote, valida que ningún lote quedaría negativo, recalcula `AverageCost` WACC, anula el asiento contable. Retorna `409 Conflict` con mensaje si la reversión causaría stock negativo.
+
+#### Factura de Venta (nuevo módulo — 5-abr-2026)
+```
+Borrador ──(Confirmar)──► Confirmado
+    │                         │
+    └──(Eliminar: solo Borrador)   └──(Anular)──► Anulado
+```
+- Al confirmar: genera `NumberInvoice` auto (`FV-YYYYMMDD-NNN`), genera asiento de ingresos (DR=contrapartida, CR=cuentas de ingresos por ProductAccount o fallback), decrementa `lot.QuantityAvailable` por línea con `IdInventoryLot`, toma snapshot de `lot.UnitCost` en la línea, genera asiento COGS si hay cuentas configuradas en el tipo.
+
+### 2.11 `SalesInvoice` — Nuevo módulo de ventas (5-abr-2026)
+
+**`SalesInvoiceType`** (catálogo):
+- Seed: 3 tipos — `CONTADO_CRC` (id=1, Caja CRC cuenta 106), `CONTADO_USD` (id=2, Caja USD cuenta 107), `CREDITO` (id=3, requiere BankMovement).
+- Campos de cuenta opcionales: `IdAccountCounterpartCRC`, `IdAccountCounterpartUSD`, `IdBankMovementType`, `IdAccountSalesRevenue` (fallback ingresos), `IdAccountCOGS`, `IdAccountInventory`.
+- Los 3 tipos seed tienen las cuentas de ingresos/COGS/inventario en `null` — deben configurarse vía `PUT /sales-invoice-types/{id}`.
+
+**`SalesInvoice`** (flujo completo):
+- `NumberInvoice` se genera automáticamente al confirmar: `FV-YYYYMMDD-NNN` (secuencial por día).
+- Admite líneas sin producto/unidad (ej: servicio puro con solo `DescriptionLine`).
+- Líneas con `IdInventoryLot` decrementan el lote al confirmar y hacen snapshot de `UnitCost`.
+- `QuantityBase` en línea = `Quantity × ConversionFactor` de la `ProductUnit`.
+
+**Nuevas cuentas en plan contable** (seed en migración `ModuloVentas`):
+
+| IdAccount | Código | Nombre | Tipo |
+|---|---|---|---|
+| 116 | `4.5` | Ingresos por Ventas | Ingreso (agrupadora) |
+| 117 | `4.5.01` | Ingresos por Ventas — Mercadería | Ingreso |
+| 118 | `5.15` | Costo de Ventas | Gasto (agrupadora) |
+| 119 | `5.15.01` | Costo de Ventas — Mercadería | Gasto |
+- Al anular: revierte `lot.QuantityAvailable`, anula asientos contables (ingresos y COGS), anula el `BankMovement` auto-creado si aplica.
 
 ---
 
@@ -166,30 +258,30 @@ Borrador ──(Confirmar)──► Confirmado
 
 ### 3.1 Gaps de validación (sin restricción en servicio)
 
-| # | Contexto | Regla ausente |
-|---|---|---|
-| V1 | `ProductService` | `IdProductParent` no puede apuntar a un producto que ya tiene padre |
-| V2 | `ProductUnitService` | Exactamente 1 `IsBase=true` por producto |
-| V3 | `ProductUnitService` | `IsBase=true` requiere `ConversionFactor=1.0` y `IdUnit=product.IdUnit` |
-| V4 | `ProductRecipeService` | `IdProductOutput` no puede ser tipo "Materia Prima" o "Reventa" |
-| V5 | `ProductRecipeService` | `IdProductInput` no puede ser igual a `IdProductOutput` |
-| V6 | `ProductAccountService` | Suma de `PercentageAccount` por producto debe ser 100 |
-| V7 | `ProductService Delete` | Mensaje claro si el producto tiene lotes o facturas asociadas |
-| V8 | `ProductUnitService` | `SalePrice >= 0` |
-| V9 | `ProductService` | Si `HasOptions=true`, debe existir al menos 1 `ProductOptionGroup` |
-| V10 | `ProductService` | Si `IsCombo=true`, debe existir al menos 1 `ProductComboSlot` |
-| V11 | `ProductService` | La combinación `HasOptions=true` e `IsCombo=true` en el mismo producto requiere política explícita |
+| # | Contexto | Regla ausente | Estado |
+|---|---|---|---|
+| V1 | `ProductService` | `IdProductParent` no puede apuntar a un producto que ya tiene padre | ⏳ Pendiente |
+| V2 | `ProductUnitService` | Exactamente 1 `IsBase=true` por producto | ✅ Resuelto 5-abr-2026 |
+| V3 | `ProductUnitService` | `IsBase=true` requiere `ConversionFactor=1.0` y `IdUnit=product.IdUnit` | ✅ Resuelto 5-abr-2026 |
+| V4 | `ProductRecipeService` | `IdProductOutput` no puede ser tipo "Materia Prima" o "Reventa" | ✅ Resuelto 5-abr-2026 |
+| V5 | `ProductRecipeService` | `IdProductInput` no puede ser igual a `IdProductOutput` | ✅ Resuelto 5-abr-2026 |
+| V6 | `ProductAccountService` | Suma de `PercentageAccount` por producto no debe superar 100 | ✅ Resuelto 5-abr-2026 |
+| V7 | `ProductService Delete` | Mensaje claro si el producto tiene lotes o facturas asociadas | ✅ Resuelto 5-abr-2026 |
+| V8 | `ProductUnitService` | `SalePrice >= 0` | ✅ Resuelto 5-abr-2026 |
+| V9 | `ProductService` | Si `HasOptions=true`, debe existir al menos 1 `ProductOptionGroup` | ⏳ Pendiente |
+| V10 | `ProductService` | Si `IsCombo=true`, debe existir al menos 1 `ProductComboSlot` | ⏳ Pendiente |
+| V11 | `ProductService` | La combinación `HasOptions=true` e `IsCombo=true` en el mismo producto requiere política explícita | ⏳ Pendiente |
 
 ### 3.2 Gaps de lógica de negocio
 
-| # | Contexto | Gap |
-|---|---|---|
-| L1 | `PurchaseInvoiceService.ConfirmAsync` | No crea `InventoryLot` ni actualiza `AverageCost` |
-| L2 | `PurchaseInvoiceLine.QuantityBase` | Siempre = `Quantity`; la conversión por `ConversionFactor` nunca se aplica |
-| L3 | `InventoryAdjustmentService.CancelAsync` | No revierte deltas de inventario ni `AverageCost` |
-| L4 | `PurchaseInvoiceService.CancelAsync` | No revierte inventario (derivado de L1) |
-| L5 | `ProductRecipeService` | Sin detección de ciclos en ingredientes |
-| L6 | `ProductOptionGroup` / `ProductComboSlot` | Precio final de un configurado/combo no está calculado en ningún endpoint (`SalePrice + PriceDelta + PriceAdjustment`); no existe todavía un endpoint de "calcular precio" |
+| # | Contexto | Gap | Estado |
+|---|---|---|---|
+| L1 | `PurchaseInvoiceService.ConfirmAsync` | No crea `InventoryLot` ni actualiza `AverageCost` | ✅ Resuelto 5-abr-2026 |
+| L2 | `PurchaseInvoiceLine.QuantityBase` | Siempre = `Quantity`; la conversión por `ConversionFactor` nunca se aplica | ✅ Resuelto 5-abr-2026 |
+| L3 | `InventoryAdjustmentService.CancelAsync` | No revierte deltas de inventario ni `AverageCost` | ✅ Resuelto 5-abr-2026 |
+| L4 | `PurchaseInvoiceService.CancelAsync` | No revierte inventario (derivado de L1) | ⏳ Pendiente — requiere política de bloqueo o ajuste automático |
+| L5 | `ProductRecipeService` | Sin detección de ciclos en ingredientes | ⏳ Pendiente |
+| L6 | `ProductOptionGroup` / `ProductComboSlot` | Precio final de un configurado/combo no calculado en ningún endpoint | ⏳ Pendiente |
 
 ### 3.3 Gaps de API / respuesta
 
@@ -205,15 +297,24 @@ Borrador ──(Confirmar)──► Confirmado
 
 ## 4. Comportamiento que sí funciona correctamente
 
-- **CRUD de `Product`**: Creación, actualización y eliminación con validación de código único (409 por índice `UQ_product_codeProduct`).
+- **CRUD de `Product`**: Creación, actualización y eliminación con validación de código único (409 por índice `UQ_product_codeProduct`). Delete ahora retorna `409 Conflict` con mensaje descriptivo si el producto tiene lotes activos, líneas de factura o es insumo en recetas (V7).
+- **Validaciones `ProductUnit`**: exactamente 1 `IsBase=true` por producto, `ConversionFactor=1` para base, `SalePrice >= 0` (V2/V3/V8).
+- **Validaciones `ProductRecipe`**: tipo de output válido (solo Proceso/Terminado), sin self-reference (V4/V5).
+- **Validación `ProductAccount`**: suma acumulada de porcentajes no supera 100 (V6).
 - **Búsqueda de `ProductUnit` por barcode**: `GET /product-units/barcode/{barcode}.json` funciona correctamente.
-- **Confirmación de `InventoryAdjustment`**: Genera número secuencial `AJ-YYYYMMDD-NNN`, aplica deltas y recalcula `AverageCost`.
-- **Confirmación de `PurchaseInvoice`**: Genera asiento contable con distribución por `ProductAccount`, y el fallback a `IdDefaultExpenseAccount` del tipo de factura.
+- **Confirmación de `PurchaseInvoice`**: Genera asiento contable, crea `InventoryLot` por línea con `UnitCost = UnitPrice/ConversionFactor` y `QuantityAvailable = Quantity×ConversionFactor`, actualiza `AverageCost` WACC (L1+L2 resueltos).
 - **Auto-creación de movimiento bancario** al confirmar factura con `CounterpartFromBankMovement=true` y sin movimiento previo vinculado.
+- **Confirmación de `InventoryAdjustment`**: Genera número secuencial `AJ-YYYYMMDD-NNN`, aplica deltas, recalcula `AverageCost` y genera asiento contable según `InventoryAdjustmentType`.
+- **Anulación de `InventoryAdjustment`**: Revierte deltas de inventario, valida stock negativo, recalcula `AverageCost`, anula asientos (L3 resuelto).
 - **Asociación M:N producto-categoría** vía `POST /product-categories/{id}/products/{idProduct}`.
 - **`ProductRecipe` con líneas**: Creación atómica de receta + ingredientes en un solo request.
-- **CRUD de `ProductOptionGroup` + `ProductOptionItem`**: `GET /by-product/{id}`, `GET /{id}`, `POST`, `PUT`, `DELETE`. Creación/actualización atómica con ítems. Validaciones: producto con `HasOptions=true`, `MaxSelections >= MinSelections`, conteo de `IsDefault` <= `MaxSelections`.
-- **CRUD de `ProductComboSlot` + `ProductComboSlotProduct`**: `GET /by-combo/{id}`, `GET /{id}`, `POST`, `PUT`, `DELETE`. Creación/actualización atómica. Validaciones: producto con `IsCombo=true`, sin combos anidados en slots, sin duplicados en slot.
+- **CRUD de `ProductOptionGroup` + `ProductOptionItem`**: Validaciones completas (HasOptions, MaxSelections, IsDefault count).
+- **CRUD de `ProductComboSlot` + `ProductComboSlotProduct`**: Validaciones completas (IsCombo, sin combos anidados, sin duplicados).
+- **CRUD de `SalesInvoiceType`**: Catálogo con 3 tipos preconfigurados (CONTADO_CRC, CONTADO_USD, CREDITO). Define cuentas de ingresos, COGS e inventario.
+- **`SalesInvoice` completo**:
+  - CRUD Borrador con validación de estado antes de modificar/eliminar.
+  - `ConfirmAsync`: genera `NumberInvoice = "FV-YYYYMMDD-NNN"`, asiento de ingresos (DR contrapartida / CR ingresos por ProductAccount o fallback), decrementa `lot.QuantityAvailable`, snapshot `UnitCost` + `QuantityBase` en línea, genera asiento COGS si cuentas configuradas.
+  - `CancelAsync`: revierte lotes, anula asientos contables, anula `BankMovement` auto-creado si aplica.
 
 ---
 
@@ -241,10 +342,24 @@ Antes de modificar cualquier parte del flujo conviene considerar:
 
 ## 6. Resumen ejecutivo
 
-El sistema tiene el modelo de datos correcto y bien estructurado. Los endpoints CRUD base funcionan. El flujo contable de facturas opera correctamente. El modelo de productos configurables y combos está definido en BD pero aún sin endpoints. Los gaps principales son:
+El sistema tiene el modelo de datos correcto y bien estructurado. Los endpoints CRUD base funcionan. El flujo contable de facturas opera correctamente.
 
-- **Inventario desconectado de facturas**: confirmar una compra no mueve el inventario.
-- **Sin validaciones de dominio** en `ProductUnit`, `ProductRecipe` y `ProductAccount` para las reglas críticas de negocio.
-- **`QuantityBase` inoperante**: la conversión de unidades nunca se ejecuta.
-- **Anulaciones sin rollback de inventario**.
-- **Sin endpoint de precio calculado**: La fórmula `SalePrice + ∑PriceDelta + PriceAdjustment` para configurados y combos no está centralizada en ningún endpoint.
+**Implementado el 5-abr-2026 (plan-cambios.md completo):**
+
+- ✅ **L1 + L2**: `PurchaseInvoiceService.ConfirmAsync` crea `InventoryLot` por línea con costo y cantidad base correctos, y recalcula `AverageCost` WACC.
+- ✅ **L3**: `InventoryAdjustmentService.CancelAsync` revierte stock, valida negativos, recalcula WACC y anula asientos.
+- ✅ **V2/V3/V8**: `ProductUnitService` valida base única, factor=1 para base, y precio ≥ 0.
+- ✅ **V4/V5**: `ProductRecipeService` valida tipo de output y auto-referencia.
+- ✅ **V6**: `ProductAccountService` valida suma ≤ 100.
+- ✅ **V7**: `ProductService.DeleteAsync` retorna `409 Conflict` con mensaje descriptivo.
+- ✅ **Módulo de Ventas**: entidades `SalesInvoice*`, 5 configuraciones EF, seed de tipos y cuentas (116-119), feature completa con CRUD + confirm + cancel, migración `ModuloVentas` aplicada.
+
+**Gaps pendientes (menor prioridad):**
+
+- **L4**: anulación de factura de compra no revierte inventario. Requiere política explícita (bloqueo si hay consumos, o ajuste negativo automático).
+- **L5**: detección de ciclos en recetas — complejidad algorítmica alta, bajo impacto operativo inmediato.
+- **V1**: validación de profundidad de `IdProductParent`.
+- **V9/V10/V11**: validaciones de `HasOptions`/`IsCombo` — baja prioridad hasta tener frontend de gestión.
+- **L6**: endpoint de precio calculado para configurados y combos.
+- **A1-A5**: paginación, filtros de búsqueda y respuestas enriquecidas.
+- **Cuentas de `SalesInvoiceType`**: los tipos seed (CONTADO_CRC/USD, CREDITO) tienen `IdAccountSalesRevenue`, `IdAccountCOGS` e `IdAccountInventory` en `null`. Deben configurarse manualmente vía `PUT /sales-invoice-types/{id}` para que la confirmación genere los asientos correctamente.

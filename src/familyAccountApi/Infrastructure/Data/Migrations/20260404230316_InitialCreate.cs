@@ -281,6 +281,43 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 comment: "Catálogo de tipos de movimiento bancario (depósito, retiro, pago, etc.)");
 
             migrationBuilder.CreateTable(
+                name: "inventoryAdjustmentType",
+                columns: table => new
+                {
+                    idInventoryAdjustmentType = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del tipo de ajuste.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    codeInventoryAdjustmentType = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false, comment: "Código único del tipo: 'CONTEO', 'PRODUCCION', 'AJUSTE_COSTO'."),
+                    nameInventoryAdjustmentType = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false, comment: "Nombre descriptivo del tipo (ej. 'Conteo Físico', 'Producción', 'Ajuste de Costo')."),
+                    idAccountInventoryDefault = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta de activo de inventario. DR en entradas (delta+), CR en salidas (delta-). Si es null, no se genera asiento contable al confirmar."),
+                    idAccountCounterpartEntry = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta contrapartida para entradas (delta > 0) o ajuste de costo al alza. Actúa como CR del asiento. Ej: 'Ajuste Favorable de Inventario'."),
+                    idAccountCounterpartExit = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta contrapartida para salidas (delta < 0) o ajuste de costo a la baja. Actúa como DR del asiento. Ej: 'Gasto por Merma', 'Costo de Producción'."),
+                    isActive = table.Column<bool>(type: "bit", nullable: false, comment: "Indica si el tipo está activo y disponible para nuevos ajustes.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_inventoryAdjustmentType", x => x.idInventoryAdjustmentType);
+                    table.ForeignKey(
+                        name: "FK_inventoryAdjustmentType_account_idAccountCounterpartEntry",
+                        column: x => x.idAccountCounterpartEntry,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_inventoryAdjustmentType_account_idAccountCounterpartExit",
+                        column: x => x.idAccountCounterpartExit,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_inventoryAdjustmentType_account_idAccountInventoryDefault",
+                        column: x => x.idAccountInventoryDefault,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "Catálogo de tipos de ajuste de inventario. Define las cuentas contables usadas para generar el asiento al confirmar un ajuste: cuenta de inventario (activo), cuenta contrapartida de entrada y cuenta contrapartida de salida.");
+
+            migrationBuilder.CreateTable(
                 name: "companyDomain",
                 columns: table => new
                 {
@@ -483,34 +520,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 comment: "Presupuestos contables por cuenta y período fiscal para control y análisis financiero.");
 
             migrationBuilder.CreateTable(
-                name: "inventoryAdjustment",
-                columns: table => new
-                {
-                    idInventoryAdjustment = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del ajuste.")
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    idFiscalPeriod = table.Column<int>(type: "int", nullable: false, comment: "FK al período fiscal al que corresponde este ajuste."),
-                    typeAdjustment = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, comment: "Tipo de ajuste: Conteo Físico | Producción | Ajuste de Costo."),
-                    numberAdjustment = table.Column<string>(type: "varchar(50)", unicode: false, maxLength: 50, nullable: false, comment: "Consecutivo interno generado al confirmar. Formato: AJ-YYYYMMDD-NNN."),
-                    dateAdjustment = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha del evento: conteo físico, corrida de producción o ajuste de costo."),
-                    descriptionAdjustment = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true, comment: "Motivo o descripción del ajuste (ej: Conteo físico mensual, Corrida lote 26032002, NC proveedor)."),
-                    statusAdjustment = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false, comment: "Estado del ajuste: Borrador | Confirmado | Anulado."),
-                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()", comment: "Fecha y hora UTC de creación del registro.")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_inventoryAdjustment", x => x.idInventoryAdjustment);
-                    table.CheckConstraint("CK_inventoryAdjustment_statusAdjustment", "statusAdjustment IN ('Borrador', 'Confirmado', 'Anulado')");
-                    table.CheckConstraint("CK_inventoryAdjustment_typeAdjustment", "typeAdjustment IN ('Conteo Físico', 'Producción', 'Ajuste de Costo')");
-                    table.ForeignKey(
-                        name: "FK_inventoryAdjustment_fiscalPeriod_idFiscalPeriod",
-                        column: x => x.idFiscalPeriod,
-                        principalTable: "fiscalPeriod",
-                        principalColumn: "idFiscalPeriod",
-                        onDelete: ReferentialAction.Restrict);
-                },
-                comment: "Documento de ajuste de inventario. Cubre tres casos: Conteo Físico (corrección teórico vs real), Producción (corrida V1: consume MP/PP y genera PP/PT) y Ajuste de Costo (corrige unitCost sin mover cantidades). Único mecanismo válido para modificar inventoryLot fuera de una factura.");
-
-            migrationBuilder.CreateTable(
                 name: "product",
                 columns: table => new
                 {
@@ -521,7 +530,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     idProductType = table.Column<int>(type: "int", nullable: false, comment: "FK al tipo de producto: Materia Prima, Prod. en Proceso, Prod. Terminado o Reventa."),
                     idUnit = table.Column<int>(type: "int", nullable: false, comment: "FK a la unidad de medida base del producto. Es la unidad en la que se lleva el inventario y se expresan las recetas."),
                     idProductParent = table.Column<int>(type: "int", nullable: true, comment: "FK auto-referencial al producto padre. Agrupa variantes bajo un mismo producto (máximo un nivel). NULL si es raíz."),
-                    averageCost = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false, defaultValue: 0m, comment: "Costo promedio ponderado en unidad base. Se recalcula automáticamente al confirmar compras y ajustes con stock positivo.")
+                    averageCost = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false, defaultValue: 0m, comment: "Costo promedio ponderado en unidad base. Se recalcula automáticamente al confirmar compras y ajustes con stock positivo."),
+                    hasOptions = table.Column<bool>(type: "bit", nullable: false, defaultValue: false, comment: "Indica que el producto tiene grupos de opciones configurables por el cliente (ej: tamaño, masa, sabor)."),
+                    isCombo = table.Column<bool>(type: "bit", nullable: false, defaultValue: false, comment: "Indica que el producto es un combo compuesto de slots con productos elegibles.")
                 },
                 constraints: table =>
                 {
@@ -641,6 +652,47 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         onDelete: ReferentialAction.Restrict);
                 },
                 comment: "Catálogo de tipos de factura de compra. Define si la contrapartida contable (CR) proviene del BankMovement vinculado o de una cuenta Caja fija por moneda.");
+
+            migrationBuilder.CreateTable(
+                name: "inventoryAdjustment",
+                columns: table => new
+                {
+                    idInventoryAdjustment = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del ajuste.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idFiscalPeriod = table.Column<int>(type: "int", nullable: false, comment: "FK al período fiscal al que corresponde este ajuste."),
+                    idInventoryAdjustmentType = table.Column<int>(type: "int", nullable: false, comment: "FK al tipo de ajuste. Determina las cuentas contables del asiento generado al confirmar."),
+                    idCurrency = table.Column<int>(type: "int", nullable: false, comment: "FK a la moneda del ajuste. Se usa en el asiento contable generado."),
+                    exchangeRateValue = table.Column<decimal>(type: "decimal(18,6)", precision: 18, scale: 6, nullable: false, comment: "Tipo de cambio vigente al momento del ajuste. 1.0 para moneda local."),
+                    numberAdjustment = table.Column<string>(type: "varchar(50)", unicode: false, maxLength: 50, nullable: false, comment: "Consecutivo interno generado al confirmar. Formato: AJ-YYYYMMDD-NNN."),
+                    dateAdjustment = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha del evento: conteo físico, corrida de producción o ajuste de costo."),
+                    descriptionAdjustment = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true, comment: "Motivo o descripción del ajuste (ej: Conteo físico mensual, Corrida lote 26032002, NC proveedor)."),
+                    statusAdjustment = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false, comment: "Estado del ajuste: Borrador | Confirmado | Anulado."),
+                    createdAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()", comment: "Fecha y hora UTC de creación del registro.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_inventoryAdjustment", x => x.idInventoryAdjustment);
+                    table.CheckConstraint("CK_inventoryAdjustment_statusAdjustment", "statusAdjustment IN ('Borrador', 'Confirmado', 'Anulado')");
+                    table.ForeignKey(
+                        name: "FK_inventoryAdjustment_currency_idCurrency",
+                        column: x => x.idCurrency,
+                        principalTable: "currency",
+                        principalColumn: "idCurrency",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_inventoryAdjustment_fiscalPeriod_idFiscalPeriod",
+                        column: x => x.idFiscalPeriod,
+                        principalTable: "fiscalPeriod",
+                        principalColumn: "idFiscalPeriod",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_inventoryAdjustment_inventoryAdjustmentType_idInventoryAdjustmentType",
+                        column: x => x.idInventoryAdjustmentType,
+                        principalTable: "inventoryAdjustmentType",
+                        principalColumn: "idInventoryAdjustmentType",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "Documento de ajuste de inventario. El tipo (idInventoryAdjustmentType) define las cuentas contables para generar el asiento al confirmar. Estados: Borrador → Confirmado → Anulado.");
 
             migrationBuilder.CreateTable(
                 name: "bankStatementImport",
@@ -813,6 +865,56 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 comment: "Distribución contable por producto: define la cuenta de gasto y el centro de costo para cada porcentaje del total de la línea de factura. La suma de PercentageAccount por IdProduct debe ser exactamente 100.");
 
             migrationBuilder.CreateTable(
+                name: "productComboSlot",
+                columns: table => new
+                {
+                    idProductComboSlot = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del slot del combo.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idProductCombo = table.Column<int>(type: "int", nullable: false, comment: "FK al producto combo padre (IsCombo=true)."),
+                    nameSlot = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, comment: "Nombre visible del slot (ej: Pizza #1, Bebida)."),
+                    quantity = table.Column<decimal>(type: "decimal(12,4)", precision: 12, scale: 4, nullable: false, defaultValue: 1m, comment: "Cantidad de este slot dentro del combo."),
+                    isRequired = table.Column<bool>(type: "bit", nullable: false, defaultValue: true, comment: "Si el cliente debe llenar este slot obligatoriamente."),
+                    sortOrder = table.Column<int>(type: "int", nullable: false, defaultValue: 0, comment: "Orden de presentación del slot al cliente.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_productComboSlot", x => x.idProductComboSlot);
+                    table.ForeignKey(
+                        name: "FK_productComboSlot_product_idProductCombo",
+                        column: x => x.idProductCombo,
+                        principalTable: "product",
+                        principalColumn: "idProduct",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "Slots de un combo (ej: Pizza #1, Pizza #2, Bebida). Un producto con IsCombo=true tiene N slots.");
+
+            migrationBuilder.CreateTable(
+                name: "productOptionGroup",
+                columns: table => new
+                {
+                    idProductOptionGroup = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del grupo de opciones.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idProduct = table.Column<int>(type: "int", nullable: false, comment: "FK al producto configurable al que pertenece este grupo."),
+                    nameGroup = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, comment: "Nombre visible del grupo (ej: Elige tu tamaño)."),
+                    isRequired = table.Column<bool>(type: "bit", nullable: false, defaultValue: true, comment: "Si el cliente debe elegir obligatoriamente en este grupo."),
+                    minSelections = table.Column<int>(type: "int", nullable: false, defaultValue: 1, comment: "Mínimo de items a elegir. 0 para grupos opcionales."),
+                    maxSelections = table.Column<int>(type: "int", nullable: false, defaultValue: 1, comment: "Máximo de items a elegir. 1 para exclusivo, N para múltiple."),
+                    allowSplit = table.Column<bool>(type: "bit", nullable: false, defaultValue: false, comment: "Cuando true, en modo mitad/mitad el cliente asigna cada selección a una mitad (half1|half2|whole). Aplica a grupos de sabor y adicionales."),
+                    sortOrder = table.Column<int>(type: "int", nullable: false, defaultValue: 0, comment: "Orden de presentación del grupo al cliente.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_productOptionGroup", x => x.idProductOptionGroup);
+                    table.ForeignKey(
+                        name: "FK_productOptionGroup_product_idProduct",
+                        column: x => x.idProduct,
+                        principalTable: "product",
+                        principalColumn: "idProduct",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "Grupos de opciones configurables de un producto (ej: Tamaño, Masa, Sabor). Un producto con HasOptions=true puede tener N grupos.");
+
+            migrationBuilder.CreateTable(
                 name: "productProductCategory",
                 columns: table => new
                 {
@@ -878,7 +980,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     usedForSale = table.Column<bool>(type: "bit", nullable: false, defaultValue: true, comment: "Indica si esta presentación puede usarse en líneas de factura de venta."),
                     codeBarcode = table.Column<string>(type: "varchar(48)", unicode: false, maxLength: 48, nullable: true, comment: "Código de barras EAN-8, EAN-13 o UPC-A del empaque. NULL si no tiene barcode. Único en todo el sistema."),
                     namePresentation = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true, comment: "Nombre comercial del empaque tal como aparece en la etiqueta (ej: Cahuita Salsa Caribeña 160ml)."),
-                    brandPresentation = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true, comment: "Marca del fabricante del empaque (ej: Fiesta de Diablitos, Aroy-D).")
+                    brandPresentation = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true, comment: "Marca del fabricante del empaque (ej: Fiesta de Diablitos, Aroy-D)."),
+                    salePrice = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false, defaultValue: 0m, comment: "Precio base de venta para esta presentación. El precio final en combos/opciones se calcula sumando deltas.")
                 },
                 constraints: table =>
                 {
@@ -951,6 +1054,33 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 comment: "Cabecera de factura de compra. Registra el gasto y genera automáticamente un asiento contable al confirmar.");
 
             migrationBuilder.CreateTable(
+                name: "inventoryAdjustmentEntry",
+                columns: table => new
+                {
+                    idInventoryAdjustmentEntry = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del vínculo ajuste-asiento.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idInventoryAdjustment = table.Column<int>(type: "int", nullable: false, comment: "FK al ajuste de inventario."),
+                    idAccountingEntry = table.Column<int>(type: "int", nullable: false, comment: "FK al asiento contable vinculado al ajuste.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_inventoryAdjustmentEntry", x => x.idInventoryAdjustmentEntry);
+                    table.ForeignKey(
+                        name: "FK_inventoryAdjustmentEntry_accountingEntry_idAccountingEntry",
+                        column: x => x.idAccountingEntry,
+                        principalTable: "accountingEntry",
+                        principalColumn: "idAccountingEntry",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_inventoryAdjustmentEntry_inventoryAdjustment_idInventoryAdjustment",
+                        column: x => x.idInventoryAdjustment,
+                        principalTable: "inventoryAdjustment",
+                        principalColumn: "idInventoryAdjustment",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "Tabla auxiliar N:M entre inventoryAdjustment y accountingEntry. Un ajuste puede vincularse a más de un asiento: el asiento inicial de confirmación y cualquier asiento de reversión posterior. Nunca se modifica un asiento confirmado; se agregan nuevas filas en esta tabla.");
+
+            migrationBuilder.CreateTable(
                 name: "bankStatementTransaction",
                 columns: table => new
                 {
@@ -999,6 +1129,59 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         onDelete: ReferentialAction.Cascade);
                 },
                 comment: "Transacciones individuales importadas de extractos bancarios");
+
+            migrationBuilder.CreateTable(
+                name: "productComboSlotProduct",
+                columns: table => new
+                {
+                    idProductComboSlotProduct = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idProductComboSlot = table.Column<int>(type: "int", nullable: false, comment: "FK al slot del combo al que pertenece esta opción."),
+                    idProduct = table.Column<int>(type: "int", nullable: false, comment: "FK al producto permitido en este slot."),
+                    priceAdjustment = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false, defaultValue: 0m, comment: "Ajuste adicional al precio del combo por elegir este producto en el slot."),
+                    sortOrder = table.Column<int>(type: "int", nullable: false, defaultValue: 0, comment: "Orden de presentación dentro del slot.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_productComboSlotProduct", x => x.idProductComboSlotProduct);
+                    table.ForeignKey(
+                        name: "FK_productComboSlotProduct_productComboSlot_idProductComboSlot",
+                        column: x => x.idProductComboSlot,
+                        principalTable: "productComboSlot",
+                        principalColumn: "idProductComboSlot",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_productComboSlotProduct_product_idProduct",
+                        column: x => x.idProduct,
+                        principalTable: "product",
+                        principalColumn: "idProduct",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "Productos permitidos en cada slot de un combo. El cliente elige uno de esta lista al armar el pedido.");
+
+            migrationBuilder.CreateTable(
+                name: "productOptionItem",
+                columns: table => new
+                {
+                    idProductOptionItem = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del item de opción.")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idProductOptionGroup = table.Column<int>(type: "int", nullable: false, comment: "FK al grupo de opciones al que pertenece este item."),
+                    nameItem = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, comment: "Nombre visible de la opción (ej: Masa Delgada)."),
+                    priceDelta = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false, defaultValue: 0m, comment: "Ajuste de precio sobre el precio base del producto. Puede ser positivo, negativo o cero."),
+                    isDefault = table.Column<bool>(type: "bit", nullable: false, defaultValue: false, comment: "Opción marcada por defecto al abrir el selector."),
+                    sortOrder = table.Column<int>(type: "int", nullable: false, defaultValue: 0, comment: "Orden de presentación dentro del grupo.")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_productOptionItem", x => x.idProductOptionItem);
+                    table.ForeignKey(
+                        name: "FK_productOptionItem_productOptionGroup_idProductOptionGroup",
+                        column: x => x.idProductOptionGroup,
+                        principalTable: "productOptionGroup",
+                        principalColumn: "idProductOptionGroup",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "Cada opción dentro de un grupo configurable (ej: Delgada, Gruesa, Rellena dentro del grupo Masa).");
 
             migrationBuilder.CreateTable(
                 name: "productRecipeLine",
@@ -1318,6 +1501,17 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.InsertData(
+                table: "productType",
+                columns: new[] { "idProductType", "descriptionProductType", "nameProductType" },
+                values: new object[,]
+                {
+                    { 1, "Insumos o materiales adquiridos para ser utilizados en el proceso productivo. No se venden directamente.", "Materia Prima" },
+                    { 2, "Productos que han iniciado su proceso de fabricación pero aún no están terminados.", "Producto en Proceso" },
+                    { 3, "Productos que han completado el proceso productivo y están listos para la venta.", "Producto Terminado" },
+                    { 4, "Productos adquiridos listos para la venta sin transformación productiva.", "Reventa" }
+                });
+
+            migrationBuilder.InsertData(
                 table: "role",
                 columns: new[] { "idRole", "createAt", "descriptionRole", "nameRole" },
                 values: new object[,]
@@ -1370,7 +1564,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 99, false, "5.10", 5, true, 2, "Personal y Hogar", "Gasto" },
                     { 100, false, "5.11", 5, true, 2, "Obligaciones", "Gasto" },
                     { 101, false, "4.4", 4, true, 2, "Ingresos Financieros", "Ingreso" },
-                    { 103, false, "5.13", 5, true, 2, "Gastos Financieros", "Gasto" }
+                    { 103, false, "5.13", 5, true, 2, "Gastos Financieros", "Gasto" },
+                    { 112, false, "5.14", 5, true, 2, "Ajustes de Inventario", "Gasto" }
                 });
 
             migrationBuilder.InsertData(
@@ -1447,7 +1642,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 88, true, "5.11.03", 100, true, 3, "Campo Santo Mantenimiento", "Gasto" },
                     { 102, true, "4.4.01", 101, true, 3, "Diferencial Cambiario Favorable", "Ingreso" },
                     { 104, true, "5.13.01", 103, true, 3, "Diferencial Cambiario Desfavorable", "Gasto" },
-                    { 105, false, "1.1.06", 7, true, 3, "Caja / Efectivo", "Activo" }
+                    { 105, false, "1.1.06", 7, true, 3, "Caja / Efectivo", "Activo" },
+                    { 108, false, "1.1.07", 7, true, 3, "Inventario", "Activo" },
+                    { 113, true, "5.14.01", 112, true, 3, "Faltantes de Inventario (Merma)", "Gasto" },
+                    { 114, true, "5.14.02", 112, true, 3, "Sobrantes de Inventario", "Gasto" },
+                    { 115, true, "5.14.03", 112, true, 3, "Costos de Producción", "Gasto" }
                 });
 
             migrationBuilder.InsertData(
@@ -1482,7 +1681,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 53, true, "2.1.03.01", 52, true, 4, "Adelanto Salarial ITQS - Baltodano Cubillo Ezequiel", "Pasivo" },
                     { 55, true, "1.1.05.01", 54, true, 4, "Davivienda - AHO CR98010401446613244113 (₡) - Baltodano Cubillo Ezequiel [Nómina ITQS]", "Activo" },
                     { 106, true, "1.1.06.01", 105, true, 4, "Caja CRC (₡)", "Activo" },
-                    { 107, true, "1.1.06.02", 105, true, 4, "Caja USD ($)", "Activo" }
+                    { 107, true, "1.1.06.02", 105, true, 4, "Caja USD ($)", "Activo" },
+                    { 109, true, "1.1.07.01", 108, true, 4, "Inventario de Mercadería", "Activo" },
+                    { 110, true, "1.1.07.02", 108, true, 4, "Materias Primas", "Activo" },
+                    { 111, true, "1.1.07.03", 108, true, 4, "Productos en Proceso", "Activo" }
                 });
 
             migrationBuilder.InsertData(
@@ -1525,6 +1727,16 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 1, "SAL", 44, true, "Abono", "Depósito de Salario" },
                     { 7, "PAGO-PREST", 42, true, "Cargo", "Pago de Préstamo" },
                     { 8, "TRANSF-ENV", 34, true, "Cargo", "Transferencia Enviada" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "inventoryAdjustmentType",
+                columns: new[] { "idInventoryAdjustmentType", "codeInventoryAdjustmentType", "idAccountCounterpartEntry", "idAccountCounterpartExit", "idAccountInventoryDefault", "isActive", "nameInventoryAdjustmentType" },
+                values: new object[,]
+                {
+                    { 1, "CONTEO", 114, 113, 109, true, "Conteo Físico" },
+                    { 2, "PRODUCCION", 115, 115, 111, true, "Producción" },
+                    { 3, "AJUSTE_COSTO", 114, 113, 109, true, "Ajuste de Costo" }
                 });
 
             migrationBuilder.InsertData(
@@ -1810,14 +2022,35 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_inventoryAdjustment_idCurrency",
+                table: "inventoryAdjustment",
+                column: "idCurrency");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_inventoryAdjustment_idFiscalPeriod",
                 table: "inventoryAdjustment",
                 column: "idFiscalPeriod");
 
             migrationBuilder.CreateIndex(
+                name: "IX_inventoryAdjustment_idInventoryAdjustmentType",
+                table: "inventoryAdjustment",
+                column: "idInventoryAdjustmentType");
+
+            migrationBuilder.CreateIndex(
                 name: "UQ_inventoryAdjustment_numberAdjustment",
                 table: "inventoryAdjustment",
                 column: "numberAdjustment",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inventoryAdjustmentEntry_idAccountingEntry",
+                table: "inventoryAdjustmentEntry",
+                column: "idAccountingEntry");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_inventoryAdjustmentEntry_idInventoryAdjustment_idAccountingEntry",
+                table: "inventoryAdjustmentEntry",
+                columns: new[] { "idInventoryAdjustment", "idAccountingEntry" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1829,6 +2062,30 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "IX_inventoryAdjustmentLine_idInventoryLot",
                 table: "inventoryAdjustmentLine",
                 column: "idInventoryLot");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inventoryAdjustmentType_idAccountCounterpartEntry",
+                table: "inventoryAdjustmentType",
+                column: "idAccountCounterpartEntry",
+                filter: "[idAccountCounterpartEntry] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inventoryAdjustmentType_idAccountCounterpartExit",
+                table: "inventoryAdjustmentType",
+                column: "idAccountCounterpartExit",
+                filter: "[idAccountCounterpartExit] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_inventoryAdjustmentType_idAccountInventoryDefault",
+                table: "inventoryAdjustmentType",
+                column: "idAccountInventoryDefault",
+                filter: "[idAccountInventoryDefault] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_inventoryAdjustmentType_codeInventoryAdjustmentType",
+                table: "inventoryAdjustmentType",
+                column: "codeInventoryAdjustmentType",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_inventoryLot_idInventoryAdjustment",
@@ -1889,6 +2146,32 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 columns: new[] { "idProduct", "idAccount", "idCostCenter" },
                 unique: true,
                 filter: "[idCostCenter] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_productComboSlot_idProductCombo",
+                table: "productComboSlot",
+                column: "idProductCombo");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_productComboSlotProduct_idProduct",
+                table: "productComboSlotProduct",
+                column: "idProduct");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_productComboSlotProduct_idSlot_idProduct",
+                table: "productComboSlotProduct",
+                columns: new[] { "idProductComboSlot", "idProduct" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_productOptionGroup_idProduct",
+                table: "productOptionGroup",
+                column: "idProduct");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_productOptionItem_idProductOptionGroup",
+                table: "productOptionItem",
+                column: "idProductOptionGroup");
 
             migrationBuilder.CreateIndex(
                 name: "IX_productProductCategory_idProductCategory",
@@ -2095,10 +2378,19 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "exchangeRate");
 
             migrationBuilder.DropTable(
+                name: "inventoryAdjustmentEntry");
+
+            migrationBuilder.DropTable(
                 name: "inventoryAdjustmentLine");
 
             migrationBuilder.DropTable(
                 name: "productAccount");
+
+            migrationBuilder.DropTable(
+                name: "productComboSlotProduct");
+
+            migrationBuilder.DropTable(
+                name: "productOptionItem");
 
             migrationBuilder.DropTable(
                 name: "productProductCategory");
@@ -2140,6 +2432,12 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "inventoryLot");
 
             migrationBuilder.DropTable(
+                name: "productComboSlot");
+
+            migrationBuilder.DropTable(
+                name: "productOptionGroup");
+
+            migrationBuilder.DropTable(
                 name: "productCategory");
 
             migrationBuilder.DropTable(
@@ -2174,6 +2472,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "purchaseInvoice");
+
+            migrationBuilder.DropTable(
+                name: "inventoryAdjustmentType");
 
             migrationBuilder.DropTable(
                 name: "productType");

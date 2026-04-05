@@ -8,6 +8,6 @@ public interface IInventoryAdjustmentService
     Task<InventoryAdjustmentResponse?> GetByIdAsync(int idInventoryAdjustment, CancellationToken ct = default);
     Task<InventoryAdjustmentResponse> CreateAsync(CreateInventoryAdjustmentRequest request, CancellationToken ct = default);
     Task<InventoryAdjustmentResponse?> ConfirmAsync(int idInventoryAdjustment, CancellationToken ct = default);
-    Task<InventoryAdjustmentResponse?> CancelAsync(int idInventoryAdjustment, CancellationToken ct = default);
+    Task<(InventoryAdjustmentResponse? Result, string? ConflictMessage)> CancelAsync(int idInventoryAdjustment, CancellationToken ct = default);
     Task<bool> DeleteAsync(int idInventoryAdjustment, CancellationToken ct = default);
 }

@@ -89,11 +89,18 @@ public static class InventoryAdjustmentsModule
         }
     }
 
-    private static async Task<Results<Ok<InventoryAdjustmentResponse>, NotFound>> Cancel(
+    private static async Task<Results<Ok<InventoryAdjustmentResponse>, NotFound, Conflict<ProblemDetails>>> Cancel(
         int id, IInventoryAdjustmentService service, CancellationToken ct)
     {
-        var item = await service.CancelAsync(id, ct);
-        return item is not null ? TypedResults.Ok(item) : TypedResults.NotFound();
+        var (result, conflict) = await service.CancelAsync(id, ct);
+        if (conflict is not null)
+            return TypedResults.Conflict(new ProblemDetails
+            {
+                Title  = "No se puede anular el ajuste",
+                Detail = conflict,
+                Status = StatusCodes.Status409Conflict
+            });
+        return result is not null ? TypedResults.Ok(result) : TypedResults.NotFound();
     }
 
     private static async Task<Results<NoContent, NotFound, Conflict<ProblemDetails>>> Delete(

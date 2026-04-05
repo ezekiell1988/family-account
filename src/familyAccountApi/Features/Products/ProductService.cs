@@ -91,12 +91,28 @@ public sealed class ProductService(AppDbContext db) : IProductService
         return ToResponse(product);
     }
 
-    public async Task<bool> DeleteAsync(int idProduct, CancellationToken ct = default)
+    public async Task<(bool Deleted, string? ConflictMessage)> DeleteAsync(int idProduct, CancellationToken ct = default)
     {
+        // V7: verificar si hay dependencias antes de borrar
+        var activeLots = await db.InventoryLot
+            .AnyAsync(il => il.IdProduct == idProduct && il.QuantityAvailable > 0, ct);
+        if (activeLots)
+            return (false, "El producto tiene lotes activos con stock disponible. Ajuste el inventario antes de eliminar.");
+
+        var hasInvoiceLines = await db.PurchaseInvoiceLine
+            .AnyAsync(l => l.IdProduct == idProduct, ct);
+        if (hasInvoiceLines)
+            return (false, "El producto está referenciado en líneas de facturas de compra. No se puede eliminar.");
+
+        var hasRecipeLines = await db.ProductRecipeLine
+            .AnyAsync(rl => rl.IdProductInput == idProduct, ct);
+        if (hasRecipeLines)
+            return (false, "El producto es un insumo en recetas de producción. Elimine o actualice las recetas antes de continuar.");
+
         var deleted = await db.Product
             .Where(p => p.IdProduct == idProduct)
             .ExecuteDeleteAsync(ct);
 
-        return deleted > 0;
+        return (deleted > 0, null);
     }
 }

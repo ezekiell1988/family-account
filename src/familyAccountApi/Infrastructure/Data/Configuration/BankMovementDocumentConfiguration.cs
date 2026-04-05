@@ -12,7 +12,7 @@ public sealed class BankMovementDocumentConfiguration : IEntityTypeConfiguration
         {
             t.HasComment("Documentos de soporte vinculados a un movimiento bancario");
             t.HasCheckConstraint("CK_bankMovementDocument_typeDocument",
-                "typeDocument IN ('FacturaCompra', 'Recibo', 'Transferencia', 'Cheque', 'Otro')");
+                "typeDocument IN ('FacturaCompra', 'FacturaVenta', 'Recibo', 'Transferencia', 'Cheque', 'Otro')");
         });
 
         builder.HasKey(bmd => bmd.IdBankMovementDocument);
@@ -27,11 +27,14 @@ public sealed class BankMovementDocumentConfiguration : IEntityTypeConfiguration
         builder.Property(bmd => bmd.IdPurchaseInvoice)
             .HasComment("FK opcional a la factura de compra vinculada a este documento de soporte");
 
+        builder.Property(bmd => bmd.IdSalesInvoice)
+            .HasComment("FK opcional a la factura de venta vinculada a este documento de soporte");
+
         builder.Property(bmd => bmd.TypeDocument)
             .HasMaxLength(20)
             .IsRequired()
             .IsUnicode(false)
-            .HasComment("Tipo de documento: 'FacturaCompra', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'");
+            .HasComment("Tipo de documento: 'FacturaCompra', 'FacturaVenta', 'Recibo', 'Transferencia', 'Cheque' u 'Otro'");
 
         builder.Property(bmd => bmd.NumberDocument)
             .HasMaxLength(100)
@@ -58,6 +61,10 @@ public sealed class BankMovementDocumentConfiguration : IEntityTypeConfiguration
             .HasDatabaseName("IX_bankMovementDocument_idPurchaseInvoice")
             .HasFilter("[idPurchaseInvoice] IS NOT NULL");
 
+        builder.HasIndex(bmd => bmd.IdSalesInvoice)
+            .HasDatabaseName("IX_bankMovementDocument_idSalesInvoice")
+            .HasFilter("[idSalesInvoice] IS NOT NULL");
+
         builder.HasOne(bmd => bmd.IdBankMovementNavigation)
             .WithMany(bm => bm.BankMovementDocuments)
             .HasForeignKey(bmd => bmd.IdBankMovement)
@@ -66,6 +73,11 @@ public sealed class BankMovementDocumentConfiguration : IEntityTypeConfiguration
         builder.HasOne(bmd => bmd.IdPurchaseInvoiceNavigation)
             .WithMany(pi => pi.BankMovementDocuments)
             .HasForeignKey(bmd => bmd.IdPurchaseInvoice)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(bmd => bmd.IdSalesInvoiceNavigation)
+            .WithMany(si => si.BankMovementDocuments)
+            .HasForeignKey(bmd => bmd.IdSalesInvoice)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

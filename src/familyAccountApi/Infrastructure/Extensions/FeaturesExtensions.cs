@@ -24,12 +24,15 @@ using FamilyAccountApi.Features.ProductUnits;
 using FamilyAccountApi.Features.ProductRecipes;
 using FamilyAccountApi.Features.InventoryLots;
 using FamilyAccountApi.Features.InventoryAdjustments;
+using FamilyAccountApi.Features.InventoryAdjustmentTypes;
 using FamilyAccountApi.Features.UnitsOfMeasure;
 using FamilyAccountApi.Features.PurchaseInvoiceTypes;
 using FamilyAccountApi.Features.PurchaseInvoices;
 using FamilyAccountApi.Features.Users;
 using FamilyAccountApi.Features.ProductOptionGroups;
 using FamilyAccountApi.Features.ProductComboSlots;
+using FamilyAccountApi.Features.SalesInvoiceTypes;
+using FamilyAccountApi.Features.SalesInvoices;
 
 namespace FamilyAccountApi.Infrastructure.Extensions;
 
@@ -47,6 +50,7 @@ public static class FeaturesExtensions
             .AddProductUnitsModule()
             .AddProductRecipesModule()
             .AddInventoryLotsModule()
+            .AddInventoryAdjustmentTypesModule()
             .AddInventoryAdjustmentsModule()
             .AddAccountsModule()
             .AddFiscalPeriodsModule()
@@ -67,7 +71,9 @@ public static class FeaturesExtensions
             .AddPurchaseInvoicesModule()
             .AddContactsModule()
             .AddProductOptionGroupsModule()
-            .AddProductComboSlotsModule();
+            .AddProductComboSlotsModule()
+            .AddSalesInvoiceTypesModule()
+            .AddSalesInvoicesModule();
 
     public static WebApplication MapAllEndpoints(this WebApplication app)
     {
@@ -86,6 +92,7 @@ public static class FeaturesExtensions
         v1.MapProductUnitsEndpoints();
         v1.MapProductRecipesEndpoints();
         v1.MapInventoryLotsEndpoints();
+        v1.MapInventoryAdjustmentTypesEndpoints();
         v1.MapInventoryAdjustmentsEndpoints();
         v1.MapAccountsEndpoints();
         v1.MapFiscalPeriodsEndpoints();
@@ -107,6 +114,8 @@ public static class FeaturesExtensions
         v1.MapContactsEndpoints();
         v1.MapProductOptionGroupsEndpoints();
         v1.MapProductComboSlotsEndpoints();
+        v1.MapSalesInvoiceTypesEndpoints();
+        v1.MapSalesInvoicesEndpoints();
 
         return app;
     }

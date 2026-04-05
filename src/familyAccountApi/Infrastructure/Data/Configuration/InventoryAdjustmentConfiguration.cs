@@ -10,8 +10,7 @@ public sealed class InventoryAdjustmentConfiguration : IEntityTypeConfiguration<
     {
         builder.ToTable(t =>
         {
-            t.HasComment("Documento de ajuste de inventario. Cubre tres casos: Conteo Físico (corrección teórico vs real), Producción (corrida V1: consume MP/PP y genera PP/PT) y Ajuste de Costo (corrige unitCost sin mover cantidades). Único mecanismo válido para modificar inventoryLot fuera de una factura.");
-            t.HasCheckConstraint("CK_inventoryAdjustment_typeAdjustment", "typeAdjustment IN ('Conteo Físico', 'Producción', 'Ajuste de Costo')");
+            t.HasComment("Documento de ajuste de inventario. El tipo (idInventoryAdjustmentType) define las cuentas contables para generar el asiento al confirmar. Estados: Borrador → Confirmado → Anulado.");
             t.HasCheckConstraint("CK_inventoryAdjustment_statusAdjustment", "statusAdjustment IN ('Borrador', 'Confirmado', 'Anulado')");
         });
 
@@ -24,10 +23,18 @@ public sealed class InventoryAdjustmentConfiguration : IEntityTypeConfiguration<
             .IsRequired()
             .HasComment("FK al período fiscal al que corresponde este ajuste.");
 
-        builder.Property(ia => ia.TypeAdjustment)
-            .HasMaxLength(20)
+        builder.Property(ia => ia.IdInventoryAdjustmentType)
             .IsRequired()
-            .HasComment("Tipo de ajuste: Conteo Físico | Producción | Ajuste de Costo.");
+            .HasComment("FK al tipo de ajuste. Determina las cuentas contables del asiento generado al confirmar.");
+
+        builder.Property(ia => ia.IdCurrency)
+            .IsRequired()
+            .HasComment("FK a la moneda del ajuste. Se usa en el asiento contable generado.");
+
+        builder.Property(ia => ia.ExchangeRateValue)
+            .HasPrecision(18, 6)
+            .IsRequired()
+            .HasComment("Tipo de cambio vigente al momento del ajuste. 1.0 para moneda local.");
 
         builder.Property(ia => ia.NumberAdjustment)
             .HasMaxLength(50)
@@ -61,9 +68,25 @@ public sealed class InventoryAdjustmentConfiguration : IEntityTypeConfiguration<
         builder.HasIndex(ia => ia.IdFiscalPeriod)
             .HasDatabaseName("IX_inventoryAdjustment_idFiscalPeriod");
 
+        builder.HasIndex(ia => ia.IdInventoryAdjustmentType)
+            .HasDatabaseName("IX_inventoryAdjustment_idInventoryAdjustmentType");
+
+        builder.HasIndex(ia => ia.IdCurrency)
+            .HasDatabaseName("IX_inventoryAdjustment_idCurrency");
+
         builder.HasOne(ia => ia.IdFiscalPeriodNavigation)
             .WithMany()
             .HasForeignKey(ia => ia.IdFiscalPeriod)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(ia => ia.IdInventoryAdjustmentTypeNavigation)
+            .WithMany(iat => iat.InventoryAdjustments)
+            .HasForeignKey(ia => ia.IdInventoryAdjustmentType)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(ia => ia.IdCurrencyNavigation)
+            .WithMany()
+            .HasForeignKey(ia => ia.IdCurrency)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

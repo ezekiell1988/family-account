@@ -78,6 +78,10 @@ public static class ProductUnitsModule
             var item = await service.CreateAsync(request, ct);
             return TypedResults.Created($"/api/v1/product-units/{item.IdProductUnit}.json", item);
         }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { [""] = [ex.Message] });
+        }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_productUnit_idProduct_idUnit") == true)
         {
             return TypedResults.Conflict(new ProblemDetails
@@ -98,13 +102,17 @@ public static class ProductUnitsModule
         }
     }
 
-    private static async Task<Results<Ok<ProductUnitResponse>, NotFound, Conflict<ProblemDetails>>> Update(
+    private static async Task<Results<Ok<ProductUnitResponse>, NotFound, Conflict<ProblemDetails>, ValidationProblem>> Update(
         int id, UpdateProductUnitRequest request, IProductUnitService service, CancellationToken ct)
     {
         try
         {
             var item = await service.UpdateAsync(id, request, ct);
             return item is not null ? TypedResults.Ok(item) : TypedResults.NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { [""] = [ex.Message] });
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UQ_productUnit_codeBarcode") == true)
         {

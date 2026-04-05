@@ -107,7 +107,11 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
             CreatedAt             = DateTime.UtcNow,
         };
 
-        entity.PurchaseInvoiceLines = request.Lines.Select(MapLine).ToList();
+        var (mappedLines, linesError) = await MapLinesAsync(request.Lines, ct);
+        if (linesError is not null)
+            throw new InvalidOperationException(linesError);
+
+        entity.PurchaseInvoiceLines = mappedLines;
 
         db.PurchaseInvoice.Add(entity);
         await db.SaveChangesAsync(CancellationToken.None);
@@ -140,11 +144,15 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         entity.DescriptionInvoice    = string.IsNullOrWhiteSpace(request.DescriptionInvoice) ? null : request.DescriptionInvoice.Trim();
         entity.ExchangeRateValue     = request.ExchangeRateValue;
 
+        var (mappedLines, linesError) = await MapLinesAsync(request.Lines, ct);
+        if (linesError is not null)
+            throw new InvalidOperationException(linesError);
+
         db.PurchaseInvoiceLine.RemoveRange(entity.PurchaseInvoiceLines);
         entity.PurchaseInvoiceLines.Clear();
 
-        foreach (var l in request.Lines)
-            entity.PurchaseInvoiceLines.Add(MapLine(l));
+        foreach (var line in mappedLines)
+            entity.PurchaseInvoiceLines.Add(line);
 
         await db.SaveChangesAsync(CancellationToken.None);
 
@@ -420,6 +428,53 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
 
         await db.SaveChangesAsync(CancellationToken.None);
 
+        // ── L1: Crear lotes de inventario y actualizar QuantityBase ─────────
+        foreach (var line in invoice.PurchaseInvoiceLines)
+        {
+            if (line.IdProduct is null || line.IdUnit is null) continue;
+
+            var pu = await db.ProductUnit
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    u => u.IdProduct == line.IdProduct.Value && u.IdUnit == line.IdUnit.Value,
+                    CancellationToken.None);
+
+            decimal conversionFactor = pu?.ConversionFactor ?? 1m;
+            decimal quantityBase     = Math.Round(line.Quantity * conversionFactor, 6);
+            decimal unitCost         = conversionFactor > 0
+                ? Math.Round(line.UnitPrice / conversionFactor, 6)
+                : line.UnitPrice;
+
+            line.QuantityBase = quantityBase;  // actualizar línea trackeada (L2 en confirm)
+
+            var lot = new InventoryLot
+            {
+                IdProduct         = line.IdProduct.Value,
+                LotNumber         = line.LotNumber,
+                ExpirationDate    = line.ExpirationDate,
+                UnitCost          = unitCost,
+                QuantityAvailable = quantityBase,
+                SourceType        = "Compra",
+                IdPurchaseInvoice = invoice.IdPurchaseInvoice,
+                CreatedAt         = DateTime.UtcNow
+            };
+
+            db.InventoryLot.Add(lot);
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            // Recalcular AverageCost (costo promedio ponderado)
+            var product = await db.Product.FindAsync([line.IdProduct.Value], CancellationToken.None);
+            var allLots = await db.InventoryLot
+                .Where(il => il.IdProduct == line.IdProduct.Value)
+                .ToListAsync(CancellationToken.None);
+
+            var totalQty  = allLots.Sum(il => il.QuantityAvailable);
+            var totalCost = allLots.Sum(il => il.QuantityAvailable * il.UnitCost);
+            product!.AverageCost = totalQty > 0 ? Math.Round(totalCost / totalQty, 6) : 0m;
+        }
+
+        await db.SaveChangesAsync(CancellationToken.None);
+
         return (true, null, await GetByIdAsync(invoice.IdPurchaseInvoice, ct));
     }
 
@@ -454,17 +509,49 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
     }
 
     // ── Helpers privados ──────────────────────────────────────────────────────
-    private static PurchaseInvoiceLine MapLine(PurchaseInvoiceLineRequest l) => new()
+    /// <summary>
+    /// Mapea líneas del request a entidades PurchaseInvoiceLine.
+    /// Calcula QuantityBase = Quantity × ConversionFactor (L2).
+    /// Retorna error si no existe la ProductUnit para el par IdProduct+IdUnit.
+    /// </summary>
+    private async Task<(List<PurchaseInvoiceLine> Lines, string? Error)> MapLinesAsync(
+        IReadOnlyList<PurchaseInvoiceLineRequest> lines, CancellationToken ct)
     {
-        IdProduct       = l.IdProduct,
-        IdUnit          = l.IdUnit,
-        LotNumber       = string.IsNullOrWhiteSpace(l.LotNumber) ? null : l.LotNumber.Trim(),
-        ExpirationDate  = l.ExpirationDate,
-        DescriptionLine = l.DescriptionLine.Trim(),
-        Quantity        = l.Quantity,
-        QuantityBase    = l.Quantity,
-        UnitPrice       = l.UnitPrice,
-        TaxPercent      = l.TaxPercent,
-        TotalLineAmount = l.TotalLineAmount
-    };
+        var result = new List<PurchaseInvoiceLine>(lines.Count);
+
+        foreach (var l in lines)
+        {
+            decimal? qtyBase = null;
+
+            if (l.IdProduct.HasValue && l.IdUnit.HasValue)
+            {
+                var pu = await db.ProductUnit
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        p => p.IdProduct == l.IdProduct.Value && p.IdUnit == l.IdUnit.Value,
+                        ct);
+
+                if (pu is null)
+                    return ([], $"No existe una presentación (ProductUnit) para el producto {l.IdProduct} con la unidad {l.IdUnit}. Configure la presentación antes de registrar la línea.");
+
+                qtyBase = Math.Round(l.Quantity * pu.ConversionFactor, 6);
+            }
+
+            result.Add(new PurchaseInvoiceLine
+            {
+                IdProduct       = l.IdProduct,
+                IdUnit          = l.IdUnit,
+                LotNumber       = string.IsNullOrWhiteSpace(l.LotNumber) ? null : l.LotNumber.Trim(),
+                ExpirationDate  = l.ExpirationDate,
+                DescriptionLine = l.DescriptionLine.Trim(),
+                Quantity        = l.Quantity,
+                QuantityBase    = qtyBase,
+                UnitPrice       = l.UnitPrice,
+                TaxPercent      = l.TaxPercent,
+                TotalLineAmount = l.TotalLineAmount
+            });
+        }
+
+        return (result, null);
+    }
 }
