@@ -13,6 +13,8 @@ public sealed record PurchaseInvoiceResponse(
     bool     CounterpartFromBankMovement,
     int?     IdBankAccount,
     string?  CodeBankAccount,
+    int?     IdContact,
+    string?  NameContact,
     string   NumberInvoice,
     string   ProviderName,
     DateOnly DateInvoice,

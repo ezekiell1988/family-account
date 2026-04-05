@@ -1,11 +1,12 @@
 using FamilyAccountApi.Domain.Entities;
+using FamilyAccountApi.Features.Contacts;
 using FamilyAccountApi.Features.PurchaseInvoices.Dtos;
 using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace FamilyAccountApi.Features.PurchaseInvoices;
 
-public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceService
+public sealed class PurchaseInvoiceService(AppDbContext db, IContactService contacts) : IPurchaseInvoiceService
 {
     // ── Proyección compartida ─────────────────────────────────────────────────
     private IQueryable<PurchaseInvoice> BuildQuery() =>
@@ -15,6 +16,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
             .Include(pi => pi.IdCurrencyNavigation)
             .Include(pi => pi.IdPurchaseInvoiceTypeNavigation)
             .Include(pi => pi.IdBankAccountNavigation)
+            .Include(pi => pi.IdContactNavigation)
             .Include(pi => pi.PurchaseInvoiceLines)
                 .ThenInclude(l => l.IdProductNavigation)
             .Include(pi => pi.PurchaseInvoiceLines)
@@ -34,6 +36,8 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         pi.IdPurchaseInvoiceTypeNavigation.CounterpartFromBankMovement,
         pi.IdBankAccount,
         pi.IdBankAccountNavigation?.CodeBankAccount,
+        pi.IdContact,
+        pi.IdContactNavigation?.Name,
         pi.NumberInvoice,
         pi.ProviderName,
         pi.DateInvoice,
@@ -89,14 +93,17 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
     // ── CREAR ─────────────────────────────────────────────────────────────────
     public async Task<PurchaseInvoiceResponse> CreateAsync(CreatePurchaseInvoiceRequest request, CancellationToken ct = default)
     {
+        var (idContact, providerName) = await ResolveContactAsync(request.IdContact, request.ProviderName, ct);
+
         var entity = new PurchaseInvoice
         {
             IdFiscalPeriod        = request.IdFiscalPeriod,
             IdCurrency            = request.IdCurrency,
             IdPurchaseInvoiceType = request.IdPurchaseInvoiceType,
             IdBankAccount         = request.IdBankAccount,
+            IdContact             = idContact,
             NumberInvoice         = request.NumberInvoice.Trim(),
-            ProviderName          = request.ProviderName.Trim(),
+            ProviderName          = providerName,
             DateInvoice           = request.DateInvoice,
             SubTotalAmount        = request.SubTotalAmount,
             TaxAmount             = request.TaxAmount,
@@ -131,12 +138,15 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         if (entity.StatusInvoice != "Borrador")
             throw new InvalidOperationException($"Solo se pueden modificar facturas en estado 'Borrador'. Estado actual: '{entity.StatusInvoice}'.");
 
+        var (idContact, providerName) = await ResolveContactAsync(request.IdContact, request.ProviderName, ct);
+
         entity.IdFiscalPeriod        = request.IdFiscalPeriod;
         entity.IdCurrency            = request.IdCurrency;
         entity.IdPurchaseInvoiceType = request.IdPurchaseInvoiceType;
         entity.IdBankAccount         = request.IdBankAccount;
+        entity.IdContact             = idContact;
         entity.NumberInvoice         = request.NumberInvoice.Trim();
-        entity.ProviderName          = request.ProviderName.Trim();
+        entity.ProviderName          = providerName;
         entity.DateInvoice           = request.DateInvoice;
         entity.SubTotalAmount        = request.SubTotalAmount;
         entity.TaxAmount             = request.TaxAmount;
@@ -553,5 +563,33 @@ public sealed class PurchaseInvoiceService(AppDbContext db) : IPurchaseInvoiceSe
         }
 
         return (result, null);
+    }
+
+    // ── Resolver contacto proveedor ───────────────────────────────────────────
+    // Si se envía IdContact → lo usa directamente y toma el nombre del catálogo.
+    // Si no se envía pero sí ProviderName → get-or-create con tipo "PRO".
+    // Si no se envía ninguno → lanza excepción (al menos uno es obligatorio).
+    private async Task<(int? IdContact, string ProviderName)> ResolveContactAsync(
+        int? idContactRequest, string? providerNameRequest, CancellationToken ct)
+    {
+        if (idContactRequest.HasValue)
+        {
+            var contactName = await db.Contact
+                .AsNoTracking()
+                .Where(c => c.IdContact == idContactRequest.Value)
+                .Select(c => c.Name)
+                .FirstOrDefaultAsync(ct)
+                ?? throw new InvalidOperationException($"El contacto con IdContact={idContactRequest.Value} no existe.");
+
+            return (idContactRequest.Value, contactName);
+        }
+
+        if (!string.IsNullOrWhiteSpace(providerNameRequest))
+        {
+            var contact = await contacts.GetOrCreateAsync(providerNameRequest.Trim(), "PRO", ct);
+            return (contact.IdContact, contact.Name);
+        }
+
+        throw new InvalidOperationException("Debe enviar IdContact o ProviderName para registrar la factura de compra.");
     }
 }

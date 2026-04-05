@@ -292,13 +292,14 @@ SalesInvoiceLine  (combo — IsComboParent, precio total)
 
 ---
 
-#### P9 — `PurchaseInvoice.ProviderName` es texto libre, sin FK a `Contact`
+#### P9 — `PurchaseInvoice.ProviderName` es texto libre, sin FK a `Contact` ✅ IMPLEMENTADO
 
-- **Situación**: Existe un catálogo de `Contact`, pero las facturas de compra guardan el nombre del proveedor en texto libre.
-- **Consecuencia**: No es posible filtrar compras por proveedor de forma confiable, ni calcular deuda con proveedores.
-- **Recomendado**: Agregar `IdContact INT NULL` en `PurchaseInvoice` con FK, y mantener `ProviderName` como campo de respaldo (snapshot).
-
-**❓ Pregunta**: ¿La ausencia de FK a Contact en compras es intencional ("V1 simplificado") o se planea incorporar en una siguiente versión?
+> **Resuelto** (abril 2026): Se agregó `IdContact INT?` en `PurchaseInvoice` con FK → `Contact` (RESTRICT). `ProviderName` se mantiene como snapshot inmutable del nombre al momento de la factura.
+> - Si se envía `IdContact` → se toma el nombre del catálogo y se guarda en `ProviderName`.
+> - Si no se envía `IdContact` pero sí `ProviderName` → se aplica `GetOrCreateAsync("PRO")` para crear o reutilizar un contacto de tipo Proveedor automáticamente.
+> - Si no se envía ninguno → error `400` con mensaje descriptivo.
+> - **Seed**: 1 contacto genérico `{ CodeContact="SIN_PRO_CLI", Name="Sin proveedor / Cliente" }` con ambos tipos (CLI + PRO) para usarse como valor neutro.
+> - Migración aplicada: `20260405153226_AddPurchaseInvoiceIdContact`.
 
 ---
 
@@ -380,7 +381,7 @@ Toda la producción pasa por `InventoryAdjustment` tipo PRODUCCION. En V1 esto e
 | ~~Q8-3~~ | ~~¿El sistema auto-asigna lotes FEFO en la explosión, o el operador elige el lote de cada insumo manualmente?~~ ✅ Auto-FEFO. `GetFefoLotAsync` asigna el lote con menor vencimiento disponible. | Combos / Recetas |
 | Q8-4 | ¿Puede existir un combo cuyos slots sean también combos (anidación combo→combo)? | Combos |
 | Q8-5 | ¿`ProductOptionItem` debe mover stock de algún insumo (ej: extra queso), o solo afecta el precio? | Opciones |
-| Q6 | ¿`PurchaseInvoice.ProviderName` sin FK es intencional en V1, o se planea normalizar? | Compras |
+| ~~Q6~~ | ~~¿`PurchaseInvoice.ProviderName` sin FK es intencional en V1, o se planea normalizar?~~ ✅ Resuelto con `IdContact` FK + get-or-create de proveedor. | Compras |
 | Q7 | ¿Un ajuste de costo puro (delta=0) debe recalcular `Product.AverageCost`? | AverageCost |
 | Q8 | ¿Se planea una entidad `ProductionOrder` para trazabilidad receta→producción→lote? | Producción |
 

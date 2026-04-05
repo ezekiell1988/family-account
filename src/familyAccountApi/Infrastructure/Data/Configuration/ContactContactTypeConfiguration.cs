@@ -38,5 +38,11 @@ public sealed class ContactContactTypeConfiguration : IEntityTypeConfiguration<C
             .WithMany(ct => ct.ContactContactTypes)
             .HasForeignKey(cct => cct.IdContactType)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // ── Seed data ────────────────────────────────────────
+        builder.HasData(
+            new ContactContactType { IdContactContactType = 1, IdContact = 1, IdContactType = 1 }, // CLI
+            new ContactContactType { IdContactContactType = 2, IdContact = 1, IdContactType = 2 }  // PRO
+        );
     }
 }

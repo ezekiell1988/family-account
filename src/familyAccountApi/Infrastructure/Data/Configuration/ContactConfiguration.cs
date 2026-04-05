@@ -34,5 +34,8 @@ public sealed class ContactConfiguration : IEntityTypeConfiguration<Contact>
         builder.HasIndex(c => c.CodeContact)
             .IsUnique()
             .HasDatabaseName("UQ_contact_codeContact");
-    }
+        // ── Seed data ────────────────────────────────────────
+        builder.HasData(
+            new Contact { IdContact = 1, CodeContact = "SIN_PRO_CLI", Name = "Sin proveedor / Cliente" }
+        );    }
 }

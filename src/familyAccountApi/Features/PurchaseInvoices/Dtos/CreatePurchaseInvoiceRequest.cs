@@ -21,13 +21,17 @@ public sealed record CreatePurchaseInvoiceRequest
     [Description("ID de la cuenta bancaria (requerido cuando el tipo requiere contrapartida bancaria)")]
     public int? IdBankAccount { get; init; }
 
+    [Range(1, int.MaxValue)]
+    [Description("ID del contacto proveedor. Si se omite se crea uno nuevo con el nombre indicado en ProviderName.")]
+    public int? IdContact { get; init; }
+
     [Required, StringLength(100, MinimumLength = 1)]
     [Description("Número de factura del proveedor")]
     public required string NumberInvoice { get; init; }
 
-    [Required, StringLength(200, MinimumLength = 1)]
-    [Description("Nombre del proveedor")]
-    public required string ProviderName { get; init; }
+    [StringLength(200, MinimumLength = 1)]
+    [Description("Nombre del proveedor. Obligatorio si no se envía IdContact; se usa para crear un contacto nuevo de tipo Proveedor.")]
+    public string? ProviderName { get; init; }
 
     [Required]
     [Description("Fecha de emisión de la factura")]

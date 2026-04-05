@@ -40,7 +40,10 @@ public sealed class PurchaseInvoiceConfiguration : IEntityTypeConfiguration<Purc
         builder.Property(pi => pi.ProviderName)
             .HasMaxLength(200)
             .IsRequired()
-            .HasComment("Nombre del proveedor (ingreso libre, sin catálogo en esta fase).");
+            .HasComment("Snapshot del nombre del proveedor en el momento de la factura. Se autocompleta desde el contacto si se envía IdContact.");
+
+        builder.Property(pi => pi.IdContact)
+            .HasComment("FK al contacto proveedor. Si es nulo, el proveedor no está en el catálogo.");
 
         builder.Property(pi => pi.DateInvoice)
             .IsRequired()
@@ -98,6 +101,9 @@ public sealed class PurchaseInvoiceConfiguration : IEntityTypeConfiguration<Purc
         builder.HasIndex(pi => pi.IdBankAccount)
             .HasDatabaseName("IX_purchaseInvoice_idBankAccount");
 
+        builder.HasIndex(pi => pi.IdContact)
+            .HasDatabaseName("IX_purchaseInvoice_idContact");
+
         builder.HasOne(pi => pi.IdFiscalPeriodNavigation)
             .WithMany()
             .HasForeignKey(pi => pi.IdFiscalPeriod)
@@ -116,6 +122,11 @@ public sealed class PurchaseInvoiceConfiguration : IEntityTypeConfiguration<Purc
         builder.HasOne(pi => pi.IdBankAccountNavigation)
             .WithMany()
             .HasForeignKey(pi => pi.IdBankAccount)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(pi => pi.IdContactNavigation)
+            .WithMany()
+            .HasForeignKey(pi => pi.IdContact)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
