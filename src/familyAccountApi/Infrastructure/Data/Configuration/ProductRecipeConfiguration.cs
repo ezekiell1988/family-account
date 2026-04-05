@@ -33,19 +33,28 @@ public sealed class ProductRecipeConfiguration : IEntityTypeConfiguration<Produc
             .HasMaxLength(500)
             .HasComment("Instrucciones generales u observaciones del proceso productivo.");
 
+        builder.Property(r => r.VersionNumber)
+            .IsRequired()
+            .HasDefaultValue(1)
+            .HasComment("Número de versión de la receta. Se incrementa al actualizar. Cada modificación crea una nueva fila; la anterior queda IsActive=false.");
+
         builder.Property(r => r.IsActive)
             .IsRequired()
             .HasDefaultValue(true)
-            .HasComment("Solo recetas activas se usan en producción.");
+            .HasComment("Solo recetas activas se usan en producción. Al actualizar una receta la versión anterior queda IsActive=false.");
 
         builder.Property(r => r.CreatedAt)
             .IsRequired()
             .HasDefaultValueSql("GETUTCDATE()")
-            .HasComment("Fecha y hora UTC de creación del registro.");
+            .HasComment("Fecha y hora UTC de creación de esta versión.");
 
         builder.HasOne(r => r.IdProductOutputNavigation)
             .WithMany()
             .HasForeignKey(r => r.IdProductOutput)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(r => new { r.IdProductOutput, r.VersionNumber })
+            .IsUnique()
+            .HasDatabaseName("UQ_productRecipe_idProductOutput_versionNumber");
     }
 }

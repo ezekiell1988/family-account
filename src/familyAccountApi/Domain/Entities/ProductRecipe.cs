@@ -4,6 +4,7 @@ public sealed class ProductRecipe
 {
     public int       IdProductRecipe     { get; set; }
     public int       IdProductOutput     { get; set; }
+    public int       VersionNumber       { get; set; }
     public string    NameRecipe          { get; set; } = null!;
     public decimal   QuantityOutput      { get; set; }
     public string?   DescriptionRecipe   { get; set; }

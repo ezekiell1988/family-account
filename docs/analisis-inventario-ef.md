@@ -336,9 +336,13 @@ Si se elimina un centro de costo, los `ProductAccount` quedan con `idCostCenter 
 
 ---
 
-#### O3 — `ProductRecipe` sin versioning
+#### O3 — `ProductRecipe` sin versioning ✅ IMPLEMENTADO
 
-Solo tiene `IsActive` como flag. Al modificar cantidades de ingredientes (actualizar `QuantityInput`) se pierde la historia. Los lotes de producción ya confirmados no pueden auditarse contra la receta que se usó en su momento. Opciones: snapshot de receta al confirmar, o versionado por número.
+> **Resuelto** (abril 2026): Se agregó `VersionNumber INT NOT NULL DEFAULT 1` en `ProductRecipe` con índice único `UQ_productRecipe_idProductOutput_versionNumber`. El comportamiento de `UpdateAsync` cambió: en lugar de mutar la receta existente, marca la versión actual como `IsActive = false` y crea una nueva fila con `VersionNumber = prev + 1`. `DeleteAsync` pasó a soft-delete (`IsActive = false`) para no romper los `ProductionSnapshot` que referencian versiones anteriores. Migración aplicada: `20260405155554_AddProductRecipeVersionNumber`.
+>
+> - **Auditoría**: `ProductionSnapshot.IdProductRecipe` apunta a la fila exacta (versión específica), por lo que la trazabilidad receta→producción queda completa sin datos adicionales.
+> - **Query receta aktiva**: `WHERE IdProductOutput = X AND IsActive = 1`.
+> - **Historial**: todas las versiones anteriores permanecen en la tabla con `IsActive = false`; crece solo una fila por cada vez que se modifica la receta (muy inferior al snapshot que crece `modificaciones × ingredientes`).
 
 ---
 

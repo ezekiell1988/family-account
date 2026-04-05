@@ -20,10 +20,6 @@ public sealed record UpdateProductRecipeRequest
     public string? DescriptionRecipe { get; init; }
 
     [Required]
-    [Description("Estado activo de la receta")]
-    public required bool IsActive { get; init; }
-
-    [Required]
     [Description("Ingredientes de la receta (reemplaza completamente las líneas existentes)")]
     public required IReadOnlyList<ProductRecipeLineRequest> Lines { get; init; }
 }

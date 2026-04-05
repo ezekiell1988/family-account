@@ -12,6 +12,7 @@ public sealed record ProductRecipeResponse(
     int      IdProductRecipe,
     int      IdProductOutput,
     string   NameProductOutput,
+    int      VersionNumber,
     string   NameRecipe,
     decimal  QuantityOutput,
     string   CodeUnitOutput,

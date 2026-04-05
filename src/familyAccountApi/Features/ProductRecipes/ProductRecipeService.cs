@@ -11,6 +11,7 @@ public sealed class ProductRecipeService(AppDbContext db) : IProductRecipeServic
         r.IdProductRecipe,
         r.IdProductOutput,
         r.IdProductOutputNavigation.NameProduct,
+        r.VersionNumber,
         r.NameRecipe,
         r.QuantityOutput,
         r.IdProductOutputNavigation.IdUnitNavigation.CodeUnit,
@@ -82,6 +83,7 @@ public sealed class ProductRecipeService(AppDbContext db) : IProductRecipeServic
         var recipe = new ProductRecipe
         {
             IdProductOutput   = request.IdProductOutput,
+            VersionNumber     = 1,
             NameRecipe        = request.NameRecipe,
             QuantityOutput    = request.QuantityOutput,
             DescriptionRecipe = request.DescriptionRecipe,
@@ -106,54 +108,62 @@ public sealed class ProductRecipeService(AppDbContext db) : IProductRecipeServic
 
     public async Task<ProductRecipeResponse?> UpdateAsync(int idProductRecipe, UpdateProductRecipeRequest request, CancellationToken ct = default)
     {
-        var recipe = await db.ProductRecipe
-            .Include(r => r.ProductRecipeLines)
+        var current = await db.ProductRecipe
+            .AsNoTracking()
             .FirstOrDefaultAsync(r => r.IdProductRecipe == idProductRecipe, ct);
 
-        if (recipe is null) return null;
+        if (current is null) return null;
 
         // V4: el producto output no puede ser Materia Prima (Id=1) ni Reventa (Id=4)
         var outputProduct = await db.Product.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.IdProduct == recipe.IdProductOutput, ct);
+            .FirstOrDefaultAsync(p => p.IdProduct == current.IdProductOutput, ct);
         if (outputProduct?.IdProductType is 1 or 4)
             throw new InvalidOperationException(
                 "El producto output no puede ser de tipo 'Materia Prima' o 'Reventa'.");
 
         // V5: ningún insumo puede ser igual al producto output
-        if (request.Lines.Any(l => l.IdProductInput == recipe.IdProductOutput))
+        if (request.Lines.Any(l => l.IdProductInput == current.IdProductOutput))
             throw new InvalidOperationException(
                 "Un insumo de la receta no puede ser el mismo producto que el output.");
 
-        recipe.NameRecipe        = request.NameRecipe;
-        recipe.QuantityOutput    = request.QuantityOutput;
-        recipe.DescriptionRecipe = request.DescriptionRecipe;
-        recipe.IsActive          = request.IsActive;
+        // Marcar versión actual como inactiva
+        await db.ProductRecipe
+            .Where(r => r.IdProductRecipe == idProductRecipe)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsActive, false), ct);
 
-        recipe.ProductRecipeLines.Clear();
-        foreach (var l in request.Lines)
+        // Crear nueva versión con número incrementado
+        var newVersion = new ProductRecipe
         {
-            recipe.ProductRecipeLines.Add(new ProductRecipeLine
+            IdProductOutput   = current.IdProductOutput,
+            VersionNumber     = current.VersionNumber + 1,
+            NameRecipe        = request.NameRecipe,
+            QuantityOutput    = request.QuantityOutput,
+            DescriptionRecipe = request.DescriptionRecipe,
+            IsActive          = true,
+            CreatedAt         = DateTime.UtcNow,
+            ProductRecipeLines = request.Lines.Select(l => new ProductRecipeLine
             {
                 IdProductInput = l.IdProductInput,
                 QuantityInput  = l.QuantityInput,
                 SortOrder      = l.SortOrder
-            });
-        }
+            }).ToList()
+        };
 
+        db.ProductRecipe.Add(newVersion);
         await db.SaveChangesAsync(ct);
 
-        var updated = await WithIncludes(db.ProductRecipe.AsNoTracking())
-            .FirstAsync(r => r.IdProductRecipe == idProductRecipe, ct);
+        var created = await WithIncludes(db.ProductRecipe.AsNoTracking())
+            .FirstAsync(r => r.IdProductRecipe == newVersion.IdProductRecipe, ct);
 
-        return ToResponse(updated);
+        return ToResponse(created);
     }
 
     public async Task<bool> DeleteAsync(int idProductRecipe, CancellationToken ct = default)
     {
-        var deleted = await db.ProductRecipe
+        var updated = await db.ProductRecipe
             .Where(r => r.IdProductRecipe == idProductRecipe)
-            .ExecuteDeleteAsync(ct);
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsActive, false), ct);
 
-        return deleted > 0;
+        return updated > 0;
     }
 }
