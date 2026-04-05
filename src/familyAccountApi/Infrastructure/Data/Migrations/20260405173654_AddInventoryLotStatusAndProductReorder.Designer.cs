@@ -4,6 +4,7 @@ using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260405173654_AddInventoryLotStatusAndProductReorder")]
+    partial class AddInventoryLotStatusAndProductReorder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3641,13 +3644,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("averageCost")
                         .HasComment("Costo promedio ponderado en unidad base. Se recalcula automáticamente al confirmar compras y ajustes con stock positivo.");
 
-                    b.Property<string>("ClassificationAbc")
-                        .HasMaxLength(1)
-                        .IsUnicode(false)
-                        .HasColumnType("CHAR(1)")
-                        .HasColumnName("classificationAbc")
-                        .HasComment("Clasificación ABC calculada por Hangfire según valor de ventas de los últimos 90 días. A=top 80%, B=siguiente 15%, C=último 5%. NULL si sin ventas en el período.");
-
                     b.Property<string>("CodeProduct")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -3733,8 +3729,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("product", t =>
                         {
                             t.HasComment("Catálogo interno de productos. Cada producto tiene un tipo (Materia Prima, Producto en Proceso, Producto Terminado, Reventa), una unidad base de inventario y opcionalmente un producto padre para agrupar variantes.");
-
-                            t.HasCheckConstraint("CK_product_classificationAbc", "[classificationAbc] IS NULL OR [classificationAbc] IN ('A', 'B', 'C')");
                         });
                 });
 

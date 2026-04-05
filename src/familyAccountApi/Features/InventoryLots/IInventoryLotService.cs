@@ -12,4 +12,9 @@ public interface IInventoryLotService
     /// Los lotes sin fecha de vencimiento se consideran siempre válidos y se colocan al final.
     /// </summary>
     Task<InventoryLotResponse?> GetSuggestedLotAsync(int idProduct, DateOnly referenceDate, CancellationToken ct = default);
+    /// <summary>
+    /// Actualiza el estado de calidad de un lote (Disponible | Cuarentena | Bloqueado | Vencido).
+    /// Los lotes en Cuarentena, Bloqueado o Vencido no son seleccionables en FEFO.
+    /// </summary>
+    Task<InventoryLotResponse?> UpdateStatusAsync(int idInventoryLot, UpdateInventoryLotStatusRequest request, CancellationToken ct = default);
 }

@@ -11,6 +11,7 @@ public sealed record InventoryLotResponse(
     decimal  QuantityReserved,
     decimal  QuantityAvailableNet,
     string   CodeUnit,
+    string   StatusLot,
     string   SourceType,
     int?     IdPurchaseInvoice,
     int?     IdInventoryAdjustment,

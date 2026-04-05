@@ -18,7 +18,11 @@ public sealed class ProductService(AppDbContext db) : IProductService
         p.IdProductParent,
         p.AverageCost,
         p.HasOptions,
-        p.IsCombo);
+        p.IsCombo,
+        p.ReorderPoint,
+        p.SafetyStock,
+        p.ReorderQuantity,
+        p.ClassificationAbc);
 
     public async Task<IReadOnlyList<ProductResponse>> GetAllAsync(CancellationToken ct = default)
     {
@@ -54,7 +58,10 @@ public sealed class ProductService(AppDbContext db) : IProductService
             IdProductParent = request.IdProductParent,
             AverageCost     = 0m,
             HasOptions      = request.HasOptions,
-            IsCombo         = request.IsCombo
+            IsCombo         = request.IsCombo,
+            ReorderPoint    = request.ReorderPoint,
+            SafetyStock     = request.SafetyStock,
+            ReorderQuantity = request.ReorderQuantity
         };
 
         db.Product.Add(product);
@@ -82,6 +89,9 @@ public sealed class ProductService(AppDbContext db) : IProductService
         product.IdProductParent = request.IdProductParent;
         product.HasOptions      = request.HasOptions;
         product.IsCombo         = request.IsCombo;
+        product.ReorderPoint    = request.ReorderPoint;
+        product.SafetyStock     = request.SafetyStock;
+        product.ReorderQuantity = request.ReorderQuantity;
 
         await db.SaveChangesAsync(ct);
 
@@ -114,5 +124,33 @@ public sealed class ProductService(AppDbContext db) : IProductService
             .ExecuteDeleteAsync(ct);
 
         return (deleted > 0, null);
+    }
+
+    public async Task<IReadOnlyList<ProductResponse>> GetBelowReorderPointAsync(CancellationToken ct = default)
+    {
+        // Obtiene productos cuyo stock total sea menor al punto de reorden configurado
+        var products = await db.Product
+            .AsNoTracking()
+            .Include(p => p.IdProductTypeNavigation)
+            .Include(p => p.IdUnitNavigation)
+            .Where(p => p.ReorderPoint != null)
+            .ToListAsync(ct);
+
+        // Stock total por producto (suma de lotes disponibles)
+        var productIds = products.Select(p => p.IdProduct).ToList();
+        var stockByProduct = await db.InventoryLot
+            .Where(il => productIds.Contains(il.IdProduct))
+            .GroupBy(il => il.IdProduct)
+            .Select(g => new { IdProduct = g.Key, Total = g.Sum(il => il.QuantityAvailable) })
+            .ToDictionaryAsync(x => x.IdProduct, x => x.Total, ct);
+
+        return products
+            .Where(p =>
+            {
+                var stock = stockByProduct.TryGetValue(p.IdProduct, out var s) ? s : 0m;
+                return stock < p.ReorderPoint!.Value;
+            })
+            .Select(ToResponse)
+            .ToList();
     }
 }

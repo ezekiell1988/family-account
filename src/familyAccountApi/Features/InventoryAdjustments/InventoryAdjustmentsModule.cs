@@ -46,6 +46,18 @@ public static class InventoryAdjustmentsModule
             .WithSummary("Eliminar ajuste en estado Borrador")
             .RequireAuthorization("Admin");
 
+        // ── Cycle Count (M6) ─────────────────────────────────────────────────
+        group.MapPost("/cycle-count/preview", PreviewCycleCount)
+            .WithName("PreviewCycleCount")
+            .WithSummary("Vista previa del conteo cíclico: calcula deltas (físico − libro) sin persistir nada")
+            .RequireAuthorization("Admin");
+
+        group.MapPost("/cycle-count", CreateCycleCount)
+            .WithName("CreateCycleCount")
+            .WithSummary("Crear ajuste de conteo cíclico tipo CONTEO: el sistema calcula quantityDelta = físico − libro. " +
+                         "Pase autoConfirm=true para crear y confirmar en un solo paso.")
+            .RequireAuthorization("Admin");
+
         return app;
     }
 
@@ -116,6 +128,49 @@ public static class InventoryAdjustmentsModule
             return TypedResults.Conflict(new ProblemDetails
             {
                 Title  = "Operación no permitida",
+                Detail = ex.Message,
+                Status = StatusCodes.Status409Conflict
+            });
+        }
+    }
+
+    // ── Cycle Count handlers ──────────────────────────────────────────────────
+
+    private static async Task<Results<Ok<CycleCountPreviewResponse>, Conflict<ProblemDetails>>> PreviewCycleCount(
+        CreateCycleCountRequest request, IInventoryAdjustmentService service, CancellationToken ct)
+    {
+        try
+        {
+            var preview = await service.PreviewCycleCountAsync(request, ct);
+            return TypedResults.Ok(preview);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.Conflict(new ProblemDetails
+            {
+                Title  = "Error en conteo cíclico",
+                Detail = ex.Message,
+                Status = StatusCodes.Status409Conflict
+            });
+        }
+    }
+
+    private static async Task<Results<Created<InventoryAdjustmentResponse>, Conflict<ProblemDetails>>> CreateCycleCount(
+        CreateCycleCountRequest request,
+        [Microsoft.AspNetCore.Mvc.FromQuery] bool autoConfirm,
+        IInventoryAdjustmentService service,
+        CancellationToken ct)
+    {
+        try
+        {
+            var item = await service.CreateCycleCountAsync(request, autoConfirm, ct);
+            return TypedResults.Created($"/api/v1/inventory-adjustments/{item.IdInventoryAdjustment}.json", item);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.Conflict(new ProblemDetails
+            {
+                Title  = "Error en conteo cíclico",
                 Detail = ex.Message,
                 Status = StatusCodes.Status409Conflict
             });

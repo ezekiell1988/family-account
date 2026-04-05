@@ -14,6 +14,12 @@ public sealed class Product
     public bool    HasOptions { get; set; } = false;
     public bool    IsCombo    { get; set; } = false;
 
+    public decimal? ReorderPoint    { get; set; }
+    public decimal? SafetyStock     { get; set; }
+    public decimal? ReorderQuantity { get; set; }
+
+    public string?  ClassificationAbc { get; set; }
+
     public ProductType  IdProductTypeNavigation  { get; set; } = null!;
     public UnitOfMeasure IdUnitNavigation        { get; set; } = null!;
     public Product?      IdProductParentNavigation { get; set; }

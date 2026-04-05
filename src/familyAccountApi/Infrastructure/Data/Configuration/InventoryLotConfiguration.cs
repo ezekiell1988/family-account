@@ -14,6 +14,7 @@ public sealed class InventoryLotConfiguration : IEntityTypeConfiguration<Invento
             t.HasCheckConstraint("CK_inventoryLot_sourceType", "sourceType IN ('Compra', 'Producción', 'Ajuste')");
             t.HasCheckConstraint("CK_inventoryLot_quantityAvailable", "quantityAvailable >= 0");
             t.HasCheckConstraint("CK_inventoryLot_quantityReserved", "quantityReserved >= 0");
+            t.HasCheckConstraint("CK_inventoryLot_statusLot", "statusLot IN ('Disponible', 'Cuarentena', 'Bloqueado', 'Vencido')");
         });
 
         builder.HasKey(il => il.IdInventoryLot);
@@ -50,6 +51,13 @@ public sealed class InventoryLotConfiguration : IEntityTypeConfiguration<Invento
             .IsRequired()
             .HasDefaultValue(0m)
             .HasComment("Stock reservado por SalesOrderLineFulfillment de tipo Stock pendientes de confirmar. Se incrementa al asignar un fulfillment y se decrementa al confirmar o eliminar el fulfillment. QuantityAvailableNet = QuantityAvailable - QuantityReserved.");
+
+        builder.Property(il => il.StatusLot)
+            .HasMaxLength(20)
+            .IsRequired()
+            .IsUnicode(false)
+            .HasDefaultValue("Disponible")
+            .HasComment("Estado de calidad del lote: Disponible | Cuarentena | Bloqueado | Vencido. Solo los lotes Disponibles son seleccionables en FEFO.");
 
         builder.Property(il => il.SourceType)
             .HasMaxLength(20)

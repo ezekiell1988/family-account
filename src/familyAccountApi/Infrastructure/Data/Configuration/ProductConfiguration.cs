@@ -60,6 +60,28 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasDefaultValue(false)
             .HasComment("Indica que el producto es un combo compuesto de slots con productos elegibles.");
 
+        builder.Property(p => p.ReorderPoint)
+            .HasPrecision(12, 4)
+            .HasComment("Punto de reorden: stock mínimo que dispara una alerta de reabastecimiento. NULL si no aplica.");
+
+        builder.Property(p => p.SafetyStock)
+            .HasPrecision(12, 4)
+            .HasComment("Stock de seguridad reservado que no debe consumirse en operación normal. NULL si no aplica.");
+
+        builder.Property(p => p.ReorderQuantity)
+            .HasPrecision(12, 4)
+            .HasComment("Cantidad sugerida a pedir cuando el stock cae por debajo del punto de reorden. NULL si no aplica.");
+
+        builder.Property(p => p.ClassificationAbc)
+            .HasMaxLength(1)
+            .IsUnicode(false)
+            .HasComment("Clasificación ABC calculada por Hangfire según valor de ventas de los últimos 90 días. A=top 80%, B=siguiente 15%, C=último 5%. NULL si sin ventas en el período.")
+            .HasColumnType("CHAR(1)");
+
+        builder.ToTable(t => t.HasCheckConstraint(
+            "CK_product_classificationAbc",
+            "[classificationAbc] IS NULL OR [classificationAbc] IN ('A', 'B', 'C')"));
+
         // ── Índice único ─────────────────────────────────────
         builder.HasIndex(p => p.CodeProduct)
             .IsUnique()

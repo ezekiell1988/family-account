@@ -26,6 +26,12 @@ public static class HangfireAppExtensions
             "create-fiscal-year-periods",
             job => job.CreateCurrentYearPeriodsAsync(),
             "0 3 1 1 *");
+
+        RecurringJob.AddOrUpdate<InventoryAbcJobs>(
+            "recalculate-inventory-abc",
+            job => job.RecalculateAsync(),
+            "0 2 * * 0");   // Domingos a las 02:00 AM UTC
+
         return app;
     }
 }

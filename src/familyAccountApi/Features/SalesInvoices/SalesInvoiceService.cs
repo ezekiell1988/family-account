@@ -740,7 +740,8 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
     private Task<InventoryLot?> GetFefoLotAsync(int idProduct, DateOnly referenceDate)
         => db.InventoryLot
             .Where(il => il.IdProduct == idProduct
-                      && il.QuantityAvailable > il.QuantityReserved   // stock neto > 0
+                      && il.StatusLot == "Disponible"               // solo lotes disponibles
+                      && il.QuantityAvailable > il.QuantityReserved  // stock neto > 0
                       && (il.ExpirationDate == null || il.ExpirationDate >= referenceDate))
             .OrderBy(il => il.ExpirationDate == null ? 1 : 0)
             .ThenBy(il => il.ExpirationDate)

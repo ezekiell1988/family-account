@@ -9,4 +9,8 @@ public interface IProductService
     Task<ProductResponse> CreateAsync(CreateProductRequest request, CancellationToken ct = default);
     Task<ProductResponse?> UpdateAsync(int idProduct, UpdateProductRequest request, CancellationToken ct = default);
     Task<(bool Deleted, string? ConflictMessage)> DeleteAsync(int idProduct, CancellationToken ct = default);
+    /// <summary>
+    /// Devuelve los productos con ReorderPoint configurado cuyo stock total esté por debajo del umbral.
+    /// </summary>
+    Task<IReadOnlyList<ProductResponse>> GetBelowReorderPointAsync(CancellationToken ct = default);
 }

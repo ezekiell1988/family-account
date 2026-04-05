@@ -26,12 +26,12 @@
 | Múltiples métodos de costeo | ❌ Solo WAC | Básico |
 | Múltiples almacenes / ubicaciones | ❌ No existe `Warehouse` ni `Location` | Ausente |
 | Control de series/números de serie | ❌ No existe `SerialNumber` | Ausente |
-| Punto de reorden / stock de seguridad | ❌ No hay campos en `Product` | Ausente |
-| Conteo cíclico (cycle count) | ❌ No hay flujo diferenciado de conteo | Ausente |
+| Punto de reorden / stock de seguridad | ✅ `Product.ReorderPoint`, `SafetyStock`, `ReorderQuantity`. Endpoint `GET /products/below-reorder-point.json` | Estándar |
+| Conteo cíclico (cycle count) | ✅ `POST /inventory-adjustments/cycle-count` — el operador ingresa cantidad física por lote, el system calcula `quantityDelta = físico − libro` automáticamente. Preview sin persistir vía `POST /cycle-count/preview`. Usa tipo `CONTEO` (seed). | Estándar |
 | Transferencias entre almacenes | ❌ No hay `InventoryTransfer` | Ausente |
-| Estado de cuarentena / calidad | ❌ `InventoryLot` no tiene estado de calidad | Ausente |
+| Estado de calidad / cuarentena | ✅ `InventoryLot.StatusLot` — Disponible | Cuarentena | Bloqueado | Vencido. Solo Disponibles van a FEFO | Avanzado |
 | Reserva de stock contra pedido | ❌ Solo fulfillment, sin reserva real en lote | Parcial |
-| Análisis ABC / XYZ | ❌ No hay clasificación automática | Ausente |
+| Análisis ABC / XYZ | ✅ `Product.ClassificationAbc` — A/B/C. Job Hangfire semanal calcula sobre ventas confirmadas de los últimos 90 días | Estándar |
 | Previsión de demanda | ❌ No hay módulo de forecasting | Ausente |
 | Backflushing automático | Parcial — BOM explosion FEFO al confirmar venta | Parcial |
 | Opciones configurables con impacto de stock | ❌ `ProductOptionItem.PriceDelta` existe, pero sin `IdProduct` ni qty | Ausente |
@@ -125,7 +125,16 @@ Cambios realizados:
 
 **Brecha identificada**: en industria alimentaria (que parece ser el contexto del proyecto — salsas, perros calientes, bebidas) la trazabilidad de lotes con estado de calidad es un requisito de cumplimiento (BRC, ISO 22000, HACCP). Un lote en cuarentena no debería ser seleccionable en FEFO sin aprobación explícita.
 
-> **Mejora potencial M5**: agregar `StatusLot VARCHAR(20) NOT NULL DEFAULT 'Disponible'` con CHECK `IN ('Disponible','Cuarentena','Bloqueado','Vencido')` en `InventoryLot`. El método `GetSuggestedLotAsync` ya filtra por `ExpirationDate >= referenceDate`; agregar filtro `StatusLot = 'Disponible'` es una línea extra. Los ajustes de cuarentena serían operaciones de cambio de estado, no decremento de stock.
+**Estado: ✅ Implementado (abril 2026 — M5)**
+
+Cambios realizados:
+- **`InventoryLot`** — nuevo campo `StatusLot VARCHAR(20) NOT NULL DEFAULT 'Disponible'` con CHECK constraint `IN ('Disponible', 'Cuarentena', 'Bloqueado', 'Vencido')`.
+- **`InventoryLotResponse`** — expone `StatusLot`.
+- **`InventoryLotService.GetSuggestedLotAsync`** — filtra por `StatusLot == "Disponible"` (solo lotes disponibles se sugieren en FEFO).
+- **`SalesInvoiceService.GetFefoLotAsync`** — igual filtro para FEFO en BOM y combos.
+- **`IInventoryLotService / InventoryLotService.UpdateStatusAsync`** — cambia el estado de un lote.
+- **`PATCH /inventory-lots/{id}/status`** — endpoint protegido con rol Admin, valida valores permitidos.
+- **Migración**: `20260405173654_AddInventoryLotStatusAndProductReorder`.
 
 ---
 
@@ -141,7 +150,21 @@ Cambios realizados:
 
 **Brecha identificada**: los `InventoryAdjustment` actuales son ajustes directos de delta. No existe el concepto de "contar físicamente, comparar con lo que dice el sistema y generar el ajuste por la diferencia". Esto es más un flujo de UX que un problema de modelo.
 
-> **Mejora potencial M6**: crear un nuevo `InventoryAdjustmentType` predefinido tipo `'Conteo'` donde la UI muestra la cantidad en libro (`InventoryLot.QuantityAvailable`) y el operador ingresa la cantidad física contada. El service calcula el delta automáticamente: `quantityDelta = contadoFísico - cantidadLibro`. Sin cambios de modelo — solo lógica de presentación y un endpoint `POST /inventory-adjustments/cycle-count`.
+**Estado: ✅ Implementado (abril 2026 — M6)**
+
+Sin cambios de modelo ni migraciones — el tipo `CONTEO` (id=1) ya existía en el seed de `InventoryAdjustmentType`.
+
+Cambios realizados:
+- **`CycleCountDtos.cs`** — `CycleCountLineRequest`, `CreateCycleCountRequest`, `CycleCountPreviewLineResponse`, `CycleCountPreviewResponse`.
+- **`IInventoryAdjustmentService`** — `PreviewCycleCountAsync` + `CreateCycleCountAsync(request, autoConfirm)`.
+- **`InventoryAdjustmentService`** — implementación de ambos métodos + validación `ValidateCycleCountLots` (lotes duplicados / inexistentes). El service carga `QuantityAvailable` de cada lote, calcula `delta = físico − libro` y crea un `CreateInventoryAdjustmentRequest` de tipo `CONTEO` solo con las líneas que tienen diferencia (delta ≠ 0).
+- **`POST /inventory-adjustments/cycle-count/preview`** — vista previa (sin persistir): devuelve todas las líneas + subconjunto `linesWithDifference`.
+- **`POST /inventory-adjustments/cycle-count?autoConfirm=false|true`** — crea el ajuste tipo `CONTEO`; con `autoConfirm=true` lo confirma en el mismo request.
+
+Flujo del operador:
+1. Llama a `preview` para ver diferencias antes de comprometerse.
+2. Si está conforme, llama a `cycle-count?autoConfirm=true` (o crea en borrador y confirma luego).
+3. El ajuste resultante es un `InventoryAdjustment` estándar consultable, anulable y auditable igual que cualquier otro ajuste.
 
 ---
 
@@ -157,13 +180,15 @@ Cambios realizados:
 
 **Brecha identificada**: no hay señal de cuándo reabastecer. El operador debe revisar el stock manualmente y decidir cuándo comprar.
 
-> **Mejora potencial M7**: agregar en `Product` tres campos opcionales:
-> ```
-> ReorderPoint      DECIMAL(12,4) NULL   ← stock mínimo para disparar compra
-> SafetyStock       DECIMAL(12,4) NULL   ← stock de reserva que no se toca
-> ReorderQuantity   DECIMAL(12,4) NULL   ← cantidad sugerida a pedir
-> ```
-> Con estos datos, un endpoint `GET /products/below-reorder-point` devuelve el listado de productos con `StockTotal < ReorderPoint`, que puede alimentar una pantalla de "alertas de reabastecimiento" en el dashboard o generar compras sugeridas automáticas.
+**Estado: ✅ Implementado (abril 2026 — M7)**
+
+Cambios realizados:
+- **`Product`** — nuevos campos opcionales `ReorderPoint DECIMAL(12,4) NULL`, `SafetyStock DECIMAL(12,4) NULL`, `ReorderQuantity DECIMAL(12,4) NULL`.
+- **`ProductResponse`** — expone los tres campos.
+- **`CreateProductRequest` / `UpdateProductRequest`** — aceptan los tres campos opcionales con validación `Range >= 0`.
+- **`ProductService.GetBelowReorderPointAsync`** — devuelve productos con `StockTotal < ReorderPoint`.
+- **`GET /products/below-reorder-point.json`** — endpoint para alertas de reabastecimiento.
+- **Migración**: `20260405173654_AddInventoryLotStatusAndProductReorder`.
 
 ---
 
@@ -196,7 +221,14 @@ Cambios realizados:
 | **NetSuite** | Reportes de rotación, días de inventario, análisis ABC configurable |
 | **family-account (hoy)** | No existe ningún campo de clasificación en `Product` |
 
-> **Mejora potencial M9** (baja prioridad): agregar `ClassificationAbc CHAR(1) NULL CHECK IN ('A','B','C')` en `Product`, calculado periódicamente desde un job de Hangfire según valor de ventas en los últimos N días. Útil para priorizar conteos cíclicos (M6) y políticas de reorden (M7) diferenciadas por clase.
+**Estado: ✅ Implementado (abril 2026 — M9)**
+
+Cambios realizados:
+- **`Product`** — nuevo campo `ClassificationAbc CHAR(1) NULL` con CHECK constraint `IN ('A','B','C')`.
+- **`ProductResponse`** — expone `ClassificationAbc`.
+- **`BackgroundJobs/InventoryAbcJobs.cs`** — recalcula semanalmente con ventana de **90 días** de facturas de venta con `StatusInvoice = 'Confirmado'`. Algoritmo Pareto: suma valor por producto, ordena descendente, asigna `A` hasta el 80% acumulado, `B` hasta el 95%, `C` el resto con ventas. Productos sin ventas en el período quedan en `NULL`.
+- **`HangfireAppExtensions.cs`** — job `recalculate-inventory-abc` programado los **domingos a las 02:00 AM UTC** (`0 2 * * 0`).
+- **Migración**: `AddProductClassificationAbc`.
 
 ---
 
@@ -208,11 +240,11 @@ Cambios realizados:
 | M2 | Múltiples almacenes / bodegas | Alta | Crítico en cuanto haya 2+ locales | Alta |
 | M3 | Reserva de stock contra pedido | Baja | Alta — evita doble-asignación | ✅ Implementado |
 | M4 | Números de serie | Media | Alto para equipos o garantías | Media |
-| M5 | Estado de calidad / cuarentena en lote | Muy baja | Crítico para alimentos (HACCP) | Alta |
-| M6 | Conteo cíclico como flujo (no solo ajuste manual) | Ningún cambio de modelo | Media | Baja |
-| M7 | Punto de reorden y stock de seguridad | Muy baja (solo campos) | Alta — operaciones diarias | Media |
+| M5 | Estado de calidad / cuarentena en lote | Muy baja | Crítico para alimentos (HACCP) | ✅ Implementado |
+| M6 | Conteo cíclico como flujo (no solo ajuste manual) | Ningún cambio de modelo | Media | ✅ Implementado |
+| M7 | Punto de reorden y stock de seguridad | Muy baja (solo campos) | Alta — operaciones diarias | ✅ Implementado |
 | M8 | Opciones configurables con impacto de stock | Media | Alta si hay "extras" vendibles | Media |
-| M9 | Clasificación ABC automática | Baja | Baja — analítica | Baja |
+| M9 | Clasificación ABC automática | Baja | Baja — analítica | ✅ Implementado |
 
 ---
 
@@ -236,8 +268,8 @@ Estas capacidades están implementadas de forma más ro­bus­ta que en sistemas
 ### Corto plazo (impacto con mínimos cambios de modelo)
 
 1. ~~**M3 — Reserva de stock**~~: ✅ Implementado (abril 2026). `QuantityReserved` en `InventoryLot` — migración `20260405172645_AddInventoryLotQuantityReserved`.
-2. **M5 — Estado de calidad en lote**: agregar `StatusLot` con CHECK constraint. Una migración simple. Crítico para alimentos.
-3. **M7 — Punto de reorden**: tres campos opcionales en `Product`. No requiere cambios en lógica de confirmación.
+2. ~~**M5 — Estado de calidad en lote**~~: ✅ Implementado (abril 2026). `StatusLot` en `InventoryLot` + `PATCH /inventory-lots/{id}/status` — migración `20260405173654_AddInventoryLotStatusAndProductReorder`.
+3. ~~**M7 — Punto de reorden**~~: ✅ Implementado (abril 2026). Tres campos opcionales en `Product` + `GET /products/below-reorder-point.json` — misma migración.
 
 ### Mediano plazo (requieren diseño nuevo)
 
@@ -248,4 +280,4 @@ Estas capacidades están implementadas de forma más ro­bus­ta que en sistemas
 
 6. **M1 — Costeo FIFO/Specific**: solo si el negocio justifica mayor precisión contable (importaciones, equipos).
 7. **M4 — Series**: solo si se venden productos con garantía o número de activo.
-8. **M6, M9**: mejoras analíticas, no operativas.
+6. ~~**M6, M9**~~: mejoras analíticas, no operativas. M6 y M9 ya implementados.

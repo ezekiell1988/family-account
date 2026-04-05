@@ -11,4 +11,8 @@ public sealed record ProductResponse(
     int?     IdProductParent,
     decimal  AverageCost,
     bool     HasOptions,
-    bool     IsCombo);
+    bool     IsCombo,
+    decimal? ReorderPoint,
+    decimal? SafetyStock,
+    decimal? ReorderQuantity,
+    string?  ClassificationAbc);

@@ -42,6 +42,11 @@ public static class ProductsModule
             .WithSummary("Eliminar producto")
             .RequireAuthorization("Admin");
 
+        group.MapGet("/below-reorder-point.json", GetBelowReorderPoint)
+            .WithName("GetProductsBelowReorderPoint")
+            .WithSummary("Productos con ReorderPoint configurado cuyo stock total está por debajo del umbral. " +
+                         "Útil para alertas de reabastecimiento.");
+
         return app;
     }
 
@@ -125,5 +130,12 @@ public static class ProductsModule
         return deleted
             ? TypedResults.NoContent()
             : TypedResults.NotFound();
+    }
+
+    private static async Task<Ok<IReadOnlyList<ProductResponse>>> GetBelowReorderPoint(
+        IProductService service, CancellationToken ct)
+    {
+        var items = await service.GetBelowReorderPointAsync(ct);
+        return TypedResults.Ok(items);
     }
 }

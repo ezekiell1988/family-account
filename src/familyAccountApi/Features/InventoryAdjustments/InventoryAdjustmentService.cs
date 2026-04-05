@@ -458,4 +458,125 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
         await db.SaveChangesAsync(ct);
         return true;
     }
+
+    // ── Cycle Count (M6) ─────────────────────────────────────────────────────
+
+    public async Task<CycleCountPreviewResponse> PreviewCycleCountAsync(
+        CreateCycleCountRequest request, CancellationToken ct = default)
+    {
+        var lotIds = request.Lines.Select(l => l.IdInventoryLot).Distinct().ToList();
+
+        var lots = await db.InventoryLot.AsNoTracking()
+            .Include(il => il.Product)
+            .Where(il => lotIds.Contains(il.IdInventoryLot))
+            .ToDictionaryAsync(il => il.IdInventoryLot, ct);
+
+        ValidateCycleCountLots(request.Lines, lots);
+
+        var lines = request.Lines.Select(l =>
+        {
+            var lot   = lots[l.IdInventoryLot];
+            var delta = l.QuantityPhysical - lot.QuantityAvailable;
+            return new CycleCountPreviewLineResponse(
+                lot.IdInventoryLot,
+                lot.LotNumber,
+                lot.Product.NameProduct,
+                lot.QuantityAvailable,
+                l.QuantityPhysical,
+                delta,
+                l.DescriptionLine);
+        }).ToList();
+
+        return new CycleCountPreviewResponse(
+            request.IdFiscalPeriod,
+            request.IdCurrency,
+            request.ExchangeRateValue,
+            request.DateAdjustment,
+            request.DescriptionAdjustment,
+            lines,
+            lines.Where(l => l.QuantityDelta != 0).ToList());
+    }
+
+    public async Task<InventoryAdjustmentResponse> CreateCycleCountAsync(
+        CreateCycleCountRequest request, bool autoConfirm, CancellationToken ct = default)
+    {
+        // Tipo CONTEO tiene CodeInventoryAdjustmentType = 'CONTEO' (seed id = 1)
+        var conteoType = await db.InventoryAdjustmentType.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.CodeInventoryAdjustmentType == "CONTEO", ct)
+            ?? throw new InvalidOperationException(
+                "No se encontró el tipo de ajuste 'CONTEO'. Verifique que el seed de InventoryAdjustmentType esté aplicado.");
+
+        var lotIds = request.Lines.Select(l => l.IdInventoryLot).Distinct().ToList();
+
+        var lots = await db.InventoryLot.AsNoTracking()
+            .Include(il => il.Product)
+            .Where(il => lotIds.Contains(il.IdInventoryLot))
+            .ToDictionaryAsync(il => il.IdInventoryLot, ct);
+
+        ValidateCycleCountLots(request.Lines, lots);
+
+        // Calcular deltas; filtrar líneas sin diferencia (sin cambio → no hay ajuste)
+        var lineRequests = request.Lines
+            .Select(l =>
+            {
+                var lot   = lots[l.IdInventoryLot];
+                var delta = l.QuantityPhysical - lot.QuantityAvailable;
+                return (l, lot, delta);
+            })
+            .Where(x => x.delta != 0)
+            .Select(x => new InventoryAdjustmentLineRequest
+            {
+                IdInventoryLot  = x.lot.IdInventoryLot,
+                IdProduct       = null,
+                QuantityDelta   = x.delta,
+                UnitCostNew     = null,
+                DescriptionLine = x.l.DescriptionLine
+                    ?? $"Conteo físico: {x.l.QuantityPhysical:F4} vs libro {x.lot.QuantityAvailable:F4}"
+            })
+            .ToList();
+
+        var createRequest = new CreateInventoryAdjustmentRequest
+        {
+            IdFiscalPeriod            = request.IdFiscalPeriod,
+            IdInventoryAdjustmentType = conteoType.IdInventoryAdjustmentType,
+            IdCurrency                = request.IdCurrency,
+            ExchangeRateValue         = request.ExchangeRateValue,
+            DateAdjustment            = request.DateAdjustment,
+            DescriptionAdjustment     = request.DescriptionAdjustment
+                ?? $"Conteo cíclico {request.DateAdjustment:yyyy-MM-dd}",
+            Lines = lineRequests
+        };
+
+        var created = await CreateAsync(createRequest, ct);
+
+        if (!autoConfirm) return created;
+
+        var confirmed = await ConfirmAsync(created.IdInventoryAdjustment, ct);
+        return confirmed ?? created;
+    }
+
+    private static void ValidateCycleCountLots(
+        IReadOnlyList<CycleCountLineRequest> lines,
+        Dictionary<int, InventoryLot> lots)
+    {
+        // Verificar lotes duplicados en la request
+        var duplicates = lines
+            .GroupBy(l => l.IdInventoryLot)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicates.Count > 0)
+            throw new InvalidOperationException(
+                $"El conteo incluye lotes repetidos: {string.Join(", ", duplicates)}. Cada lote debe aparecer una sola vez.");
+
+        // Verificar que todos los lotes existen
+        var missing = lines.Select(l => l.IdInventoryLot)
+            .Except(lots.Keys)
+            .ToList();
+
+        if (missing.Count > 0)
+            throw new InvalidOperationException(
+                $"Los siguientes lotes no existen: {string.Join(", ", missing)}.");
+    }
 }

@@ -9,6 +9,7 @@ public sealed class InventoryLot
     public decimal   UnitCost                { get; set; }
     public decimal   QuantityAvailable       { get; set; }
     public decimal   QuantityReserved        { get; set; }
+    public string    StatusLot               { get; set; } = null!;
     public string    SourceType              { get; set; } = null!;
     public int?      IdPurchaseInvoice       { get; set; }
     public int?      IdInventoryAdjustment   { get; set; }

@@ -35,6 +35,12 @@ public static class InventoryLotsModule
             .WithSummary("Sugerir el lote más antiguo no vencido con stock disponible (FEFO). " +
                          "Parámetro opcional ?date=yyyy-MM-dd (por defecto: fecha UTC de hoy).");
 
+        group.MapPatch("/{id:int}/status", UpdateStatus)
+            .WithName("UpdateInventoryLotStatus")
+            .WithSummary("Cambiar el estado de calidad de un lote: Disponible | Cuarentena | Bloqueado | Vencido. " +
+                         "Los lotes no Disponibles quedan excluidos de la selección FEFO.")
+            .RequireAuthorization("Admin");
+
         return app;
     }
 
@@ -67,6 +73,22 @@ public static class InventoryLotsModule
     {
         var referenceDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var item = await service.GetSuggestedLotAsync(idProduct, referenceDate, ct);
+        return item is not null ? TypedResults.Ok(item) : TypedResults.NotFound();
+    }
+
+    private static async Task<Results<Ok<InventoryLotResponse>, NotFound, ValidationProblem>> UpdateStatus(
+        int id, UpdateInventoryLotStatusRequest request, IInventoryLotService service, CancellationToken ct)
+    {
+        var validStatuses = new[] { "Disponible", "Cuarentena", "Bloqueado", "Vencido" };
+        if (!validStatuses.Contains(request.StatusLot))
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["statusLot"] = [$"El estado debe ser uno de: {string.Join(", ", validStatuses)}."]
+            });
+        }
+
+        var item = await service.UpdateStatusAsync(id, request, ct);
         return item is not null ? TypedResults.Ok(item) : TypedResults.NotFound();
     }
 }
