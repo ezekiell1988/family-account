@@ -45,5 +45,12 @@ public sealed class ProductComboSlotConfiguration : IEntityTypeConfiguration<Pro
             .WithMany(p => p.ProductComboSlots)
             .HasForeignKey(s => s.IdProductCombo)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // ── Seed: slots del Combo 2 Pizzas + Bebida (IdProductCombo=30) ──────
+        builder.HasData(
+            new ProductComboSlot { IdProductComboSlot = 1, IdProductCombo = 30, NameSlot = "Pizza #1", Quantity = 1m, IsRequired = true,  SortOrder = 1 },
+            new ProductComboSlot { IdProductComboSlot = 2, IdProductCombo = 30, NameSlot = "Pizza #2", Quantity = 1m, IsRequired = true,  SortOrder = 2 },
+            new ProductComboSlot { IdProductComboSlot = 3, IdProductCombo = 30, NameSlot = "Bebida",   Quantity = 1m, IsRequired = true,  SortOrder = 3 }
+        );
     }
 }

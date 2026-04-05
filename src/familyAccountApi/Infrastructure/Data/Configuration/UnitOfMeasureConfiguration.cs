@@ -38,10 +38,14 @@ public sealed class UnitOfMeasureConfiguration : IEntityTypeConfiguration<UnitOf
 
         // ── Seed ──────────────────────────────────────────────────────────────
         builder.HasData(
-            new UnitOfMeasure { IdUnit = 1, CodeUnit = "U",  NameUnit = "Unidad",       IdUnitType = 1 },
-            new UnitOfMeasure { IdUnit = 2, CodeUnit = "M3", NameUnit = "Metro Cúbico", IdUnitType = 2 },
-            new UnitOfMeasure { IdUnit = 3, CodeUnit = "KG", NameUnit = "Kilogramo",    IdUnitType = 3 },
-            new UnitOfMeasure { IdUnit = 4, CodeUnit = "M",  NameUnit = "Metro",        IdUnitType = 4 }
+            new UnitOfMeasure { IdUnit = 1, CodeUnit = "U",   NameUnit = "Unidad",       IdUnitType = 1 },
+            new UnitOfMeasure { IdUnit = 2, CodeUnit = "M3",  NameUnit = "Metro Cúbico", IdUnitType = 2 },
+            new UnitOfMeasure { IdUnit = 3, CodeUnit = "KG",  NameUnit = "Kilogramo",    IdUnitType = 3 },
+            new UnitOfMeasure { IdUnit = 4, CodeUnit = "M",   NameUnit = "Metro",        IdUnitType = 4 },
+            // Unidades para demos de inventario
+            new UnitOfMeasure { IdUnit = 5, CodeUnit = "GR",  NameUnit = "Gramo",        IdUnitType = 3 },
+            new UnitOfMeasure { IdUnit = 6, CodeUnit = "ML",  NameUnit = "Mililitro",    IdUnitType = 2 },
+            new UnitOfMeasure { IdUnit = 7, CodeUnit = "LTR", NameUnit = "Litro",        IdUnitType = 2 }
         );
     }
 }

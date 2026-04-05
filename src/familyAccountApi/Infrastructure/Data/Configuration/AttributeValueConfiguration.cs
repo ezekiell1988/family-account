@@ -37,5 +37,15 @@ public sealed class AttributeValueConfiguration : IEntityTypeConfiguration<Attri
             .WithMany(a => a.AttributeValues)
             .HasForeignKey(v => v.IdProductAttribute)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // ── Seed: valores para atributos de Camisa Oxford ────────────────────
+        // Talla (attr=1): S, M, L  |  Color (attr=2): Azul, Rojo
+        builder.HasData(
+            new AttributeValue { IdAttributeValue = 1, IdProductAttribute = 1, NameValue = "S",    SortOrder = 1 },
+            new AttributeValue { IdAttributeValue = 2, IdProductAttribute = 1, NameValue = "M",    SortOrder = 2 },
+            new AttributeValue { IdAttributeValue = 3, IdProductAttribute = 1, NameValue = "L",    SortOrder = 3 },
+            new AttributeValue { IdAttributeValue = 4, IdProductAttribute = 2, NameValue = "Azul", SortOrder = 1 },
+            new AttributeValue { IdAttributeValue = 5, IdProductAttribute = 2, NameValue = "Rojo", SortOrder = 2 }
+        );
     }
 }

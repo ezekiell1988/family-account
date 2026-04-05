@@ -54,5 +54,20 @@ public sealed class ProductOptionItemConfiguration : IEntityTypeConfiguration<Pr
             .WithMany()
             .HasForeignKey(i => i.IdProductRecipe)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Seed: opciones para Pizza (grupos 1-4) ────────────────────────────
+        // Grupo 1 — Tamaño: Mediana (default, sin receta) | Grande (+$2, receta 6)
+        // Grupo 2 — Masa: Clásica (default) | Delgada
+        // Grupo 3 — Sabor: Pepperoni (default, receta 4) | Hawaiian (receta 5)
+        // Grupo 4 — Extras: Doble Queso (+$0.75, receta 7)
+        builder.HasData(
+            new ProductOptionItem { IdProductOptionItem = 1, IdProductOptionGroup = 1, NameItem = "Mediana",      PriceDelta = 0.00m,  IsDefault = true,  IdProductRecipe = null, SortOrder = 1 },
+            new ProductOptionItem { IdProductOptionItem = 2, IdProductOptionGroup = 1, NameItem = "Grande",       PriceDelta = 2.00m,  IsDefault = false, IdProductRecipe = 6,    SortOrder = 2 },
+            new ProductOptionItem { IdProductOptionItem = 3, IdProductOptionGroup = 2, NameItem = "Clásica",      PriceDelta = 0.00m,  IsDefault = true,  IdProductRecipe = null, SortOrder = 1 },
+            new ProductOptionItem { IdProductOptionItem = 4, IdProductOptionGroup = 2, NameItem = "Delgada",      PriceDelta = 0.00m,  IsDefault = false, IdProductRecipe = null, SortOrder = 2 },
+            new ProductOptionItem { IdProductOptionItem = 5, IdProductOptionGroup = 3, NameItem = "Pepperoni",    PriceDelta = 0.00m,  IsDefault = true,  IdProductRecipe = 4,    SortOrder = 1 },
+            new ProductOptionItem { IdProductOptionItem = 6, IdProductOptionGroup = 3, NameItem = "Hawaiian",     PriceDelta = 0.00m,  IsDefault = false, IdProductRecipe = 5,    SortOrder = 2 },
+            new ProductOptionItem { IdProductOptionItem = 7, IdProductOptionGroup = 4, NameItem = "Doble Queso",  PriceDelta = 0.75m,  IsDefault = false, IdProductRecipe = 7,    SortOrder = 1 }
+        );
     }
 }

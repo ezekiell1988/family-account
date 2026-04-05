@@ -56,5 +56,21 @@ public sealed class ProductRecipeConfiguration : IEntityTypeConfiguration<Produc
         builder.HasIndex(r => new { r.IdProductOutput, r.VersionNumber })
             .IsUnique()
             .HasDatabaseName("UQ_productRecipe_idProductOutput_versionNumber");
+
+        // ── Seed: recetas demo para los casos de uso ──────────────────────────
+        // C2: Chile Embotellado (ProductOutput=6)
+        // C3: Hot Dog (ProductOutput=11) — ensamble en venta
+        // C5: Pizza (ProductOutput=27) — base + recetas de opciones (IsActive=false)
+        var seedDate = new DateTime(2026, 4, 5, 0, 0, 0, DateTimeKind.Unspecified);
+        builder.HasData(
+            new ProductRecipe { IdProductRecipe = 1, IdProductOutput =  6, VersionNumber = 1, NameRecipe = "Receta Chile Embotellado",  QuantityOutput = 1m,    IsActive = true,  CreatedAt = seedDate },
+            new ProductRecipe { IdProductRecipe = 2, IdProductOutput = 11, VersionNumber = 1, NameRecipe = "Receta Hot Dog",            QuantityOutput = 1m,    IsActive = true,  CreatedAt = seedDate },
+            new ProductRecipe { IdProductRecipe = 3, IdProductOutput = 27, VersionNumber = 1, NameRecipe = "Base Pizza",               QuantityOutput = 1m,    IsActive = true,  CreatedAt = seedDate },
+            // Recetas de opciones (IsActive=false — solo se usan como fórmulas de ingredientes)
+            new ProductRecipe { IdProductRecipe = 4, IdProductOutput = 27, VersionNumber = 2, NameRecipe = "Opción Sabor: Pepperoni",   QuantityOutput = 1m,    IsActive = false, CreatedAt = seedDate },
+            new ProductRecipe { IdProductRecipe = 5, IdProductOutput = 27, VersionNumber = 3, NameRecipe = "Opción Sabor: Hawaiian",    QuantityOutput = 1m,    IsActive = false, CreatedAt = seedDate },
+            new ProductRecipe { IdProductRecipe = 6, IdProductOutput = 27, VersionNumber = 4, NameRecipe = "Opción Tamaño: Grande",     QuantityOutput = 1m,    IsActive = false, CreatedAt = seedDate },
+            new ProductRecipe { IdProductRecipe = 7, IdProductOutput = 27, VersionNumber = 5, NameRecipe = "Opción Extra: Doble Queso", QuantityOutput = 1m,    IsActive = false, CreatedAt = seedDate }
+        );
     }
 }

@@ -37,5 +37,11 @@ public sealed class ProductAttributeConfiguration : IEntityTypeConfiguration<Pro
             .WithMany(p => p.ProductAttributes)
             .HasForeignKey(a => a.IdProduct)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Seed: atributos de Camisa Oxford (IdProduct=12) ──────────────────
+        builder.HasData(
+            new ProductAttribute { IdProductAttribute = 1, IdProduct = 12, NameAttribute = "Talla", SortOrder = 1 },
+            new ProductAttribute { IdProductAttribute = 2, IdProduct = 12, NameAttribute = "Color", SortOrder = 2 }
+        );
     }
 }

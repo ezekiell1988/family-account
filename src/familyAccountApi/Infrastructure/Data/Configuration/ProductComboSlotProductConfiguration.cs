@@ -50,5 +50,16 @@ public sealed class ProductComboSlotProductConfiguration : IEntityTypeConfigurat
             .WithMany()
             .HasForeignKey(sp => sp.IdProduct)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // ── Seed: productos permitidos por slot ───────────────────────────────
+        // Slot 1 (Pizza #1) y Slot 2 (Pizza #2) → solo Pizza (id=27)
+        // Slot 3 (Bebida) → Coca-Cola (1), Sprite (28), Agua Pura (29)
+        builder.HasData(
+            new ProductComboSlotProduct { IdProductComboSlotProduct = 1, IdProductComboSlot = 1, IdProduct = 27, PriceAdjustment = 0m, SortOrder = 1 },
+            new ProductComboSlotProduct { IdProductComboSlotProduct = 2, IdProductComboSlot = 2, IdProduct = 27, PriceAdjustment = 0m, SortOrder = 1 },
+            new ProductComboSlotProduct { IdProductComboSlotProduct = 3, IdProductComboSlot = 3, IdProduct =  1, PriceAdjustment = 0m, SortOrder = 1 },  // Coca-Cola
+            new ProductComboSlotProduct { IdProductComboSlotProduct = 4, IdProductComboSlot = 3, IdProduct = 28, PriceAdjustment = 0m, SortOrder = 2 },  // Sprite
+            new ProductComboSlotProduct { IdProductComboSlotProduct = 5, IdProductComboSlot = 3, IdProduct = 29, PriceAdjustment = 0m, SortOrder = 3 }   // Agua Pura
+        );
     }
 }

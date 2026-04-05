@@ -54,5 +54,13 @@ public sealed class ProductOptionGroupConfiguration : IEntityTypeConfiguration<P
             .WithMany(p => p.ProductOptionGroups)
             .HasForeignKey(g => g.IdProduct)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // ── Seed: grupos de opciones para Pizza (IdProduct=27) ───────────────
+        builder.HasData(
+            new ProductOptionGroup { IdProductOptionGroup = 1, IdProduct = 27, NameGroup = "Elige tu tamaño", IsRequired = true,  MinSelections = 1, MaxSelections = 1, SortOrder = 1 },
+            new ProductOptionGroup { IdProductOptionGroup = 2, IdProduct = 27, NameGroup = "Elige tu masa",   IsRequired = true,  MinSelections = 1, MaxSelections = 1, SortOrder = 2 },
+            new ProductOptionGroup { IdProductOptionGroup = 3, IdProduct = 27, NameGroup = "Elige tu sabor",  IsRequired = true,  MinSelections = 1, MaxSelections = 1, SortOrder = 3 },
+            new ProductOptionGroup { IdProductOptionGroup = 4, IdProduct = 27, NameGroup = "Extras",          IsRequired = false, MinSelections = 0, MaxSelections = 3, SortOrder = 4 }
+        );
     }
 }
