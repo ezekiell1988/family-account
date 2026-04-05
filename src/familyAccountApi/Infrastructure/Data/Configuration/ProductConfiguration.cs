@@ -46,6 +46,10 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasDefaultValue(0m)
             .HasComment("Costo promedio ponderado en unidad base. Se recalcula automáticamente al confirmar compras y ajustes con stock positivo.");
 
+        builder.Property(p => p.RowVersion)
+            .IsRowVersion()
+            .HasComment("Token de concurrencia optimista. Previene race conditions al recalcular AverageCost en confirmaciones paralelas.");
+
         builder.Property(p => p.HasOptions)
             .IsRequired()
             .HasDefaultValue(false)

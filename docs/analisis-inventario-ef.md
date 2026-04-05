@@ -303,7 +303,9 @@ SalesInvoiceLine  (combo — IsComboParent, precio total)
 
 ---
 
-#### P10 — `Product.AverageCost` sin token de concurrencia optimista
+#### P10 — `Product.AverageCost` sin token de concurrencia optimista ✅ IMPLEMENTADO
+
+> **Resuelto** (abril 2026): Se agregó la propiedad `RowVersion byte[]` en `Product` y se configuró con `.IsRowVersion()` en `ProductConfiguration`. SQL Server gestiona automáticamente la columna `rowversion`; EF Core lanzará `DbUpdateConcurrencyException` si dos confirmaciones paralelas intentan modificar `AverageCost` del mismo producto simultáneamente. Migración aplicada: `20260405153714_AddProductRowVersion`.
 
 - **Problema**: `AverageCost` se recalcula al confirmar compras y ajustes. Si dos transacciones se confirman en paralelo sobre el mismo producto, hay riesgo de race condition con el cálculo del promedio ponderado.
 - **Recomendado**: Agregar `RowVersion` (tipo `byte[]`) como concurrency token en `Product`:

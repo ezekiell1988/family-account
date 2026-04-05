@@ -9,6 +9,7 @@ public sealed class Product
     public int     IdUnit          { get; set; }
     public int?    IdProductParent { get; set; }
     public decimal AverageCost     { get; set; }
+    public byte[]  RowVersion      { get; set; } = null!;
 
     public bool    HasOptions { get; set; } = false;
     public bool    IsCombo    { get; set; } = false;
