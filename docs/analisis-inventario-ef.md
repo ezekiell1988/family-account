@@ -355,7 +355,9 @@ Si se elimina un centro de costo, los `ProductAccount` quedan con `idCostCenter 
 
 ---
 
-#### O5 — Falta índice en `InventoryLot.IdInventoryAdjustment`
+#### O5 — Falta índice en `InventoryLot.IdInventoryAdjustment` ✅ IMPLEMENTADO
+
+> **Resuelto** (abril 2026): Se agregó `IX_inventoryLot_idInventoryAdjustment` (filtrado `WHERE idInventoryAdjustment IS NOT NULL`) en `InventoryLotConfiguration`. Migración aplicada: `20260405161040_AddInventoryLotIdInventoryAdjustmentIndex`.
 
 `IdInventoryAdjustment` es FK nullable en `InventoryLot`, pero no tiene índice definido en `InventoryLotConfiguration`. Las consultas "todos los lotes creados por el ajuste X" harán full scan.
 
@@ -367,17 +369,131 @@ builder.HasIndex(il => il.IdInventoryAdjustment)
 
 ---
 
-#### O6 — `InventoryAdjustmentLine.QuantityDelta = 0` (ajuste de costo puro) y su impacto en `AverageCost`
+#### O6 — `InventoryAdjustmentLine.QuantityDelta = 0` (ajuste de costo puro) y su impacto en `AverageCost` ✅ IMPLEMENTADO
 
-El caso `quantityDelta = 0 AND unitCostNew IS NOT NULL` actualiza el costo de un lote sin mover stock. La lógica del service deberá decidir si esto recalcula `Product.AverageCost` (y cómo). No está documentado en el modelo.
-
-**❓ Pregunta**: ¿Un ajuste de costo puro (delta=0) debe recalcular el costo promedio del producto, o solo actualiza el lote específico?
+> **Resuelto** (abril 2026): Se implementaron dos tipos de ajuste de costo en una sola línea, discriminados por `idInventoryLot` vs `idProduct` (check constraint `CK_inventoryAdjustmentLine_target` garantiza que exactamente uno esté informado):
+>
+> - **Tipo 1 — Por lote** (`idInventoryLot`): `quantityDelta = 0`, `unitCostNew = nuevo costo unitario del lote`. Actualiza `InventoryLot.UnitCost` del lote específico y recalcula `Product.AverageCost` como promedio ponderado de todos sus lotes. Genera asiento contable por la diferencia `qty × (nuevo − viejo)`.
+>
+> - **Tipo 2 — Por producto** (`idProduct`): `quantityDelta = 0` (obligatorio), `unitCostNew = costo promedio objetivo`. Escala el `UnitCost` de **todos** los lotes con stock del producto proporcionalmente (conserva la distribución relativa de costos entre lotes). Establece `Product.AverageCost = unitCostNew` directamente. Genera asiento contable por la diferencia entre el valor total inventario nuevo y el viejo.
+>
+> - Nuevos check constraints: `CK_inventoryAdjustmentLine_target`, `CK_inventoryAdjustmentLine_productLevel`.
+> - Migración aplicada: `20260405162306_AddInventoryAdjustmentLineProductLevel`.
 
 ---
 
-#### O7 — Ausencia de `ProductionOrder` como entidad de primer nivel
+#### O7 — Ausencia de `SalesOrder` y `ProductionOrder` como entidades de primer nivel ✅ IMPLEMENTADO
 
-Toda la producción pasa por `InventoryAdjustment` tipo PRODUCCION. En V1 esto es aceptable. A medida que crezca, se puede necesitar un árbol: `ProductionOrder → ProductionOrderLine → InventoryAdjustment`. Tenerlo en mente para no diseñar cosas difíciles de migrar.
+> **Resuelto** (5-abr-2026): Se implementaron las Modalidades A y B completas. Migración aplicada: `20260405165826_AddSalesOrdersProductionOrders`.
+>
+> **Entidades nuevas**: `PriceList`, `PriceListItem`, `SalesOrder`, `SalesOrderLine`, `SalesOrderLineFulfillment`, `SalesOrderAdvance`, `ProductionOrder`, `ProductionOrderLine`.
+>
+> **FK opcionales agregadas** (no rompen flujos existentes):
+> - `InventoryAdjustment.IdProductionOrder INT?` — vincula cada corrida de producción a su orden.
+> - `SalesInvoice.IdSalesOrder INT?` — vincula facturas a pedidos de origen.
+> - `ProductionOrder.IdSalesOrder INT?` — NULL = Modalidad A; NOT NULL = Modalidad B.
+>
+> **Endpoints nuevos**:
+> - `GET|POST|PUT|DELETE /api/v1/price-lists` + `GET /api/v1/price-lists/by-product/{id}`
+> - `GET|POST|PUT|DELETE /api/v1/sales-orders` + `/confirm` + `/cancel` + `/fulfillments` + `/advances`
+> - `GET|POST|PUT|DELETE /api/v1/production-orders` + `PATCH /{id}/status` + `GET /by-sales-order/{id}`
+
+Existen **dos modalidades de producción** claramente diferenciadas:
+
+---
+
+##### Modalidad A — Producción para stock de tienda (flujo actual ✅)
+
+El encargado de producción decide cuánto producir basándose en el inventario disponible y la demanda esperada. No hay pedido previo del cliente.
+
+```
+ProductRecipe
+  └──► InventoryAdjustment (PRODUCCION)    ← ejecución directa
+         └──► ProductionSnapshot           ← ya implementado ✅
+         └──► InventoryLot (producto terminado)
+                └──► SalesInvoice          ← venta en tienda
+```
+
+**Este flujo ya está cubierto completamente.** Para la Modalidad A se puede crear opcionalmente una `ProductionOrder` con `IdSalesOrder = NULL` para planificar y agrupar corridas parciales, pero no es obligatorio.
+
+---
+
+##### Modalidad B — Producción contra pedido de cliente (✅ IMPLEMENTADO)
+
+Un cliente externo hace un pedido grande. El proceso es:
+
+1. **Ingresa el pedido** (`SalesOrder`) con productos, cantidades y precio tomado de la lista de precios vigente.
+2. **Se crea una orden de producción** (`ProductionOrder`) vinculada al pedido.
+3. **El encargado define cómo cumplir cada línea**: puede usar stock existente, producir todo, o una combinación de ambos.
+4. **Se produce en múltiples ejecuciones parciales** (cada una es un `InventoryAdjustment` tipo PRODUCCION con su `ProductionSnapshot`).
+5. **Al completar**, se toma lo producido + lotes de stock asignados contra el pedido y se emite la `SalesInvoice`.
+6. **Trazabilidad de margen**: precio de lista (snapshot al crear el pedido) vs costo real (MPs + lotes usados) → % de ganancia o pérdida documentado por pedido.
+
+```
+PriceList / PriceListItem                         ← lista de precios vigente
+  └── IdProduct, UnitPrice, DateFrom, DateTo
+
+SalesOrder                                        ← pedido del cliente
+  ├── IdContact (cliente)
+  ├── DateRequired (fecha prometida de entrega)
+  ├── Status: Borrador→Confirmado→EnProduccion→Listo→Facturado→Cancelado
+  ├── SalesOrderLine[]
+  │     ├── IdProduct, Quantity
+  │     ├── UnitPrice (snapshot de PriceListItem al crear el pedido)
+  │     └── SalesOrderLineFulfillment[]            ← cómo se cumple cada línea
+  │           ├── FulfillmentType: 'Stock' | 'Produccion'
+  │           ├── QuantityFulfilled
+  │           ├── IdInventoryLot FK? (si FulfillmentType = 'Stock')
+  │           └── IdProductionOrderLine FK? (si FulfillmentType = 'Produccion')
+  │
+  ├── SalesOrderAdvance[]                          ← anticipos opcionales del cliente
+  │     ├── IdSalesOrder INT NOT NULL FK    ← vínculo financiero obligatorio
+  │     ├── IdProductionOrder INT? FK       ← referencia informativa opcional ("anticipo al arrancar orden #X")
+  │     ├── Amount, DateAdvance
+  │     └── IdAccountingEntry INT? FK       ← asiento contable del anticipo
+  │
+  ├── ProductionOrder[]                            ← planificación de producción
+  │     ├── IdSalesOrder FK?  (NULL = Modalidad A, sin pedido)
+  │     ├── Status: Pendiente→EnProceso→Completada→Cancelada
+  │     ├── ProductionOrderLine[]
+  │     │     └── IdProduct, QuantityRequired, QuantityProduced, IdProductRecipe
+  │     └── InventoryAdjustment[]                  ← ejecuciones parciales
+  │           └── ProductionSnapshot (ya implementado ✅)
+  │
+  └── SalesInvoice                                 ← se factura al cerrar el pedido
+        ├── IdSalesOrder FK?
+        └── (los anticipos se aplican como crédito al facturar)
+```
+
+**Entidades nuevas implicadas:**
+
+| Entidad | Propósito | Nota |
+|---------|-----------|------|
+| `SalesOrder` | Cabecera del pedido | FK nullable desde `SalesInvoice` |
+| `SalesOrderLine` | Línea por producto | Precio snapshot de lista vigente |
+| `SalesOrderLineFulfillment` | Cómo se cumple cada línea (stock o producción) | Permite mezcla en misma línea |
+| `PriceList` / `PriceListItem` | Lista de precios con vigencia por fechas | Cambia periódicamente, no por pedido |
+| `ProductionOrder` | Orden de producción planificada | FK nullable `IdSalesOrder`; NULL = Modalidad A |
+| `ProductionOrderLine` | Qué producir y cuánto | `QuantityRequired` vs `QuantityProduced` |
+| `SalesOrderAdvance` | Anticipo/depósito del cliente | `IdSalesOrder NOT NULL` (vínculo financiero). `IdProductionOrder INT?` solo como contexto informativo de cuándo/por qué se recibió. Al facturar: `WHERE IdSalesOrder = X`. |
+
+**Puntos de extensión limpios en el modelo actual** (todos FK nullable → no rompen Modalidad A ni ventas de tienda):
+- `InventoryAdjustment.IdProductionOrder INT?`
+- `SalesInvoice.IdSalesOrder INT?`
+- `ProductionOrder.IdSalesOrder INT?`
+
+**Valor de negocio para encargado de producción y ventas:**
+
+| Necesidad | Cómo se resuelve |
+|-----------|------------------|
+| ¿Qué tengo pendiente de producir? | `ProductionOrder WHERE status IN ('Pendiente','EnProceso')` |
+| ¿Para qué cliente produzco? | `ProductionOrder → SalesOrder → Contact` |
+| ¿Cuánto llevo vs lo comprometido? | `QuantityRequired vs QuantityProduced` en `ProductionOrderLine` |
+| Margen por pedido | `SalesOrderLine.UnitPrice × Qty − CostoReal` → % ganancia o pérdida |
+| Costo real de producción | Suma `UnitCost × QuantityReal` de `ProductionSnapshotLine` vinculados |
+| Costo de lotes de stock usados | Suma `InventoryLot.UnitCost × Qty` de `SalesOrderLineFulfillment` tipo Stock |
+| Producción parcial en varios turnos | Múltiples `InventoryAdjustment` bajo la misma `ProductionOrder` |
+| Anticipos al generar la factura | `SalesOrderAdvance WHERE IdSalesOrder = X` — simple y completo. El campo `IdProductionOrder` muestra contexto en UI ("anticipo al iniciar orden #2") sin afectar la lógica financiera. |
 
 ---
 
@@ -395,8 +511,10 @@ Toda la producción pasa por `InventoryAdjustment` tipo PRODUCCION. En V1 esto e
 | Q8-4 | ¿Puede existir un combo cuyos slots sean también combos (anidación combo→combo)? | Combos |
 | Q8-5 | ¿`ProductOptionItem` debe mover stock de algún insumo (ej: extra queso), o solo afecta el precio? | Opciones |
 | ~~Q6~~ | ~~¿`PurchaseInvoice.ProviderName` sin FK es intencional en V1, o se planea normalizar?~~ ✅ Resuelto con `IdContact` FK + get-or-create de proveedor. | Compras |
-| Q7 | ¿Un ajuste de costo puro (delta=0) debe recalcular `Product.AverageCost`? | AverageCost |
-| Q8 | ¿Se planea una entidad `ProductionOrder` para trazabilidad receta→producción→lote? | Producción |
+| ~~Q7~~ | ~~¿Un ajuste de costo puro (delta=0) debe recalcular `Product.AverageCost`?~~ ✅ Sí. Tipo 1 (por lote): recalcula el WACC del producto. Tipo 2 (por producto): ajusta directamente el `AverageCost` y escala todos los lotes proporcionalmente. | AverageCost |
+| ~~Q9-1~~ | ~~¿Un pedido puede mezclar stock existente y productos a producir?~~ ✅ Sí. El encargado define por línea si usa stock, produce, o una combinación. Trazado en `SalesOrderLineFulfillment`. | SalesOrder |
+| ~~Q9-2~~ | ~~¿El precio se fija al ingresar el pedido o puede ajustarse?~~ ✅ Los precios viven en una entidad `PriceList` / `PriceListItem` que cambia periódicamente. Al crear el pedido se hace snapshot del precio vigente en `SalesOrderLine.UnitPrice`. El margen = precio snapshot − costo real de producción/stock. | SalesOrder / Margen |
+| ~~Q9-3~~ | ~~¿Se registran anticipos del cliente?~~ ✅ Opcional. Entidad `SalesOrderAdvance` con monto, fecha y asiento contable. Se aplica como crédito al emitir la `SalesInvoice`. | SalesOrder / Finanzas |
 
 ---
 
@@ -406,7 +524,11 @@ Los siguientes son cambios de BD (nuevas migraciones) que no rompen código exis
 
 1. ~~`CK_inventoryAdjustmentLine_unitCostNew` — CHECK `quantityDelta <= 0 OR unitCostNew IS NOT NULL`~~ ✅ Aplicado en `20260405011042_InventoryConstraints_P1P2P3`
 2. ~~`UQ_productUnit_idProduct_isBase` — índice único filtrado para `isBase = 1`~~ ✅ Aplicado en `20260405011042_InventoryConstraints_P1P2P3`
-3. `IX_inventoryLot_idInventoryAdjustment` — índice en FK nullable
+3. ~~`IX_inventoryLot_idInventoryAdjustment` — índice en FK nullable~~ ✅ Aplicado en `20260405161040_AddInventoryLotIdInventoryAdjustmentIndex`
 5. ~~`ProductionSnapshot` + `ProductionSnapshotLine` — trazabilidad receta→producción con teórico vs real~~ ✅ Aplicado en `20260405012446_ProductionSnapshot`
 4. ~~Validación en service: suma `PercentageAccount = 100` antes de confirmar documentos con `idProduct` que tenga distribución contable~~ ✅ Aplicado en `SalesInvoiceService.ConfirmAsync`
+6. ~~**`PriceList` + `PriceListItem`** — lista de precios con vigencia por fechas. Base para snapshot en `SalesOrderLine.UnitPrice`. Prioridad alta.~~ ✅ Aplicado en `20260405165826_AddSalesOrdersProductionOrders`
+7. ~~**`SalesOrder` + `SalesOrderLine` + `SalesOrderLineFulfillment`** — pedido del cliente con mezcla de stock/producción por línea. FK nullable `SalesInvoice.IdSalesOrder`. Prioridad alta.~~ ✅ Aplicado en `20260405165826_AddSalesOrdersProductionOrders`
+8. ~~**`SalesOrderAdvance`** — anticipo opcional del cliente con asiento contable. Se aplica como crédito al facturar. Prioridad media.~~ ✅ Aplicado en `20260405165826_AddSalesOrdersProductionOrders`
+9. ~~**`ProductionOrder` + `ProductionOrderLine`** — planificación de producción contra pedido. FK nullable `InventoryAdjustment.IdProductionOrder` y `ProductionOrder.IdSalesOrder`. Prioridad alta.~~ ✅ Aplicado en `20260405165826_AddSalesOrdersProductionOrders`
 

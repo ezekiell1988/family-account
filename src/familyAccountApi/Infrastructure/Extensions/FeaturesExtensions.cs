@@ -33,6 +33,9 @@ using FamilyAccountApi.Features.ProductOptionGroups;
 using FamilyAccountApi.Features.ProductComboSlots;
 using FamilyAccountApi.Features.SalesInvoiceTypes;
 using FamilyAccountApi.Features.SalesInvoices;
+using FamilyAccountApi.Features.PriceLists;
+using FamilyAccountApi.Features.SalesOrders;
+using FamilyAccountApi.Features.ProductionOrders;
 
 namespace FamilyAccountApi.Infrastructure.Extensions;
 
@@ -73,7 +76,10 @@ public static class FeaturesExtensions
             .AddProductOptionGroupsModule()
             .AddProductComboSlotsModule()
             .AddSalesInvoiceTypesModule()
-            .AddSalesInvoicesModule();
+            .AddSalesInvoicesModule()
+            .AddPriceListsModule()
+            .AddSalesOrdersModule()
+            .AddProductionOrdersModule();
 
     public static WebApplication MapAllEndpoints(this WebApplication app)
     {
@@ -116,6 +122,9 @@ public static class FeaturesExtensions
         v1.MapProductComboSlotsEndpoints();
         v1.MapSalesInvoiceTypesEndpoints();
         v1.MapSalesInvoicesEndpoints();
+        v1.MapPriceListsEndpoints();
+        v1.MapSalesOrdersEndpoints();
+        v1.MapProductionOrdersEndpoints();
 
         return app;
     }

@@ -25,8 +25,9 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
         ia.InventoryAdjustmentLines.Select(l => new InventoryAdjustmentLineResponse(
             l.IdInventoryAdjustmentLine,
             l.IdInventoryLot,
-            l.IdInventoryLotNavigation.Product.NameProduct,
-            l.IdInventoryLotNavigation.LotNumber,
+            l.IdProduct,
+            (l.IdInventoryLotNavigation?.Product ?? l.IdProductNavigation)?.NameProduct ?? string.Empty,
+            l.IdInventoryLotNavigation?.LotNumber,
             l.QuantityDelta,
             l.UnitCostNew,
             l.DescriptionLine)).ToList());
@@ -36,8 +37,10 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
             .Include(ia => ia.IdCurrencyNavigation)
             .Include(ia => ia.InventoryAdjustmentEntries)
             .Include(ia => ia.InventoryAdjustmentLines)
-               .ThenInclude(l => l.IdInventoryLotNavigation)
-               .ThenInclude(il => il.Product);
+               .ThenInclude(l => l.IdInventoryLotNavigation!)
+               .ThenInclude(il => il.Product)
+            .Include(ia => ia.InventoryAdjustmentLines)
+               .ThenInclude(l => l.IdProductNavigation);
 
     public async Task<IReadOnlyList<InventoryAdjustmentResponse>> GetAllAsync(CancellationToken ct = default)
     {
@@ -73,11 +76,29 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
             InventoryAdjustmentLines  = request.Lines.Select(l => new InventoryAdjustmentLine
             {
                 IdInventoryLot  = l.IdInventoryLot,
+                IdProduct       = l.IdProduct,
                 QuantityDelta   = l.QuantityDelta,
                 UnitCostNew     = l.UnitCostNew,
                 DescriptionLine = l.DescriptionLine
             }).ToList()
         };
+
+        // Validar coherencia de líneas
+        foreach (var l in request.Lines)
+        {
+            if (!l.IdInventoryLot.HasValue && !l.IdProduct.HasValue)
+                throw new InvalidOperationException(
+                    "Cada línea debe referenciar un lote (idInventoryLot) o un producto (idProduct).");
+            if (l.IdInventoryLot.HasValue && l.IdProduct.HasValue)
+                throw new InvalidOperationException(
+                    "Una línea no puede referenciar simultáneamente un lote y un producto.");
+            if (l.IdProduct.HasValue && !l.UnitCostNew.HasValue)
+                throw new InvalidOperationException(
+                    $"El ajuste de costo por producto (idProduct={l.IdProduct}) requiere unitCostNew (costo promedio objetivo).");
+            if (l.IdProduct.HasValue && l.QuantityDelta != 0)
+                throw new InvalidOperationException(
+                    $"El ajuste de costo por producto (idProduct={l.IdProduct}) requiere quantityDelta = 0.");
+        }
 
         db.InventoryAdjustment.Add(adjustment);
         await db.SaveChangesAsync(ct);
@@ -94,8 +115,10 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
             .Include(ia => ia.IdInventoryAdjustmentTypeNavigation)
             .Include(ia => ia.IdCurrencyNavigation)
             .Include(ia => ia.InventoryAdjustmentLines)
-                .ThenInclude(l => l.IdInventoryLotNavigation)
+                .ThenInclude(l => l.IdInventoryLotNavigation!)
                     .ThenInclude(il => il.Product)
+            .Include(ia => ia.InventoryAdjustmentLines)
+                .ThenInclude(l => l.IdProductNavigation)
             .FirstOrDefaultAsync(ia => ia.IdInventoryAdjustment == idInventoryAdjustment, ct);
 
         if (adjustment is null || adjustment.StatusAdjustment != "Borrador") return null;
@@ -109,28 +132,78 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
         adjustment.NumberAdjustment = $"{prefix}-{(count + 1):D3}";
         adjustment.StatusAdjustment = "Confirmado";
 
+        // Diferencias pre-mutación para asientos contables
+        // clave: IdInventoryAdjustmentLine → diffAmount ya redondeado
+        var costDiffs = new Dictionary<int, decimal>();
+
         // Aplicar deltas y actualizar costos
         foreach (var line in adjustment.InventoryAdjustmentLines)
         {
-            var lot = line.IdInventoryLotNavigation;
+            // ── Ajuste de costo por producto ──
+            if (line.IdProduct.HasValue)
+            {
+                var targetAvg = line.UnitCostNew!.Value;
+                var product   = line.IdProductNavigation!;
+
+                var allLots = await db.InventoryLot
+                    .Where(il => il.IdProduct == product.IdProduct)
+                    .ToListAsync(ct);
+
+                var totalQty     = allLots.Sum(il => il.QuantityAvailable);
+                var oldTotalCost = allLots.Sum(il => il.QuantityAvailable * il.UnitCost);
+
+                if (totalQty > 0)
+                {
+                    var targetTotalCost = totalQty * targetAvg;
+                    costDiffs[line.IdInventoryAdjustmentLine] = Math.Round(targetTotalCost - oldTotalCost, 2);
+
+                    if (oldTotalCost > 0)
+                    {
+                        // Escalar cada lote proporcionalmente para mantener la distribución relativa de costos
+                        var scaleFactor = targetTotalCost / oldTotalCost;
+                        foreach (var lot in allLots)
+                            lot.UnitCost = Math.Round(lot.UnitCost * scaleFactor, 6);
+                    }
+                    else
+                    {
+                        // Todos los lotes estaban a costo cero: asignar el nuevo costo directamente a cada lote
+                        foreach (var lot in allLots)
+                            lot.UnitCost = targetAvg;
+                    }
+                }
+
+                product.AverageCost = targetAvg;
+                continue;
+            }
+
+            // ── Ajuste por lote ──
+            var lot2 = line.IdInventoryLotNavigation!;
 
             if (line.QuantityDelta != 0)
             {
-                var newQty = lot.QuantityAvailable + line.QuantityDelta;
+                var newQty = lot2.QuantityAvailable + line.QuantityDelta;
                 if (newQty < 0)
                     throw new InvalidOperationException(
-                        $"El lote {lot.IdInventoryLot} quedaría con stock negativo ({newQty}).");
+                        $"El lote {lot2.IdInventoryLot} quedaría con stock negativo ({newQty}).");
 
-                lot.QuantityAvailable = newQty;
+                lot2.QuantityAvailable = newQty;
             }
 
             if (line.UnitCostNew.HasValue)
-                lot.UnitCost = line.UnitCostNew.Value;
+            {
+                if (line.QuantityDelta == 0)
+                {
+                    // Ajuste de costo puro por lote: calcular diff ANTES de mutar para el asiento contable
+                    var diff = Math.Round(lot2.QuantityAvailable * (line.UnitCostNew.Value - lot2.UnitCost), 2);
+                    costDiffs[line.IdInventoryAdjustmentLine] = diff;
+                }
+                lot2.UnitCost = line.UnitCostNew.Value;
+            }
 
             // Recalcular averageCost si el delta es positivo o se actualizó el costo
             if (line.QuantityDelta > 0 || line.UnitCostNew.HasValue)
             {
-                var product = lot.Product;
+                var product = lot2.Product;
                 var allLots = await db.InventoryLot
                     .Where(il => il.IdProduct == product.IdProduct)
                     .ToListAsync(ct);
@@ -151,7 +224,38 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
 
             foreach (var line in adjustment.InventoryAdjustmentLines)
             {
-                var lot = line.IdInventoryLotNavigation;
+                // ── Asiento por ajuste de costo de producto ──
+                if (line.IdProduct.HasValue)
+                {
+                    if (!costDiffs.TryGetValue(line.IdInventoryAdjustmentLine, out var pDiff) || pDiff == 0)
+                        continue; // Sin stock o sin diferencia: sin movimiento contable
+
+                    var productName = line.IdProductNavigation!.NameProduct;
+                    var desc = line.DescriptionLine ?? $"Ajuste costo promedio — {productName}";
+
+                    if (pDiff > 0)
+                    {
+                        if (adjustmentType.IdAccountCounterpartEntry is null)
+                            throw new InvalidOperationException(
+                                $"El tipo de ajuste '{adjustmentType.NameInventoryAdjustmentType}' requiere 'IdAccountCounterpartEntry' para registrar el aumento de costo promedio del producto '{productName}'.");
+
+                        entryLines.Add(new AccountingEntryLine { IdAccount = adjustmentType.IdAccountInventoryDefault!.Value, DebitAmount = pDiff,    CreditAmount = 0,      DescriptionLine = desc });
+                        entryLines.Add(new AccountingEntryLine { IdAccount = adjustmentType.IdAccountCounterpartEntry.Value,   DebitAmount = 0,       CreditAmount = pDiff,  DescriptionLine = desc });
+                    }
+                    else
+                    {
+                        if (adjustmentType.IdAccountCounterpartExit is null)
+                            throw new InvalidOperationException(
+                                $"El tipo de ajuste '{adjustmentType.NameInventoryAdjustmentType}' requiere 'IdAccountCounterpartExit' para registrar la reducción de costo promedio del producto '{productName}'.");
+
+                        var absAmt = Math.Abs(pDiff);
+                        entryLines.Add(new AccountingEntryLine { IdAccount = adjustmentType.IdAccountCounterpartExit.Value,    DebitAmount = absAmt,  CreditAmount = 0,      DescriptionLine = desc });
+                        entryLines.Add(new AccountingEntryLine { IdAccount = adjustmentType.IdAccountInventoryDefault!.Value, DebitAmount = 0,       CreditAmount = absAmt, DescriptionLine = desc });
+                    }
+                    continue;
+                }
+
+                var lot = line.IdInventoryLotNavigation!;
 
                 if (line.QuantityDelta > 0)
                 {
@@ -203,8 +307,11 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
                 }
                 else if (line.UnitCostNew.HasValue)
                 {
-                    // Ajuste de costo puro (QuantityDelta == 0)
-                    var diffAmount = Math.Round(lot.QuantityAvailable * (line.UnitCostNew.Value - lot.UnitCost), 2);
+                    // Ajuste de costo puro por lote (QuantityDelta == 0): usar diff pre-computado
+                    if (!costDiffs.TryGetValue(line.IdInventoryAdjustmentLine, out var diffAmount) || diffAmount == 0)
+                        continue; // Sin diferencia: sin movimiento contable
+
+                    var desc = line.DescriptionLine ?? $"Ajuste costo lote {lot.LotNumber ?? lot.IdInventoryLot.ToString()} — {lot.Product.NameProduct}";
 
                     if (diffAmount > 0)
                     {
@@ -213,20 +320,8 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
                             throw new InvalidOperationException(
                                 $"El tipo de ajuste '{adjustmentType.NameInventoryAdjustmentType}' requiere 'IdAccountCounterpartEntry' para registrar el aumento de costo del lote {lot.IdInventoryLot}.");
 
-                        entryLines.Add(new AccountingEntryLine
-                        {
-                            IdAccount       = adjustmentType.IdAccountInventoryDefault.Value,
-                            DebitAmount     = diffAmount,
-                            CreditAmount    = 0,
-                            DescriptionLine = line.DescriptionLine ?? $"Ajuste costo lote {lot.LotNumber ?? lot.IdInventoryLot.ToString()} — {lot.Product.NameProduct}"
-                        });
-                        entryLines.Add(new AccountingEntryLine
-                        {
-                            IdAccount       = adjustmentType.IdAccountCounterpartEntry.Value,
-                            DebitAmount     = 0,
-                            CreditAmount    = diffAmount,
-                            DescriptionLine = line.DescriptionLine ?? $"Ajuste costo lote {lot.LotNumber ?? lot.IdInventoryLot.ToString()} — {lot.Product.NameProduct}"
-                        });
+                        entryLines.Add(new AccountingEntryLine { IdAccount = adjustmentType.IdAccountInventoryDefault.Value,   DebitAmount = diffAmount,            CreditAmount = 0,           DescriptionLine = desc });
+                        entryLines.Add(new AccountingEntryLine { IdAccount = adjustmentType.IdAccountCounterpartEntry.Value,   DebitAmount = 0,                     CreditAmount = diffAmount,  DescriptionLine = desc });
                     }
                     else if (diffAmount < 0)
                     {
@@ -236,20 +331,8 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
                                 $"El tipo de ajuste '{adjustmentType.NameInventoryAdjustmentType}' requiere 'IdAccountCounterpartExit' para registrar la reducción de costo del lote {lot.IdInventoryLot}.");
 
                         var absAmount = Math.Abs(diffAmount);
-                        entryLines.Add(new AccountingEntryLine
-                        {
-                            IdAccount       = adjustmentType.IdAccountCounterpartExit.Value,
-                            DebitAmount     = absAmount,
-                            CreditAmount    = 0,
-                            DescriptionLine = line.DescriptionLine ?? $"Ajuste costo lote {lot.LotNumber ?? lot.IdInventoryLot.ToString()} — {lot.Product.NameProduct}"
-                        });
-                        entryLines.Add(new AccountingEntryLine
-                        {
-                            IdAccount       = adjustmentType.IdAccountInventoryDefault.Value,
-                            DebitAmount     = 0,
-                            CreditAmount    = absAmount,
-                            DescriptionLine = line.DescriptionLine ?? $"Ajuste costo lote {lot.LotNumber ?? lot.IdInventoryLot.ToString()} — {lot.Product.NameProduct}"
-                        });
+                        entryLines.Add(new AccountingEntryLine { IdAccount = adjustmentType.IdAccountCounterpartExit.Value,    DebitAmount = absAmount,             CreditAmount = 0,           DescriptionLine = desc });
+                        entryLines.Add(new AccountingEntryLine { IdAccount = adjustmentType.IdAccountInventoryDefault.Value,   DebitAmount = 0,                     CreditAmount = absAmount,   DescriptionLine = desc });
                     }
                     // diffAmount == 0: sin movimiento contable
                 }

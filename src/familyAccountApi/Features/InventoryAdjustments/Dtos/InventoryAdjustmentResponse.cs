@@ -2,7 +2,8 @@ namespace FamilyAccountApi.Features.InventoryAdjustments.Dtos;
 
 public sealed record InventoryAdjustmentLineResponse(
     int      IdInventoryAdjustmentLine,
-    int      IdInventoryLot,
+    int?     IdInventoryLot,
+    int?     IdProduct,
     string   NameProduct,
     string?  LotNumber,
     decimal  QuantityDelta,

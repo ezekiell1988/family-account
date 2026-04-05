@@ -5,17 +5,19 @@ namespace FamilyAccountApi.Features.InventoryAdjustments.Dtos;
 
 public sealed record InventoryAdjustmentLineRequest
 {
-    [Required]
-    [Description("ID del lote de inventario a ajustar")]
-    public required int IdInventoryLot { get; init; }
+    [Description("ID del lote de inventario a ajustar. Exclusivo con idProduct.")]
+    public int? IdInventoryLot { get; init; }
+
+    [Description("ID del producto para ajuste de costo promedio global (afecta todos sus lotes). Exclusivo con idInventoryLot. Requiere quantityDelta = 0 y unitCostNew = costo promedio objetivo.")]
+    public int? IdProduct { get; init; }
 
     [Required]
-    [Description("Delta en unidad base: positivo = entrada, negativo = salida, cero = ajuste de costo puro")]
+    [Description("Delta en unidad base: positivo = entrada, negativo = salida, cero = ajuste de costo puro. Para ajuste por producto siempre debe ser 0.")]
     public required decimal QuantityDelta { get; init; }
 
     [Range(typeof(decimal), "0.000001", "999999999999.999999",
         ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
-    [Description("Nuevo costo unitario del lote. Requerido si quantityDelta > 0. Reemplaza inventoryLot.unitCost.")]
+    [Description("Nuevo costo unitario (ajuste por lote) o costo promedio objetivo (ajuste por producto). Requerido si quantityDelta > 0 o si se usa idProduct.")]
     public decimal? UnitCostNew { get; init; }
 
     [StringLength(500)]

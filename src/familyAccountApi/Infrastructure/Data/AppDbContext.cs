@@ -50,6 +50,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ProductOptionItem>        ProductOptionItem        => Set<ProductOptionItem>();
     public DbSet<ProductComboSlot>         ProductComboSlot         => Set<ProductComboSlot>();
     public DbSet<ProductComboSlotProduct>  ProductComboSlotProduct  => Set<ProductComboSlotProduct>();
+    public DbSet<PriceList>                PriceList                => Set<PriceList>();
+    public DbSet<PriceListItem>            PriceListItem            => Set<PriceListItem>();
+    public DbSet<SalesOrder>               SalesOrder               => Set<SalesOrder>();
+    public DbSet<SalesOrderLine>           SalesOrderLine           => Set<SalesOrderLine>();
+    public DbSet<SalesOrderLineFulfillment> SalesOrderLineFulfillment => Set<SalesOrderLineFulfillment>();
+    public DbSet<SalesOrderAdvance>        SalesOrderAdvance        => Set<SalesOrderAdvance>();
+    public DbSet<ProductionOrder>          ProductionOrder          => Set<ProductionOrder>();
+    public DbSet<ProductionOrderLine>      ProductionOrderLine      => Set<ProductionOrderLine>();
     public DbSet<PurchaseInvoiceType>      PurchaseInvoiceType      => Set<PurchaseInvoiceType>();
     public DbSet<PurchaseInvoice>          PurchaseInvoice          => Set<PurchaseInvoice>();
     public DbSet<PurchaseInvoiceLine>      PurchaseInvoiceLine      => Set<PurchaseInvoiceLine>();

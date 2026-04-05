@@ -100,5 +100,17 @@ public sealed class SalesInvoiceConfiguration : IEntityTypeConfiguration<SalesIn
             .WithMany()
             .HasForeignKey(si => si.IdBankAccount)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(si => si.IdSalesOrder)
+            .HasComment("FK al pedido de venta que origina esta factura. NULL = venta directa de tienda.");
+
+        builder.HasIndex(si => si.IdSalesOrder)
+            .HasFilter("[idSalesOrder] IS NOT NULL")
+            .HasDatabaseName("IX_salesInvoice_idSalesOrder");
+
+        builder.HasOne(si => si.IdSalesOrderNavigation)
+            .WithMany(so => so.SalesInvoices)
+            .HasForeignKey(si => si.IdSalesOrder)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

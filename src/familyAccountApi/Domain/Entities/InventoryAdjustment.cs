@@ -6,6 +6,7 @@ public sealed class InventoryAdjustment
     public int      IdFiscalPeriod            { get; set; }
     public int      IdInventoryAdjustmentType { get; set; }
     public int      IdCurrency                { get; set; }
+    public int?     IdProductionOrder         { get; set; }   // NULL = Modalidad A; NOT NULL = producción contra pedido
     public decimal  ExchangeRateValue         { get; set; }
     public string   NumberAdjustment          { get; set; } = null!;
     public DateOnly DateAdjustment            { get; set; }
@@ -16,6 +17,7 @@ public sealed class InventoryAdjustment
     public FiscalPeriod              IdFiscalPeriodNavigation            { get; set; } = null!;
     public InventoryAdjustmentType   IdInventoryAdjustmentTypeNavigation { get; set; } = null!;
     public Currency                  IdCurrencyNavigation                { get; set; } = null!;
+    public ProductionOrder?          IdProductionOrderNavigation         { get; set; }
     public ICollection<InventoryAdjustmentLine>  InventoryAdjustmentLines   { get; set; } = [];
     public ICollection<InventoryAdjustmentEntry> InventoryAdjustmentEntries { get; set; } = [];
 }

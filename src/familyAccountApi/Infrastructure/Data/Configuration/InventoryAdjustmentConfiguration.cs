@@ -88,5 +88,17 @@ public sealed class InventoryAdjustmentConfiguration : IEntityTypeConfiguration<
             .WithMany()
             .HasForeignKey(ia => ia.IdCurrency)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(ia => ia.IdProductionOrder)
+            .HasComment("FK a la orden de produccion que originó este ajuste. NULL = modalidad A (producción para stock).");
+
+        builder.HasIndex(ia => ia.IdProductionOrder)
+            .HasFilter("[idProductionOrder] IS NOT NULL")
+            .HasDatabaseName("IX_inventoryAdjustment_idProductionOrder");
+
+        builder.HasOne(ia => ia.IdProductionOrderNavigation)
+            .WithMany(po => po.InventoryAdjustments)
+            .HasForeignKey(ia => ia.IdProductionOrder)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

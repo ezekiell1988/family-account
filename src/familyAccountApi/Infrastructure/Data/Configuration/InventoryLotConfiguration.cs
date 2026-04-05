@@ -69,6 +69,10 @@ public sealed class InventoryLotConfiguration : IEntityTypeConfiguration<Invento
             .HasFilter("[idPurchaseInvoice] IS NOT NULL")
             .HasDatabaseName("IX_inventoryLot_idPurchaseInvoice");
 
+        builder.HasIndex(il => il.IdInventoryAdjustment)
+            .HasFilter("[idInventoryAdjustment] IS NOT NULL")
+            .HasDatabaseName("IX_inventoryLot_idInventoryAdjustment");
+
         // ── FK: Product ──────────────────────────────────────
         builder.HasOne(il => il.Product)
             .WithMany()
