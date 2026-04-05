@@ -8,7 +8,12 @@ public sealed class InventoryAdjustmentLineConfiguration : IEntityTypeConfigurat
 {
     public void Configure(EntityTypeBuilder<InventoryAdjustmentLine> builder)
     {
-        builder.ToTable(t => t.HasComment("Líneas del ajuste de inventario. Cada línea referencia un lote específico: quantityDelta positivo = entrada, negativo = salida, cero = ajuste de costo puro. Si quantityDelta > 0, unitCostNew es requerido."));
+        builder.ToTable(t =>
+        {
+            t.HasComment("Líneas del ajuste de inventario. Cada línea referencia un lote específico: quantityDelta positivo = entrada, negativo = salida, cero = ajuste de costo puro. Si quantityDelta > 0, unitCostNew es requerido.");
+            t.HasCheckConstraint("CK_inventoryAdjustmentLine_unitCostNew",
+                "quantityDelta <= 0 OR unitCostNew IS NOT NULL");
+        });
 
         builder.HasKey(ial => ial.IdInventoryAdjustmentLine);
         builder.Property(ial => ial.IdInventoryAdjustmentLine)

@@ -3,6 +3,7 @@ namespace FamilyAccountApi.Features.SalesInvoices.Dtos;
 public sealed record SalesInvoiceLineResponse(
     int      IdSalesInvoiceLine,
     int      IdSalesInvoice,
+    bool     IsNonProductLine,
     int?     IdProduct,
     string?  NameProduct,
     int?     IdUnit,

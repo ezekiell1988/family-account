@@ -19,7 +19,7 @@ public sealed class SalesInvoiceTypeConfiguration : IEntityTypeConfiguration<Sal
             .HasMaxLength(20)
             .IsRequired()
             .IsUnicode(false)
-            .HasComment("Código único del tipo: 'CONTADO_CRC', 'CONTADO_USD', 'CREDITO'.");
+            .HasComment("Código único del tipo: 'CONTADO_CRC', 'CONTADO_USD', 'CREDITO_CRC', 'CREDITO_USD'.");
 
         builder.Property(sit => sit.NameSalesInvoiceType)
             .HasMaxLength(150)
@@ -131,15 +131,29 @@ public sealed class SalesInvoiceTypeConfiguration : IEntityTypeConfiguration<Sal
             new SalesInvoiceType
             {
                 IdSalesInvoiceType          = 3,
-                CodeSalesInvoiceType        = "CREDITO",
-                NameSalesInvoiceType        = "Venta a Crédito",
+                CodeSalesInvoiceType        = "CREDITO_CRC",
+                NameSalesInvoiceType        = "Venta a Crédito CRC (₡)",
                 CounterpartFromBankMovement = true,
                 IdAccountCounterpartCRC     = null,
                 IdAccountCounterpartUSD     = null,
-                IdBankMovementType          = null,  // El usuario configura según su catálogo
-                IdAccountSalesRevenue       = 117,
-                IdAccountCOGS              = 119,
-                IdAccountInventory          = 109,
+                IdBankMovementType          = 9,    // COBRO-CRC → contrapartida 1.1.08.01 CxC CRC
+                IdAccountSalesRevenue       = 117,  // 4.5.01 Ingresos por Ventas
+                IdAccountCOGS              = 119,  // 5.15.01 Costo de Ventas — Mercadería
+                IdAccountInventory          = 109,  // 1.1.07.01 Inventario de Mercadería
+                IsActive                    = true
+            },
+            new SalesInvoiceType
+            {
+                IdSalesInvoiceType          = 4,
+                CodeSalesInvoiceType        = "CREDITO_USD",
+                NameSalesInvoiceType        = "Venta a Crédito USD ($)",
+                CounterpartFromBankMovement = true,
+                IdAccountCounterpartCRC     = null,
+                IdAccountCounterpartUSD     = null,
+                IdBankMovementType          = 10,   // COBRO-USD → contrapartida 1.1.08.02 CxC USD
+                IdAccountSalesRevenue       = 117,  // 4.5.01 Ingresos por Ventas
+                IdAccountCOGS              = 119,  // 5.15.01 Costo de Ventas — Mercadería
+                IdAccountInventory          = 109,  // 1.1.07.01 Inventario de Mercadería
                 IsActive                    = true
             }
         );

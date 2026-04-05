@@ -249,7 +249,12 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
 
             // ── 5.15 Costo de Ventas (módulo de ventas) ──────────────────────
             new Account { IdAccount = 118, CodeAccount = "5.15",    NameAccount = "Costo de Ventas",                  TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 119, CodeAccount = "5.15.01", NameAccount = "Costo de Ventas — Mercadería",     TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 118, AllowsMovements = true,  IsActive = true }
+            new Account { IdAccount = 119, CodeAccount = "5.15.01", NameAccount = "Costo de Ventas — Mercadería",     TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 118, AllowsMovements = true,  IsActive = true },
+
+            // ── 1.1.08 Cuentas por Cobrar (módulo de ventas a crédito) ───────────
+            new Account { IdAccount = 120, CodeAccount = "1.1.08",    NameAccount = "Cuentas por Cobrar",              TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 121, CodeAccount = "1.1.08.01", NameAccount = "Cuentas por Cobrar — Clientes CRC (₡)", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 120, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 122, CodeAccount = "1.1.08.02", NameAccount = "Cuentas por Cobrar — Clientes USD ($)", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 120, AllowsMovements = true,  IsActive = true }
         );
     }
 }

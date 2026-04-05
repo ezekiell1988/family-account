@@ -8,12 +8,31 @@ public sealed class SalesInvoiceLineConfiguration : IEntityTypeConfiguration<Sal
 {
     public void Configure(EntityTypeBuilder<SalesInvoiceLine> builder)
     {
-        builder.ToTable(t => t.HasComment("Línea de la factura de venta. IdInventoryLot es obligatorio para productos con stock; se descuenta al confirmar."));
+        builder.ToTable(t =>
+        {
+            t.HasComment(
+                "Línea de la factura de venta. " +
+                "IsNonProductLine=false + producto sin receta ni combo: IdInventoryLot obligatorio (lote directo). " +
+                "IsNonProductLine=false + producto con receta activa: BOM explosion en ConfirmAsync (BomDetails). " +
+                "IsNonProductLine=false + combo: explosión de slots en ConfirmAsync (BomDetails). " +
+                "IsNonProductLine=true: flete/servicio/gasto, sin movimiento de inventario.");
+            // CHECK: no aplica a combos ni a líneas BOM — la validación de lote se hace en ConfirmAsync.
+            t.HasCheckConstraint("CK_salesInvoiceLine_lot_required",
+                "isNonProductLine = 1 OR idInventoryLot IS NOT NULL OR idProductRecipe IS NOT NULL");
+        });
 
         builder.HasKey(sil => sil.IdSalesInvoiceLine);
         builder.Property(sil => sil.IdSalesInvoiceLine)
             .ValueGeneratedOnAdd()
             .HasComment("Identificador único autoincremental de la línea.");
+
+        builder.Property(sil => sil.IsNonProductLine)
+            .IsRequired()
+            .HasDefaultValue(false)
+            .HasComment("true = flete/servicio/gasto sin stock; false = producto. Cuando false y sin receta activa ni combo, idInventoryLot es obligatorio.");
+
+        builder.Property(sil => sil.IdProductRecipe)
+            .HasComment("Snapshot FK de la receta usada al confirmar (explosión BOM). NULL si el producto no tiene receta activa o es combo.");
 
         builder.Property(sil => sil.DescriptionLine)
             .HasMaxLength(300)
@@ -66,6 +85,11 @@ public sealed class SalesInvoiceLineConfiguration : IEntityTypeConfiguration<Sal
         builder.HasOne(sil => sil.IdInventoryLotNavigation)
             .WithMany()
             .HasForeignKey(sil => sil.IdInventoryLot)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(sil => sil.IdProductRecipeNavigation)
+            .WithMany()
+            .HasForeignKey(sil => sil.IdProductRecipe)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

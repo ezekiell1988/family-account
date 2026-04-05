@@ -184,8 +184,12 @@ salesInvoiceLine
 ─────────────────────────────────────────
 idSalesInvoiceLine  INT PK AI
 idSalesInvoice      INT FK → salesInvoice    NOT NULL
+isNonProductLine    BIT NOT NULL DEFAULT 0    -- 0 = producto con stock (lote obligatorio)
+                                               -- 1 = flete/servicio/gasto (lote NULL permitido)
 idProduct           INT FK → product          NULL
 idUnit              INT FK → unitOfMeasure    NULL
+idInventoryLot      INT FK → inventoryLot     NULL  -- REQUERIDO cuando isNonProductLine = 0
+                                                      -- CHECK: isNonProductLine = 1 OR idInventoryLot IS NOT NULL
 descriptionLine     NVARCHAR(500) NOT NULL
 quantity            DECIMAL(18,4) NOT NULL
 quantityBase        DECIMAL(18,6) NULL                 -- calculado al confirmar
@@ -414,12 +418,16 @@ productType ◄─────────────────────�
    └── idContact = cliente
 
 2. Agregar salesInvoiceLine:
-   ├── Opción A — escaneo de barcode del empaque:
-   │     SELECT * FROM productUnit WHERE codeBarcode = @ean
-   │     → pre-llena idProduct + idUnit + namePresentation
+   ├── Línea de producto (isNonProductLine = false):
+   │     idProduct, idUnit, idInventoryLot (obligatorio), quantity, unitPrice
+   │     Opciones de selección:
+   │     A — barcode: SELECT * FROM productUnit WHERE codeBarcode = @ean
+   │     B — selección manual (usedForSale = 1)
    │
-   └── Opción B — selección manual de producto y unidad
-         (usedForSale = 1)
+   └── Línea de no-producto (isNonProductLine = true):
+         descriptionLine = descripción del gasto (flete, servicio, etc.)
+         idProduct / idUnit / idInventoryLot pueden ser NULL
+         No genera COGS ni decrementa inventario al confirmar
 
 3. Confirmar salesInvoice → API por cada línea con idProduct:
 

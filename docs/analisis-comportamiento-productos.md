@@ -1,6 +1,6 @@
 # Análisis de Comportamiento Actual — Sistema de Productos
 
-> Fecha: 4 de abril de 2026 (actualizado: 5 de abril de 2026)  
+> Fecha: 4 de abril de 2026 (actualizado: 5 de abril de 2026 — IsNonProductLine en SalesInvoiceLine)  
 > Rama: `main`  
 > Alcance: Entidades, servicios y endpoints relacionados con el flujo de productos, inventario, facturas de compra y el nuevo módulo de facturas de venta.
 
@@ -26,9 +26,9 @@
 | `ProductOptionItem` | — | Implícito | Se crea/destruye con el grupo |
 | `ProductComboSlot` | `/product-combo-slots` | ✅ | CRUD completo. Productos del slot implícitos |
 | `ProductComboSlotProduct` | — | Implícito | Productos elegibles por slot |
-| `SalesInvoiceType` | `/sales-invoice-types` | ✅ | Catálogo CRUD. Define contrapartida, cuentas contables de ingresos y COGS. Seed con 3 tipos |
+| `SalesInvoiceType` | `/sales-invoice-types` | ✅ | Catálogo CRUD. Define contrapartida, cuentas contables de ingresos y COGS. Seed con 4 tipos, todos con cuentas preconfiguradas |
 | `SalesInvoice` | `/sales-invoices` | ✅ | Flujo Borrador → Confirmado → Anulado. Genera asiento contable + COGS al confirmar |
-| `SalesInvoiceLine` | — | Implícito | Se crea/destruye con la factura. Snapshots UnitCost y QuantityBase al confirmar |
+| `SalesInvoiceLine` | — | Implícito | Se crea/destruye con la factura. `IsNonProductLine` controla si requiere lote. Snapshots UnitCost y QuantityBase al confirmar |
 | `SalesInvoiceEntry` | — | Implícito | Pivot N:M entre `salesInvoice` y `accountingEntry` |
 | `SalesInvoiceLineEntry` | — | Implícito | Pivot N:M entre `salesInvoiceLine` y `accountingEntryLine` |
 
@@ -227,22 +227,36 @@ Borrador ──(Confirmar)──► Confirmado
     │                         │
     └──(Eliminar: solo Borrador)   └──(Anular)──► Anulado
 ```
-- Al confirmar: genera `NumberInvoice` auto (`FV-YYYYMMDD-NNN`), genera asiento de ingresos (DR=contrapartida, CR=cuentas de ingresos por ProductAccount o fallback), decrementa `lot.QuantityAvailable` por línea con `IdInventoryLot`, toma snapshot de `lot.UnitCost` en la línea, genera asiento COGS si hay cuentas configuradas en el tipo.
+- Al confirmar: valida que todas las líneas de producto (`IsNonProductLine = false`) tengan `IdInventoryLot` asignado (error descriptivo si falta); genera `NumberInvoice` auto (`FV-YYYYMMDD-NNN`), genera asiento de ingresos (DR=contrapartida, CR=cuentas de ingresos por ProductAccount o fallback), decrementa `lot.QuantityAvailable` por línea de producto, toma snapshot de `lot.UnitCost` en la línea, genera asiento COGS si hay cuentas configuradas en el tipo. Líneas con `IsNonProductLine = true` (flete, servicio, gasto) solo contribuyen al asiento de ingresos, no generan COGS ni decrementan inventario.
 
 ### 2.11 `SalesInvoice` — Nuevo módulo de ventas (5-abr-2026)
 
 **`SalesInvoiceType`** (catálogo):
-- Seed: 3 tipos — `CONTADO_CRC` (id=1, Caja CRC cuenta 106), `CONTADO_USD` (id=2, Caja USD cuenta 107), `CREDITO` (id=3, requiere BankMovement).
-- Campos de cuenta opcionales: `IdAccountCounterpartCRC`, `IdAccountCounterpartUSD`, `IdBankMovementType`, `IdAccountSalesRevenue` (fallback ingresos), `IdAccountCOGS`, `IdAccountInventory`.
-- Los 3 tipos seed tienen las cuentas de ingresos/COGS/inventario en `null` — deben configurarse vía `PUT /sales-invoice-types/{id}`.
+- Seed: **4 tipos** — todos con `IdAccountSalesRevenue=117`, `IdAccountCOGS=119`, `IdAccountInventory=109` preconfigurados.
+- Campos de cuenta: `IdAccountCounterpartCRC`, `IdAccountCounterpartUSD`, `IdBankMovementType`, `IdAccountSalesRevenue` (fallback ingresos), `IdAccountCOGS`, `IdAccountInventory`.
+
+| Id | Código | Nombre | Contrapartida |
+|---|---|---|---|
+| 1 | `CONTADO_CRC` | Venta Contado CRC (₡) | Caja CRC (id=106) — DR fijo |
+| 2 | `CONTADO_USD` | Venta Contado USD ($) | Caja USD (id=107) — DR fijo |
+| 3 | `CREDITO_CRC` | Venta a Crédito CRC (₡) | BankMovement `COBRO-CRC` (id=9) |
+| 4 | `CREDITO_USD` | Venta a Crédito USD ($) | BankMovement `COBRO-USD` (id=10) |
 
 **`SalesInvoice`** (flujo completo):
 - `NumberInvoice` se genera automáticamente al confirmar: `FV-YYYYMMDD-NNN` (secuencial por día).
-- Admite líneas sin producto/unidad (ej: servicio puro con solo `DescriptionLine`).
-- Líneas con `IdInventoryLot` decrementan el lote al confirmar y hacen snapshot de `UnitCost`.
+- Cada línea tiene el campo `IsNonProductLine` (`bit`, default `false`):
+  - `false` = línea de producto con stock. **`IdInventoryLot` obligatorio** al confirmar (CHECK constraint en BD y validación en servicio).
+  - `true` = línea de flete/servicio/gasto. `IdInventoryLot` puede ser `null`; no genera COGS ni decrementa inventario.
+- Líneas con `IsNonProductLine = false` decrementan el lote al confirmar y hacen snapshot de `UnitCost`.
 - `QuantityBase` en línea = `Quantity × ConversionFactor` de la `ProductUnit`.
+- Al anular: revierte `lot.QuantityAvailable`, anula asientos contables (ingresos y COGS), anula el `BankMovement` auto-creado si aplica.
 
-**Nuevas cuentas en plan contable** (seed en migración `ModuloVentas`):
+**Asiento contable al confirmar venta a crédito** (neto efectivo):
+- `DR Cuentas por Cobrar` (121/122) ← via `BankMovement` auto-creado con tipo COBRO-CRC/USD
+- `CR Ingresos por Ventas` (117) ← asiento de factura de venta
+- `DR Costo de Ventas` (119) + `CR Inventario` (109) ← asiento COGS
+
+**Cuentas en plan contable** (seed en migración `ModuloVentas`):
 
 | IdAccount | Código | Nombre | Tipo |
 |---|---|---|---|
@@ -250,7 +264,21 @@ Borrador ──(Confirmar)──► Confirmado
 | 117 | `4.5.01` | Ingresos por Ventas — Mercadería | Ingreso |
 | 118 | `5.15` | Costo de Ventas | Gasto (agrupadora) |
 | 119 | `5.15.01` | Costo de Ventas — Mercadería | Gasto |
-- Al anular: revierte `lot.QuantityAvailable`, anula asientos contables (ingresos y COGS), anula el `BankMovement` auto-creado si aplica.
+
+**Cuentas en plan contable** (seed en migración `ConfiguracionCuentasVenta` — 5-abr-2026):
+
+| IdAccount | Código | Nombre | Tipo |
+|---|---|---|---|
+| 120 | `1.1.08` | Cuentas por Cobrar | Activo (agrupadora) |
+| 121 | `1.1.08.01` | Cuentas por Cobrar — Clientes CRC (₡) | Activo |
+| 122 | `1.1.08.02` | Cuentas por Cobrar — Clientes USD ($) | Activo |
+
+**BankMovementType** agregados (seed en migración `ConfiguracionCuentasVenta`):
+
+| Id | Código | Nombre | Signo | Contrapartida |
+|---|---|---|---|---|
+| 9 | `COBRO-CRC` | Cobro de Venta a Crédito (₡) | Abono | 121 CxC CRC |
+| 10 | `COBRO-USD` | Cobro de Venta a Crédito ($) | Abono | 122 CxC USD |
 
 ---
 
@@ -313,7 +341,7 @@ Borrador ──(Confirmar)──► Confirmado
 - **CRUD de `SalesInvoiceType`**: Catálogo con 3 tipos preconfigurados (CONTADO_CRC, CONTADO_USD, CREDITO). Define cuentas de ingresos, COGS e inventario.
 - **`SalesInvoice` completo**:
   - CRUD Borrador con validación de estado antes de modificar/eliminar.
-  - `ConfirmAsync`: genera `NumberInvoice = "FV-YYYYMMDD-NNN"`, asiento de ingresos (DR contrapartida / CR ingresos por ProductAccount o fallback), decrementa `lot.QuantityAvailable`, snapshot `UnitCost` + `QuantityBase` en línea, genera asiento COGS si cuentas configuradas.
+  - `ConfirmAsync`: valida que líneas de producto (`IsNonProductLine=false`) tengan `IdInventoryLot`; genera `NumberInvoice = "FV-YYYYMMDD-NNN"`, asiento de ingresos (DR contrapartida / CR ingresos por ProductAccount o fallback), decrementa `lot.QuantityAvailable` solo en líneas de producto, snapshot `UnitCost` + `QuantityBase` en línea, genera asiento COGS si cuentas configuradas. Líneas `IsNonProductLine=true` solo aportan al asiento de ingresos.
   - `CancelAsync`: revierte lotes, anula asientos contables, anula `BankMovement` auto-creado si aplica.
 
 ---

@@ -6,7 +6,7 @@ namespace FamilyAccountApi.Features.SalesInvoiceTypes.Dtos;
 public sealed record CreateSalesInvoiceTypeRequest
 {
     [Required, StringLength(20, MinimumLength = 1)]
-    [Description("Código único del tipo (ej. 'CONTADO_CRC', 'CREDITO')")]
+    [Description("Código único del tipo (ej. 'CONTADO_CRC', 'CREDITO_CRC', 'CREDITO_USD')")]
     public required string CodeSalesInvoiceType { get; init; }
 
     [Required, StringLength(150, MinimumLength = 1)]

@@ -77,7 +77,13 @@ public sealed class BankMovementTypeConfiguration : IEntityTypeConfiguration<Ban
             new BankMovementType { IdBankMovementType = 5, CodeBankMovementType = "RET",        NameBankMovementType = "Retiro en Efectivo",      IdAccountCounterpart = 75, MovementSign = "Cargo", IsActive = true },
             new BankMovementType { IdBankMovementType = 6, CodeBankMovementType = "PAGO-TC",    NameBankMovementType = "Pago Tarjeta de Crédito", IdAccountCounterpart = 28, MovementSign = "Cargo", IsActive = true },
             new BankMovementType { IdBankMovementType = 7, CodeBankMovementType = "PAGO-PREST", NameBankMovementType = "Pago de Préstamo",        IdAccountCounterpart = 42, MovementSign = "Cargo", IsActive = true },
-            new BankMovementType { IdBankMovementType = 8, CodeBankMovementType = "TRANSF-ENV", NameBankMovementType = "Transferencia Enviada",   IdAccountCounterpart = 34, MovementSign = "Cargo", IsActive = true }
+            new BankMovementType { IdBankMovementType = 8,  CodeBankMovementType = "TRANSF-ENV",  NameBankMovementType = "Transferencia Enviada",         IdAccountCounterpart = 34,  MovementSign = "Cargo", IsActive = true },
+
+            // ── Cobros de venta a crédito ────────────────────────────────────────
+            //   121 → 1.1.08.01  Cuentas por Cobrar — Clientes CRC (Activo)
+            //   122 → 1.1.08.02  Cuentas por Cobrar — Clientes USD (Activo)
+            new BankMovementType { IdBankMovementType = 9,  CodeBankMovementType = "COBRO-CRC",   NameBankMovementType = "Cobro de Venta a Crédito (₡)",  IdAccountCounterpart = 121, MovementSign = "Abono", IsActive = true },
+            new BankMovementType { IdBankMovementType = 10, CodeBankMovementType = "COBRO-USD",   NameBankMovementType = "Cobro de Venta a Crédito ($)",  IdAccountCounterpart = 122, MovementSign = "Abono", IsActive = true }
         );
     }
 }

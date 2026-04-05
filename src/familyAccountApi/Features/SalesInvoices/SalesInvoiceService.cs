@@ -53,6 +53,7 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
             .Select(l => new SalesInvoiceLineResponse(
                 l.IdSalesInvoiceLine,
                 l.IdSalesInvoice,
+                l.IsNonProductLine,
                 l.IdProduct,
                 l.IdProductNavigation?.NameProduct,
                 l.IdUnit,
@@ -327,6 +328,12 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
 
                 if (productAccounts.Count > 0)
                 {
+                    var totalPct = productAccounts.Sum(pa => pa.PercentageAccount);
+                    if (totalPct != 100m)
+                        return (false,
+                            $"La distribución contable del producto {invoiceLine.IdProduct} suma {totalPct:N2}% en lugar de 100%. Corrija los porcentajes antes de confirmar.",
+                            null);
+
                     foreach (var pa in productAccounts)
                     {
                         var rawAmount = Math.Round(invoiceLine.TotalLineAmount * pa.PercentageAccount / 100m, 2);
@@ -429,67 +436,124 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
 
         await db.SaveChangesAsync(CancellationToken.None);
 
-        // ── 5. Decrementar lotes y registrar COGS ────────────────────────────
+        // ── 5. Decrementar inventario y registrar COGS (BOM 2B + Combo 3A) ─────────────────
+
+        // Validación previa: líneas de producto sin receta activa ni combo deben llevar lote
+        foreach (var invoiceLine in invoice.SalesInvoiceLines)
+        {
+            if (invoiceLine.IsNonProductLine || invoiceLine.IdProduct is null) continue;
+
+            var prodType = await db.Product
+                .AsNoTracking()
+                .Include(p => p.IdProductTypeNavigation)
+                .Where(p => p.IdProduct == invoiceLine.IdProduct.Value)
+                .Select(p => new { p.IsCombo, p.IdProductTypeNavigation.TrackInventory })
+                .FirstOrDefaultAsync(CancellationToken.None);
+
+            if (prodType is null || !prodType.TrackInventory) continue;
+            if (prodType.IsCombo) continue;
+
+            var hasRecipe = await db.ProductRecipe.AnyAsync(
+                r => r.IdProductOutput == invoiceLine.IdProduct.Value && r.IsActive,
+                CancellationToken.None);
+            if (hasRecipe) continue;
+
+            if (invoiceLine.IdInventoryLot is null)
+                return (false,
+                    $"La línea '{invoiceLine.DescriptionLine}' es un producto con inventario, sin receta activa y sin combo. Debe asignar un lote (IdInventoryLot) o marcar como IsNonProductLine si no lleva stock.",
+                    null);
+        }
+
         var cogsLines  = new List<(AccountingEntryLine Line, SalesInvoiceLine SourceLine)>();
         var totalCogsAmount = 0m;
 
         foreach (var invoiceLine in invoice.SalesInvoiceLines)
         {
-            if (invoiceLine.IdProduct is null || invoiceLine.IdInventoryLot is null) continue;
+            if (invoiceLine.IsNonProductLine || invoiceLine.IdProduct is null) continue;
 
-            var lot = await db.InventoryLot.FindAsync([invoiceLine.IdInventoryLot.Value], CancellationToken.None);
-            if (lot is null) continue;
+            var prod = await db.Product
+                .Include(p => p.IdProductTypeNavigation)
+                .FirstOrDefaultAsync(p => p.IdProduct == invoiceLine.IdProduct.Value, CancellationToken.None);
 
-            var pu = await db.ProductUnit
-                .AsNoTracking()
-                .FirstOrDefaultAsync(
-                    u => u.IdProduct == invoiceLine.IdProduct.Value && u.IdUnit == (invoiceLine.IdUnit ?? invoiceLine.IdProduct),
-                    CancellationToken.None);
+            if (prod is null || !prod.IdProductTypeNavigation.TrackInventory) continue;
 
-            decimal conversionFactor = pu?.ConversionFactor ?? 1m;
-            decimal qtyBase          = Math.Round(invoiceLine.Quantity * conversionFactor, 6);
-            decimal unitCost         = lot.UnitCost;
-            decimal lineCogsAmount   = Math.Round(qtyBase * unitCost, 2);
+            // Calcular qtyBase de la línea (cantidad en unidad base del producto vendido)
+            var puLine = invoiceLine.IdUnit.HasValue
+                ? await db.ProductUnit.AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.IdProduct == invoiceLine.IdProduct.Value && u.IdUnit == invoiceLine.IdUnit.Value, CancellationToken.None)
+                : null;
+            decimal lineQtyBase = Math.Round(invoiceLine.Quantity * (puLine?.ConversionFactor ?? 1m), 6);
 
-            // Actualizar línea
-            var trackedLine = await db.SalesInvoiceLine.FindAsync([invoiceLine.IdSalesInvoiceLine], CancellationToken.None);
-            if (trackedLine is not null)
+            string? bomError;
+
+            if (prod.IsCombo)
             {
-                trackedLine.QuantityBase = qtyBase;
-                trackedLine.UnitCost     = unitCost;
+                // ── 3A: Explosión de combo ────────────────────────────────────────────
+                (totalCogsAmount, bomError) = await ExplodeComboAsync(
+                    invoice, invoiceLine, lineQtyBase, invoiceType, cogsLines, totalCogsAmount, CancellationToken.None);
+
+                if (bomError is not null)
+                    return (false, bomError, null);
             }
-
-            // Decrementar lote
-            lot.QuantityAvailable -= qtyBase;
-            if (lot.QuantityAvailable < 0)
-                return (false,
-                    $"El lote '{lot.LotNumber ?? lot.IdInventoryLot.ToString()}' del producto {invoiceLine.IdProduct} quedaría con stock negativo ({lot.QuantityAvailable:N4}) al decrementar {qtyBase:N4} unidades.",
-                    null);
-
-            await db.SaveChangesAsync(CancellationToken.None);
-
-            // Recalcular AverageCost
-            var product = await db.Product.FindAsync([invoiceLine.IdProduct.Value], CancellationToken.None);
-            var allLots = await db.InventoryLot
-                .Where(il => il.IdProduct == invoiceLine.IdProduct.Value)
-                .ToListAsync(CancellationToken.None);
-
-            var totalQty  = allLots.Sum(il => il.QuantityAvailable);
-            var totalCost = allLots.Sum(il => il.QuantityAvailable * il.UnitCost);
-            if (product is not null)
-                product.AverageCost = totalQty > 0 ? Math.Round(totalCost / totalQty, 6) : 0m;
-
-            totalCogsAmount += lineCogsAmount;
-            cogsLines.Add((new AccountingEntryLine
+            else
             {
-                IdAccount       = invoiceType.IdAccountCOGS    ?? 0,
-                DebitAmount     = lineCogsAmount,
-                CreditAmount    = 0,
-                DescriptionLine = invoiceLine.DescriptionLine
-            }, invoiceLine));
+                var recipe = await db.ProductRecipe
+                    .Include(r => r.ProductRecipeLines)
+                    .FirstOrDefaultAsync(r => r.IdProductOutput == invoiceLine.IdProduct.Value && r.IsActive, CancellationToken.None);
+
+                if (recipe is not null)
+                {
+                    // ── 2B: Explosión BOM (receta activa) ─────────────────────────────
+                    (totalCogsAmount, bomError) = await ExplodeBomAsync(
+                        invoice, invoiceLine, lineQtyBase, recipe, null, invoiceType, cogsLines, totalCogsAmount, CancellationToken.None);
+
+                    if (bomError is not null)
+                        return (false, bomError, null);
+
+                    // Snapshot de receta usada en la línea
+                    var trackedBomLine = await db.SalesInvoiceLine.FindAsync([invoiceLine.IdSalesInvoiceLine], CancellationToken.None);
+                    if (trackedBomLine is not null)
+                    {
+                        trackedBomLine.IdProductRecipe = recipe.IdProductRecipe;
+                        trackedBomLine.QuantityBase    = lineQtyBase;
+                    }
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+                else
+                {
+                    // ── Lote directo (comportamiento original) ────────────────────────
+                    var lot = await db.InventoryLot.FindAsync([invoiceLine.IdInventoryLot!.Value], CancellationToken.None);
+                    if (lot is null) continue;
+
+                    if (lot.ExpirationDate.HasValue && lot.ExpirationDate.Value < invoice.DateInvoice)
+                        return (false,
+                            $"El lote '{lot.LotNumber ?? lot.IdInventoryLot.ToString()}' del producto {invoiceLine.IdProduct} " +
+                            $"está vencido (vence {lot.ExpirationDate.Value:yyyy-MM-dd}, fecha de factura {invoice.DateInvoice:yyyy-MM-dd}).",
+                            null);
+
+                    decimal lineCogs;
+                    (lineCogs, bomError) = await DeductLotAsync(
+                        lot, lineQtyBase, invoiceLine.IdProduct.Value, invoiceLine.DescriptionLine,
+                        invoiceType, invoiceLine, cogsLines, CancellationToken.None);
+
+                    if (bomError is not null)
+                        return (false, bomError, null);
+
+                    totalCogsAmount += lineCogs;
+
+                    var trackedLine = await db.SalesInvoiceLine.FindAsync([invoiceLine.IdSalesInvoiceLine], CancellationToken.None);
+                    if (trackedLine is not null)
+                    {
+                        trackedLine.QuantityBase = lineQtyBase;
+                        trackedLine.UnitCost     = lot.UnitCost;
+                    }
+                    await db.SaveChangesAsync(CancellationToken.None);
+                }
+            }
         }
 
         await db.SaveChangesAsync(CancellationToken.None);
+
 
         // ── 6. Asiento de COGS (solo si hay cuentas configuradas y líneas) ───
         if (cogsLines.Count > 0 && invoiceType.IdAccountCOGS is not null && invoiceType.IdAccountInventory is not null)
@@ -563,28 +627,33 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
         // ── Revertir lotes e inventario ───────────────────────────────────────
         foreach (var line in invoice.SalesInvoiceLines)
         {
+            // Revertir BomDetails (descarga BOM o combo)
+            var bomDetails = await db.SalesInvoiceLineBomDetail
+                .Where(d => d.IdSalesInvoiceLine == line.IdSalesInvoiceLine)
+                .ToListAsync(CancellationToken.None);
+
+            foreach (var detail in bomDetails)
+            {
+                var bomLot = await db.InventoryLot.FindAsync([detail.IdInventoryLot], CancellationToken.None);
+                if (bomLot is null) continue;
+
+                bomLot.QuantityAvailable += detail.QuantityConsumed;
+                await db.SaveChangesAsync(CancellationToken.None);
+
+                await RecalcAverageCostAsync(detail.IdProduct, CancellationToken.None);
+            }
+
+            // Revertir lote directo (líneas sin BOM)
             if (line.IdInventoryLot is null || line.QuantityBase is null) continue;
 
             var lot = await db.InventoryLot.FindAsync([line.IdInventoryLot.Value], CancellationToken.None);
             if (lot is null) continue;
 
             lot.QuantityAvailable += line.QuantityBase.Value;
-
             await db.SaveChangesAsync(CancellationToken.None);
 
-            // Recalcular AverageCost
             if (line.IdProduct is not null)
-            {
-                var product = await db.Product.FindAsync([line.IdProduct.Value], CancellationToken.None);
-                var allLots = await db.InventoryLot
-                    .Where(il => il.IdProduct == line.IdProduct.Value)
-                    .ToListAsync(CancellationToken.None);
-
-                var totalQty  = allLots.Sum(il => il.QuantityAvailable);
-                var totalCost = allLots.Sum(il => il.QuantityAvailable * il.UnitCost);
-                if (product is not null)
-                    product.AverageCost = totalQty > 0 ? Math.Round(totalCost / totalQty, 6) : 0m;
-            }
+                await RecalcAverageCostAsync(line.IdProduct.Value, CancellationToken.None);
         }
 
         // ── Anular asientos contables ────────────────────────────────────────
@@ -616,6 +685,186 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
         return (await GetByIdAsync(idSalesInvoice, ct), null);
     }
 
+    // ── Helpers privados de inventario ───────────────────────────────────────
+
+    /// Decrementa un lote, recalcula AverageCost y agrega la línea COGS.
+    /// Retorna (cogsAmount, errorMessage). errorMessage == null => éxito.
+    private async Task<(decimal CogsAmount, string? Error)> DeductLotAsync(
+        InventoryLot lot, decimal qtyBase, int idProduct, string description,
+        SalesInvoiceType invoiceType, SalesInvoiceLine sourceLine,
+        List<(AccountingEntryLine, SalesInvoiceLine)> cogsLines,
+        CancellationToken ct)
+    {
+        if (lot.ExpirationDate.HasValue && lot.ExpirationDate.Value < DateOnly.FromDateTime(DateTime.UtcNow))
+            return (0m, $"El lote '{lot.LotNumber ?? lot.IdInventoryLot.ToString()}' del producto {idProduct} está vencido.");
+
+        decimal unitCost       = lot.UnitCost;
+        decimal lineCogsAmount = Math.Round(qtyBase * unitCost, 2);
+
+        lot.QuantityAvailable -= qtyBase;
+        if (lot.QuantityAvailable < 0)
+            return (0m, $"El lote '{lot.LotNumber ?? lot.IdInventoryLot.ToString()}' del producto {idProduct} quedaría con stock negativo ({lot.QuantityAvailable + qtyBase:N4} disponible, se intenta decrementar {qtyBase:N4}).");
+
+        await db.SaveChangesAsync(ct);
+        await RecalcAverageCostAsync(idProduct, ct);
+
+        cogsLines.Add((new AccountingEntryLine
+        {
+            IdAccount       = invoiceType.IdAccountCOGS ?? 0,
+            DebitAmount     = lineCogsAmount,
+            CreditAmount    = 0,
+            DescriptionLine = description
+        }, sourceLine));
+
+        return (lineCogsAmount, null);
+    }
+
+    /// Recalcula Product.AverageCost a partir de los lotes disponibles.
+    private async Task RecalcAverageCostAsync(int idProduct, CancellationToken ct)
+    {
+        var product = await db.Product.FindAsync([idProduct], ct);
+        var allLots = await db.InventoryLot
+            .Where(il => il.IdProduct == idProduct)
+            .ToListAsync(ct);
+
+        var totalQty  = allLots.Sum(il => il.QuantityAvailable);
+        var totalCost = allLots.Sum(il => il.QuantityAvailable * il.UnitCost);
+        if (product is not null)
+            product.AverageCost = totalQty > 0 ? Math.Round(totalCost / totalQty, 6) : 0m;
+    }
+
+    /// Obtiene el primer lote FEFO con stock disponible para el producto.
+    private Task<InventoryLot?> GetFefoLotAsync(int idProduct, DateOnly referenceDate)
+        => db.InventoryLot
+            .Where(il => il.IdProduct == idProduct
+                      && il.QuantityAvailable > 0
+                      && (il.ExpirationDate == null || il.ExpirationDate >= referenceDate))
+            .OrderBy(il => il.ExpirationDate == null ? 1 : 0)
+            .ThenBy(il => il.ExpirationDate)
+            .ThenBy(il => il.IdInventoryLot)
+            .FirstOrDefaultAsync();
+
+    /// 2B — Explota una receta para una línea de factura.
+    /// Crea un SalesInvoiceLineBomDetail por cada insumo y descuenta FEFO.
+    /// comboSlotId es FK nullable cuando se llama desde ExplodeComboAsync.
+    private async Task<(decimal TotalCogs, string? Error)> ExplodeBomAsync(
+        SalesInvoice invoice, SalesInvoiceLine sourceLine, decimal lineQtyBase,
+        ProductRecipe recipe, int? comboSlotId,
+        SalesInvoiceType invoiceType,
+        List<(AccountingEntryLine, SalesInvoiceLine)> cogsLines,
+        decimal runningTotal, CancellationToken ct)
+    {
+        foreach (var recipeLine in recipe.ProductRecipeLines)
+        {
+            decimal qtyToConsume = Math.Round(recipeLine.QuantityInput * lineQtyBase, 6);
+
+            var lot = await GetFefoLotAsync(recipeLine.IdProductInput, invoice.DateInvoice);
+            if (lot is null)
+                return (runningTotal, $"Sin stock disponible para el insumo '{recipeLine.IdProductInput}' requerido por la receta '{recipe.NameRecipe}'. Verifique lotes o realice un ajuste de inventario.");
+
+            var (lineCogs, error) = await DeductLotAsync(
+                lot, qtyToConsume, recipeLine.IdProductInput,
+                $"BOM — {recipe.NameRecipe} / {sourceLine.DescriptionLine}",
+                invoiceType, sourceLine, cogsLines, ct);
+
+            if (error is not null) return (runningTotal, error);
+
+            db.SalesInvoiceLineBomDetail.Add(new SalesInvoiceLineBomDetail
+            {
+                IdSalesInvoiceLine  = sourceLine.IdSalesInvoiceLine,
+                IdProductComboSlot  = comboSlotId,
+                IdProductRecipeLine = recipeLine.IdProductRecipeLine,
+                IdProduct           = recipeLine.IdProductInput,
+                IdInventoryLot      = lot.IdInventoryLot,
+                QuantityConsumed    = qtyToConsume,
+                UnitCost            = lot.UnitCost
+            });
+
+            runningTotal += lineCogs;
+        }
+
+        await db.SaveChangesAsync(ct);
+        return (runningTotal, null);
+    }
+
+    /// 3A — Explota un combo: itera slots, por cada producto:
+    ///   - Si tiene receta activa  → ExplodeBomAsync
+    ///   - Si es reventa/directo   → FEFO + DeductLotAsync + BomDetail
+    private async Task<(decimal TotalCogs, string? Error)> ExplodeComboAsync(
+        SalesInvoice invoice, SalesInvoiceLine sourceLine, decimal lineQtyBase,
+        SalesInvoiceType invoiceType,
+        List<(AccountingEntryLine, SalesInvoiceLine)> cogsLines,
+        decimal runningTotal, CancellationToken ct)
+    {
+        var slots = await db.ProductComboSlot
+            .Include(s => s.ProductComboSlotProducts)
+            .Where(s => s.IdProductCombo == sourceLine.IdProduct!.Value)
+            .ToListAsync(ct);
+
+        foreach (var slot in slots)
+        {
+            // Cantidad total del slot = cantidad del slot en el combo × cantidad en línea de factura
+            decimal slotQty = Math.Round(slot.Quantity * lineQtyBase, 6);
+
+            // Tomar el primer producto del slot (el operador lo puede variar desde la UI en versiones futuras)
+            var slotProduct = slot.ProductComboSlotProducts.FirstOrDefault();
+            if (slotProduct is null) continue;
+
+            var recipe = await db.ProductRecipe
+                .Include(r => r.ProductRecipeLines)
+                .FirstOrDefaultAsync(r => r.IdProductOutput == slotProduct.IdProduct && r.IsActive, ct);
+
+            if (recipe is not null)
+            {
+                // Slot con receta → explosión BOM
+                (runningTotal, var bomError) = await ExplodeBomAsync(
+                    invoice, sourceLine, slotQty, recipe, slot.IdProductComboSlot,
+                    invoiceType, cogsLines, runningTotal, ct);
+
+                if (bomError is not null) return (runningTotal, bomError);
+            }
+            else
+            {
+                // Slot sin receta (reventa / producto terminado con lote propio) → FEFO directo
+                var prodType = await db.Product
+                    .AsNoTracking()
+                    .Include(p => p.IdProductTypeNavigation)
+                    .Where(p => p.IdProduct == slotProduct.IdProduct)
+                    .Select(p => p.IdProductTypeNavigation.TrackInventory)
+                    .FirstOrDefaultAsync(ct);
+
+                if (!prodType) continue;   // servicio / no inventariable → omitir
+
+                var lot = await GetFefoLotAsync(slotProduct.IdProduct, invoice.DateInvoice);
+                if (lot is null)
+                    return (runningTotal, $"Sin stock disponible para el producto '{slotProduct.IdProduct}' del slot '{slot.NameSlot}' en el combo '{sourceLine.DescriptionLine}'.");
+
+                var (lineCogs, slotError) = await DeductLotAsync(
+                    lot, slotQty, slotProduct.IdProduct,
+                    $"Combo slot '{slot.NameSlot}' — {sourceLine.DescriptionLine}",
+                    invoiceType, sourceLine, cogsLines, ct);
+
+                if (slotError is not null) return (runningTotal, slotError);
+
+                db.SalesInvoiceLineBomDetail.Add(new SalesInvoiceLineBomDetail
+                {
+                    IdSalesInvoiceLine  = sourceLine.IdSalesInvoiceLine,
+                    IdProductComboSlot  = slot.IdProductComboSlot,
+                    IdProductRecipeLine = null,   // reventa directa — no hay línea de receta
+                    IdProduct           = slotProduct.IdProduct,
+                    IdInventoryLot      = lot.IdInventoryLot,
+                    QuantityConsumed    = slotQty,
+                    UnitCost            = lot.UnitCost
+                });
+
+                await db.SaveChangesAsync(ct);
+                runningTotal += lineCogs;
+            }
+        }
+
+        return (runningTotal, null);
+    }
+
     // ── Helpers privados ──────────────────────────────────────────────────────
     private async Task<(List<SalesInvoiceLine> Lines, string? Error)> MapLinesAsync(
         IReadOnlyList<SalesInvoiceLineRequest> lines, CancellationToken ct)
@@ -642,15 +891,16 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
 
             result.Add(new SalesInvoiceLine
             {
-                IdProduct       = l.IdProduct,
-                IdUnit          = l.IdUnit,
-                IdInventoryLot  = l.IdInventoryLot,
-                DescriptionLine = l.DescriptionLine.Trim(),
-                Quantity        = l.Quantity,
-                QuantityBase    = qtyBase,
-                UnitPrice       = l.UnitPrice,
-                TaxPercent      = l.TaxPercent,
-                TotalLineAmount = l.TotalLineAmount
+                IsNonProductLine = l.IsNonProductLine,
+                IdProduct        = l.IdProduct,
+                IdUnit           = l.IdUnit,
+                IdInventoryLot   = l.IdInventoryLot,
+                DescriptionLine  = l.DescriptionLine.Trim(),
+                Quantity         = l.Quantity,
+                QuantityBase     = qtyBase,
+                UnitPrice        = l.UnitPrice,
+                TaxPercent       = l.TaxPercent,
+                TotalLineAmount  = l.TotalLineAmount
             });
         }
 

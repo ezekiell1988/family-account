@@ -4,6 +4,7 @@ using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260405011042_InventoryConstraints_P1P2P3")]
+    partial class InventoryConstraints_P1P2P3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3984,14 +3987,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)")
                         .HasColumnName("nameProductType")
-                        .HasComment("Nombre del tipo: Materia Prima | Producto en Proceso | Producto Terminado | Reventa | Servicios.");
-
-                    b.Property<bool>("TrackInventory")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true)
-                        .HasColumnName("trackInventory")
-                        .HasComment("Indica si los productos de este tipo llevan control de stock (inventariables). false = Servicios y productos sin inventario.");
+                        .HasComment("Nombre del tipo: Materia Prima | Producto en Proceso | Producto Terminado | Reventa.");
 
                     b.HasKey("IdProductType");
 
@@ -4001,7 +3997,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.ToTable("productType", t =>
                         {
-                            t.HasComment("Tipo de producto según la fase productiva: Materia Prima, Producto en Proceso, Producto Terminado, Reventa o Servicios. Catálogo de sistema, sin CRUD expuesto al usuario.");
+                            t.HasComment("Tipo de producto según la fase productiva: Materia Prima, Producto en Proceso, Producto Terminado o Reventa. Catálogo de sistema, sin CRUD expuesto al usuario.");
                         });
 
                     b.HasData(
@@ -4009,36 +4005,25 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             IdProductType = 1,
                             DescriptionProductType = "Insumos o materiales adquiridos para ser utilizados en el proceso productivo. No se venden directamente.",
-                            NameProductType = "Materia Prima",
-                            TrackInventory = true
+                            NameProductType = "Materia Prima"
                         },
                         new
                         {
                             IdProductType = 2,
                             DescriptionProductType = "Productos que han iniciado su proceso de fabricación pero aún no están terminados.",
-                            NameProductType = "Producto en Proceso",
-                            TrackInventory = true
+                            NameProductType = "Producto en Proceso"
                         },
                         new
                         {
                             IdProductType = 3,
                             DescriptionProductType = "Productos que han completado el proceso productivo y están listos para la venta.",
-                            NameProductType = "Producto Terminado",
-                            TrackInventory = true
+                            NameProductType = "Producto Terminado"
                         },
                         new
                         {
                             IdProductType = 4,
                             DescriptionProductType = "Productos adquiridos listos para la venta sin transformación productiva.",
-                            NameProductType = "Reventa",
-                            TrackInventory = true
-                        },
-                        new
-                        {
-                            IdProductType = 5,
-                            DescriptionProductType = "Servicios, mano de obra o conceptos sin stock físico. No generan movimientos de inventario.",
-                            NameProductType = "Servicios",
-                            TrackInventory = false
+                            NameProductType = "Reventa"
                         });
                 });
 
@@ -4137,119 +4122,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("productUnit", t =>
                         {
                             t.HasComment("Presentaciones de compra/venta de un producto con su factor de conversión a la unidad base. Reemplaza productSKU + productProductSKU. El campo codeBarcode permite escanear EAN para pre-llenar líneas de factura.");
-                        });
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionSnapshot", b =>
-                {
-                    b.Property<int>("IdProductionSnapshot")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("idProductionSnapshot")
-                        .HasComment("Identificador único autoincremental del snapshot de producción.");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductionSnapshot"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("createdAt")
-                        .HasComment("Fecha y hora UTC en que se creó el snapshot.");
-
-                    b.Property<int>("IdInventoryAdjustment")
-                        .HasColumnType("int")
-                        .HasColumnName("idInventoryAdjustment")
-                        .HasComment("FK 1:1 al ajuste de inventario de tipo PRODUCCION.");
-
-                    b.Property<int>("IdProductRecipe")
-                        .HasColumnType("int")
-                        .HasColumnName("idProductRecipe")
-                        .HasComment("FK a la receta vigente al momento de confirmar la producción.");
-
-                    b.Property<decimal>("QuantityCalculated")
-                        .HasPrecision(12, 4)
-                        .HasColumnType("decimal(12,4)")
-                        .HasColumnName("quantityCalculated")
-                        .HasComment("Cantidad teórica del producto final según la receta (ProductRecipe.QuantityOutput al confirmar).");
-
-                    b.Property<decimal>("QuantityReal")
-                        .HasPrecision(12, 4)
-                        .HasColumnType("decimal(12,4)")
-                        .HasColumnName("quantityReal")
-                        .HasComment("Cantidad real producida físicamente en esta corrida.");
-
-                    b.HasKey("IdProductionSnapshot");
-
-                    b.HasIndex("IdInventoryAdjustment")
-                        .IsUnique()
-                        .HasDatabaseName("UQ_productionSnapshot_idInventoryAdjustment");
-
-                    b.HasIndex("IdProductRecipe")
-                        .HasDatabaseName("IX_productionSnapshot_idProductRecipe");
-
-                    b.ToTable("productionSnapshot", t =>
-                        {
-                            t.HasComment("Copia de la receta usada al confirmar un ajuste de producción. Registra la cantidad calculada (teórica) y la real producida para permitir ajustar recetas a lo largo del tiempo.");
-                        });
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionSnapshotLine", b =>
-                {
-                    b.Property<int>("IdProductionSnapshotLine")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("idProductionSnapshotLine")
-                        .HasComment("Identificador único autoincremental de la línea.");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductionSnapshotLine"));
-
-                    b.Property<int>("IdProductInput")
-                        .HasColumnType("int")
-                        .HasColumnName("idProductInput")
-                        .HasComment("Snapshot del producto insumo, desacoplado de la línea de receta para sobrevivir cambios futuros en la misma.");
-
-                    b.Property<int?>("IdProductRecipeLine")
-                        .HasColumnType("int")
-                        .HasColumnName("idProductRecipeLine")
-                        .HasComment("FK a la línea de receta de origen. NULL si es un insumo extra no previsto en la receta.");
-
-                    b.Property<int>("IdProductionSnapshot")
-                        .HasColumnType("int")
-                        .HasColumnName("idProductionSnapshot")
-                        .HasComment("FK al snapshot de producción cabecera.");
-
-                    b.Property<decimal>("QuantityCalculated")
-                        .HasPrecision(12, 4)
-                        .HasColumnType("decimal(12,4)")
-                        .HasColumnName("quantityCalculated")
-                        .HasComment("Cantidad teórica: ProductRecipeLine.QuantityInput × (QuantityReal / QuantityCalculated de la cabecera). 0 para insumos extra.");
-
-                    b.Property<decimal>("QuantityReal")
-                        .HasPrecision(12, 4)
-                        .HasColumnType("decimal(12,4)")
-                        .HasColumnName("quantityReal")
-                        .HasComment("Cantidad real usada por el operador en esta corrida.");
-
-                    b.Property<int>("SortOrder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0)
-                        .HasColumnName("sortOrder")
-                        .HasComment("Orden de visualización, copiado de ProductRecipeLine.SortOrder.");
-
-                    b.HasKey("IdProductionSnapshotLine");
-
-                    b.HasIndex("IdProductInput");
-
-                    b.HasIndex("IdProductRecipeLine")
-                        .HasDatabaseName("IX_productionSnapshotLine_idProductRecipeLine")
-                        .HasFilter("[idProductRecipeLine] IS NOT NULL");
-
-                    b.HasIndex("IdProductionSnapshot")
-                        .HasDatabaseName("IX_productionSnapshotLine_idProductionSnapshot");
-
-                    b.ToTable("productionSnapshotLine", t =>
-                        {
-                            t.HasComment("Línea del snapshot de producción. Una fila por insumo, con cantidad teórica calculada (según receta) y cantidad real usada. idProductRecipeLine es NULL cuando el operador agregó un insumo extra no previsto en la receta.");
                         });
                 });
 
@@ -4893,11 +4765,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("idProduct");
 
-                    b.Property<int?>("IdProductRecipe")
-                        .HasColumnType("int")
-                        .HasColumnName("idProductRecipe")
-                        .HasComment("Snapshot FK de la receta usada al confirmar (explosión BOM). NULL si el producto no tiene receta activa o es combo.");
-
                     b.Property<int>("IdSalesInvoice")
                         .HasColumnType("int")
                         .HasColumnName("idSalesInvoice");
@@ -4905,13 +4772,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Property<int?>("IdUnit")
                         .HasColumnType("int")
                         .HasColumnName("idUnit");
-
-                    b.Property<bool>("IsNonProductLine")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false)
-                        .HasColumnName("isNonProductLine")
-                        .HasComment("true = flete/servicio/gasto sin stock; false = producto. Cuando false y sin receta activa ni combo, idInventoryLot es obligatorio.");
 
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 4)
@@ -4955,88 +4815,13 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.HasIndex("IdProduct");
 
-                    b.HasIndex("IdProductRecipe");
-
                     b.HasIndex("IdSalesInvoice");
 
                     b.HasIndex("IdUnit");
 
                     b.ToTable("salesInvoiceLine", t =>
                         {
-                            t.HasComment("Línea de la factura de venta. IsNonProductLine=false + producto sin receta ni combo: IdInventoryLot obligatorio (lote directo). IsNonProductLine=false + producto con receta activa: BOM explosion en ConfirmAsync (BomDetails). IsNonProductLine=false + combo: explosión de slots en ConfirmAsync (BomDetails). IsNonProductLine=true: flete/servicio/gasto, sin movimiento de inventario.");
-
-                            t.HasCheckConstraint("CK_salesInvoiceLine_lot_required", "isNonProductLine = 1 OR idInventoryLot IS NOT NULL OR idProductRecipe IS NOT NULL");
-                        });
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineBomDetail", b =>
-                {
-                    b.Property<int>("IdSalesInvoiceLineBomDetail")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("idSalesInvoiceLineBomDetail")
-                        .HasComment("Identificador único autoincremental del detalle BOM.");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoiceLineBomDetail"));
-
-                    b.Property<int>("IdInventoryLot")
-                        .HasColumnType("int")
-                        .HasColumnName("idInventoryLot")
-                        .HasComment("Lote específico del que se descontó el stock (FEFO auto-asignado).");
-
-                    b.Property<int>("IdProduct")
-                        .HasColumnType("int")
-                        .HasColumnName("idProduct")
-                        .HasComment("Snapshot del insumo o producto de slot descontado al confirmar.");
-
-                    b.Property<int?>("IdProductComboSlot")
-                        .HasColumnType("int")
-                        .HasColumnName("idProductComboSlot")
-                        .HasComment("FK nullable al slot del combo. NULL si la línea no es un combo.");
-
-                    b.Property<int?>("IdProductRecipeLine")
-                        .HasColumnType("int")
-                        .HasColumnName("idProductRecipeLine")
-                        .HasComment("FK nullable a la línea de receta. NULL si es reventa directa de slot o insumo extra.");
-
-                    b.Property<int>("IdSalesInvoiceLine")
-                        .HasColumnType("int")
-                        .HasColumnName("idSalesInvoiceLine")
-                        .HasComment("FK a la línea de factura de venta que originó este movimiento.");
-
-                    b.Property<decimal>("QuantityConsumed")
-                        .HasPrecision(12, 4)
-                        .HasColumnType("decimal(12,4)")
-                        .HasColumnName("quantityConsumed")
-                        .HasComment("Cantidad descontada en unidad base del insumo/producto.");
-
-                    b.Property<decimal>("UnitCost")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("decimal(18,6)")
-                        .HasColumnName("unitCost")
-                        .HasComment("Snapshot del costo unitario del lote al momento de confirmar la factura.");
-
-                    b.HasKey("IdSalesInvoiceLineBomDetail");
-
-                    b.HasIndex("IdInventoryLot")
-                        .HasDatabaseName("IX_salesInvoiceLineBomDetail_idInventoryLot");
-
-                    b.HasIndex("IdProduct");
-
-                    b.HasIndex("IdProductComboSlot")
-                        .HasDatabaseName("IX_salesInvoiceLineBomDetail_idProductComboSlot")
-                        .HasFilter("[idProductComboSlot] IS NOT NULL");
-
-                    b.HasIndex("IdProductRecipeLine")
-                        .HasDatabaseName("IX_salesInvoiceLineBomDetail_idProductRecipeLine")
-                        .HasFilter("[idProductRecipeLine] IS NOT NULL");
-
-                    b.HasIndex("IdSalesInvoiceLine")
-                        .HasDatabaseName("IX_salesInvoiceLineBomDetail_idSalesInvoiceLine");
-
-                    b.ToTable("salesInvoiceLineBomDetail", t =>
-                        {
-                            t.HasComment("Detalle de movimiento de inventario generado al confirmar una SalesInvoiceLine mediante explosión BOM (receta activa — Opción 2B) o por slot de combo (Opción 3A). Una línea puede originar N registros: uno por insumo de receta o por producto de slot. IdProductRecipeLine = NULL indica reventa directa de slot o insumo extra no previsto en receta.");
+                            t.HasComment("Línea de la factura de venta. IdInventoryLot es obligatorio para productos con stock; se descuenta al confirmar.");
                         });
                 });
 
@@ -6043,51 +5828,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("UnitOfMeasure");
                 });
 
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionSnapshot", b =>
-                {
-                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryAdjustment", "IdInventoryAdjustmentNavigation")
-                        .WithMany()
-                        .HasForeignKey("IdInventoryAdjustment")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductRecipe", "IdProductRecipeNavigation")
-                        .WithMany()
-                        .HasForeignKey("IdProductRecipe")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("IdInventoryAdjustmentNavigation");
-
-                    b.Navigation("IdProductRecipeNavigation");
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionSnapshotLine", b =>
-                {
-                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductInputNavigation")
-                        .WithMany()
-                        .HasForeignKey("IdProductInput")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductRecipeLine", "IdProductRecipeLineNavigation")
-                        .WithMany()
-                        .HasForeignKey("IdProductRecipeLine")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductionSnapshot", "IdProductionSnapshotNavigation")
-                        .WithMany("ProductionSnapshotLines")
-                        .HasForeignKey("IdProductionSnapshot")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("IdProductInputNavigation");
-
-                    b.Navigation("IdProductRecipeLineNavigation");
-
-                    b.Navigation("IdProductionSnapshotNavigation");
-                });
-
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PurchaseInvoice", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.BankAccount", "IdBankAccountNavigation")
@@ -6288,11 +6028,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasForeignKey("IdProduct")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductRecipe", "IdProductRecipeNavigation")
-                        .WithMany()
-                        .HasForeignKey("IdProductRecipe")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoice", "IdSalesInvoiceNavigation")
                         .WithMany("SalesInvoiceLines")
                         .HasForeignKey("IdSalesInvoice")
@@ -6308,52 +6043,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.Navigation("IdProductNavigation");
 
-                    b.Navigation("IdProductRecipeNavigation");
-
                     b.Navigation("IdSalesInvoiceNavigation");
 
                     b.Navigation("IdUnitNavigation");
-                });
-
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineBomDetail", b =>
-                {
-                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryLot", "IdInventoryLotNavigation")
-                        .WithMany()
-                        .HasForeignKey("IdInventoryLot")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
-                        .WithMany()
-                        .HasForeignKey("IdProduct")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductComboSlot", "IdProductComboSlotNavigation")
-                        .WithMany()
-                        .HasForeignKey("IdProductComboSlot")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductRecipeLine", "IdProductRecipeLineNavigation")
-                        .WithMany()
-                        .HasForeignKey("IdProductRecipeLine")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", "IdSalesInvoiceLineNavigation")
-                        .WithMany("BomDetails")
-                        .HasForeignKey("IdSalesInvoiceLine")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("IdInventoryLotNavigation");
-
-                    b.Navigation("IdProductComboSlotNavigation");
-
-                    b.Navigation("IdProductNavigation");
-
-                    b.Navigation("IdProductRecipeLineNavigation");
-
-                    b.Navigation("IdSalesInvoiceLineNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineEntry", b =>
@@ -6586,11 +6278,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("Products");
                 });
 
-            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionSnapshot", b =>
-                {
-                    b.Navigation("ProductionSnapshotLines");
-                });
-
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PurchaseInvoice", b =>
                 {
                     b.Navigation("BankMovementDocuments");
@@ -6626,8 +6313,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", b =>
                 {
-                    b.Navigation("BomDetails");
-
                     b.Navigation("SalesInvoiceLineEntries");
                 });
 

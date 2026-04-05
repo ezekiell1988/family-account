@@ -4,6 +4,12 @@ namespace FamilyAccountApi.Features.SalesInvoices.Dtos;
 
 public sealed record SalesInvoiceLineRequest
 {
+    /// <summary>
+    /// true = línea de flete/servicio/gasto (IdInventoryLot puede ser null).
+    /// false (default) = línea de producto con stock (IdInventoryLot requerido al confirmar).
+    /// </summary>
+    public bool IsNonProductLine { get; init; }
+
     [Range(1, int.MaxValue)]
     public int? IdProduct { get; init; }
 

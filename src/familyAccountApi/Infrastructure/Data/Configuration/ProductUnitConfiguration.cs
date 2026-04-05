@@ -73,6 +73,12 @@ public sealed class ProductUnitConfiguration : IEntityTypeConfiguration<ProductU
             .HasFilter("[codeBarcode] IS NOT NULL")
             .HasDatabaseName("UQ_productUnit_codeBarcode");
 
+        // ── Índice único filtrado: exactamente 1 unidad base por producto ─────
+        builder.HasIndex(pu => pu.IdProduct)
+            .IsUnique()
+            .HasFilter("[isBase] = 1")
+            .HasDatabaseName("UQ_productUnit_idProduct_isBase");
+
         // ── FK: Product ──────────────────────────────────────
         builder.HasOne(pu => pu.Product)
             .WithMany(p => p.ProductUnits)

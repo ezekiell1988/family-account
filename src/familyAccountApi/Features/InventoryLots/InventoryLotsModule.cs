@@ -1,5 +1,6 @@
 using FamilyAccountApi.Features.InventoryLots.Dtos;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FamilyAccountApi.Features.InventoryLots;
 
@@ -29,6 +30,11 @@ public static class InventoryLotsModule
             .WithName("GetStockTotal")
             .WithSummary("Obtener stock total disponible de un producto en unidad base");
 
+        group.MapGet("/suggest/{idProduct:int}.json", GetSuggestedLot)
+            .WithName("GetSuggestedInventoryLot")
+            .WithSummary("Sugerir el lote más antiguo no vencido con stock disponible (FEFO). " +
+                         "Parámetro opcional ?date=yyyy-MM-dd (por defecto: fecha UTC de hoy).");
+
         return app;
     }
 
@@ -51,5 +57,16 @@ public static class InventoryLotsModule
     {
         var total = await service.GetStockTotalAsync(idProduct, ct);
         return TypedResults.Ok(total);
+    }
+
+    private static async Task<Results<Ok<InventoryLotResponse>, NotFound>> GetSuggestedLot(
+        int idProduct,
+        [FromQuery] DateOnly? date,
+        IInventoryLotService service,
+        CancellationToken ct)
+    {
+        var referenceDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var item = await service.GetSuggestedLotAsync(idProduct, referenceDate, ct);
+        return item is not null ? TypedResults.Ok(item) : TypedResults.NotFound();
     }
 }
