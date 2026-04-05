@@ -8,6 +8,11 @@ public sealed class ProductOptionItem
     public decimal PriceDelta           { get; set; }
     public bool    IsDefault            { get; set; } = false;
     public int     SortOrder            { get; set; }
+    public int?    IdProductRecipe      { get; set; }
 
-    public ProductOptionGroup IdProductOptionGroupNavigation { get; set; } = null!;
+    public ProductOptionGroup  IdProductOptionGroupNavigation { get; set; } = null!;
+    public ProductRecipe?      IdProductRecipeNavigation      { get; set; }
+
+    public ICollection<ProductOptionItemAvailability> RestrictedByRules  { get; set; } = [];
+    public ICollection<ProductOptionItemAvailability> EnablesRules        { get; set; } = [];
 }

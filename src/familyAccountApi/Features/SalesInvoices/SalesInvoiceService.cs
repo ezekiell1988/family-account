@@ -507,7 +507,11 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
                     .Include(r => r.ProductRecipeLines)
                     .FirstOrDefaultAsync(r => r.IdProductOutput == invoiceLine.IdProduct.Value && r.IsActive, CancellationToken.None);
 
-                if (recipe is not null)
+                // T19: Si la línea ya tiene un lote PT (vino de producción), saltar
+                // la explosión BOM y descontar el lote directamente.
+                bool hasPreassignedLot = invoiceLine.IdInventoryLot.HasValue && recipe is not null;
+
+                if (recipe is not null && !hasPreassignedLot)
                 {
                     // ── 2B: Explosión BOM (receta activa) ─────────────────────────────
                     (totalCogsAmount, bomError) = await ExplodeBomAsync(

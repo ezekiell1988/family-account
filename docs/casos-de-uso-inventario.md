@@ -188,7 +188,7 @@ SalesInvoice:
 
 ---
 
-## C5 — Pedido configurado (Pizza) 🔴 30% implementado
+## C5 — Pedido configurado (Pizza) ✅ Completo
 
 ### Flujo esperado
 
@@ -229,14 +229,14 @@ POST /sales-orders/{id}/invoice  (o crear SalesInvoice manual vinculada al pedid
 | `SalesOrder` con status workflow (Borrador→Confirmado→…→Completado) | ✅ Parcial |
 | `ProductionOrder.IdSalesOrder?` — vínculo OP ↔ Pedido | ✅ Schema |
 | `SalesOrderLineFulfillment` tipo `"Produccion"` con `IdProductionOrder` | ✅ |
-| `SalesOrderLine` almacena opciones seleccionadas por el cliente | ❌ **No existe `SalesOrderLineOption`** |
-| `ProductOptionItem.IdProductExtra / QuantityExtra` — opción que consume stock extra | ❌ **No existe** |
-| Opciones condicionales: `ProductOptionItemAvailability` — filtrar items por selección previa (ej: Masa según Tamaño) | ❌ **No existe** — ver análisis en "Diseño potencial: opciones condicionales" |
-| `POST /sales-orders/{id}/send-to-production` — crea OP automáticamente | ❌ **No existe** |
-| Transición automática de `SalesOrder` a `"EnProduccion"` | ❌ **No implementado** |
-| `ProductionOrder.Completado` ejecuta movimiento de inventario | ❌ **No implementado** (ver C2) |
-| `POST /sales-orders/{id}/complete` | ❌ **No existe** |
-| `POST /sales-orders/{id}/invoice` — generar factura desde pedido | ❌ **No existe** |
+| `SalesOrderLine` almacena opciones seleccionadas por el cliente | ✅ `SalesOrderLineOption` (migración `AddC5Options`) |
+| `ProductOptionItem.IdProductRecipe` — opción vincula a receta de insumos (reemplaza `IdProductExtra/QuantityExtra`) | ✅ Implementado |
+| Opciones condicionales: `ProductOptionItemAvailability` — filtrar items por selección previa (ej: Masa según Tamaño) | ✅ Entidad + CRUD + validación en `SalesOrderService` |
+| `POST /sales-orders/{id}/send-to-production` — crea OP automáticamente | ✅ Implementado |
+| Transición automática de `SalesOrder` a `"EnProduccion"` | ✅ Implementado |
+| `ProductionOrder.Completado` ejecuta movimiento de inventario | ✅ Ver C2 |
+| `POST /sales-orders/{id}/complete` | ✅ Implementado |
+| `POST /sales-orders/{id}/invoice` — generar factura desde pedido | ✅ Implementado |
 
 ### Diseño de opciones con impacto de stock
 
@@ -309,19 +309,19 @@ Pedido del cliente → SalesOrderLineOptions:
 
 En `ConfirmAsync` (factura): si la línea tiene `SalesInvoiceLineOptions` cuyo `ProductOptionItem.IdProductRecipe IS NOT NULL`, generar `BomDetail` adicionales para cada ingrediente de esas recetas.
 
-### Trabajo necesario para completar C5
+### Implementación completada (abril 2026)
 
-| Tarea | Prioridad |
+| Tarea | Estado |
 |---|---|
-| C2 completo (ProductionOrder.Completado → inventario) | Alta — prerequisito |
-| `ProductOptionItem.IdProductRecipe` — reemplaza `IdProductExtra/QuantityExtra` | Alta |
-| `SalesOrderLineOption` tabla + `SalesOrderLine` recibe opciones | Alta — prerequisito |
-| `POST /sales-orders/{id}/send-to-production` (combina receta base + recetas de opciones) | Alta |
-| `SalesOrder` transición a `"EnProduccion"` | Alta |
-| `POST /sales-orders/{id}/complete` | Media |
-| `POST /sales-orders/{id}/invoice` | Media |
-| `SalesInvoiceLineOption` + explosión en `ConfirmAsync` | Media — para extras con stock |
-| `ProductOptionItemAvailability` + validación de compatibilidad en `SalesOrderService` y `ConfirmAsync` | Media — ver análisis en "opciones condicionales" |
+| Migración `AddC5Options`: `SalesOrderLineOption`, `SalesInvoiceLineOption`, `ProductOptionItemAvailability`, FK `ProductOptionItem.IdProductRecipe` | ✅ Aplicada |
+| `ProductOptionItem.IdProductRecipe` — vincula opción a receta de insumos | ✅ En DTOs, service y validación |
+| `SalesOrderLineOption` — almacena opciones por línea; `PopulateOptionsAsync` ajusta `UnitPrice += Σ(PriceDelta × Qty)` | ✅ |
+| `ValidateOptionsAsync` — T9: ownership por grupo + unicidad grupo por línea; T10: reglas de disponibilidad | ✅ |
+| `POST /availability-rules`, `DELETE /availability-rules/{id}`, `GET /available-by-product/{id}` | ✅ |
+| `POST /sales-orders/{id}/send-to-production` — combina receta base + recetas de opciones, crea OP Modalidad B, transición `EnProduccion` | ✅ |
+| `POST /sales-orders/{id}/complete` — valida que todas las OPs vinculadas estén `Completado` | ✅ |
+| `POST /sales-orders/{id}/invoice` — crea `SalesInvoice` con `SalesInvoiceLineOptions` copiadas; 409 si ya existe | ✅ |
+| `SalesInvoiceService.ConfirmAsync` (T19) — omite `ExplodeBomAsync` cuando la línea ya tiene `IdInventoryLot` pre-asignado desde producción | ✅ |
 
 ---
 ## C6 — Combo configurado multi-slot (2 pizzas + bebida) 🔴 15% implementado
@@ -1025,8 +1025,8 @@ Cada canal tiene su propio **adaptador de presentación** pero comparte la misma
 | **C2 — Manufactura** | 🟡 **50%** — falta `Completado` → inventario | Media (~1 día backend) |
 | **C3 — Ensamble en venta (BOM)** | ✅ **Completo** | Revisar bug de escala `QuantityOutput` |
 | **C4 — Variantes (talla/color)** | � **80%** — backend completo, frontend pendiente | UI Angular selector de variantes (~0.5 día) |
-| **C5 — Pedido configurado (pizza)** | 🔴 **30%** | Alta (~3–4 días, depende de C2) |
-| **C6 — Combo configurado multi-slot** | 🔴 **15%** | Muy Alta (~5–7 días, depende de C2 y C5) |
+| **C5 — Pedido configurado (pizza)** | ✅ **Completo** | — |
+| **C6 — Combo configurado multi-slot** | 🔴 **15%** | Muy Alta (~5–7 días) |
 
 ---
 
@@ -1087,7 +1087,7 @@ C5 (Pedido configurado)
 |---|---|---|---|
 | 1 | **C2** — Manufactura | Prerequisito de C5 y C6. Brecha concreta en `UpdateStatusAsync` | ✅ Completo |
 | 2 | **C4** — Variantes | Independiente de C2/C5. Trabajo mínimo, no bloquea nada | ⏳ Pendiente |
-| 3 | **C5** — Pedido configurado | Depende de C2 completo | ⏳ Pendiente |
+| 3 | **C5** — Pedido configurado | Depende de C2 completo | ✅ Completo |
 | 4 | **C6** — Combo multi-slot | Depende de C2 + C5 completos | ⏳ Pendiente |
 
 ---
@@ -1122,13 +1122,13 @@ C5 (Pedido configurado)
 
 | # | Tarea | Estado |
 |---|---|---|
-| C5-1 | `ProductOptionItem.IdProductRecipe` — reemplaza `IdProductExtra/QuantityExtra` | ⏳ |
-| C5-2 | `SalesOrderLineOption` tabla + `SalesOrderLine` recibe opciones | ⏳ |
-| C5-3 | `POST /sales-orders/{id}/send-to-production` (combina receta base + recetas de opciones) | ⏳ |
-| C5-4 | `SalesOrder` transición a `"EnProduccion"` | ⏳ |
-| C5-5 | `POST /sales-orders/{id}/complete` | ⏳ |
-| C5-6 | `POST /sales-orders/{id}/invoice` | ⏳ |
-| C5-7 | `SalesInvoiceLineOption` + explosión en `ConfirmAsync` | ⏳ |
+| C5-1 | `ProductOptionItem.IdProductRecipe` — reemplaza `IdProductExtra/QuantityExtra` | ✅ |
+| C5-2 | `SalesOrderLineOption` tabla + `SalesOrderLine` recibe opciones | ✅ |
+| C5-3 | `POST /sales-orders/{id}/send-to-production` (combina receta base + recetas de opciones) | ✅ |
+| C5-4 | `SalesOrder` transición a `"EnProduccion"` | ✅ |
+| C5-5 | `POST /sales-orders/{id}/complete` | ✅ |
+| C5-6 | `POST /sales-orders/{id}/invoice` | ✅ |
+| C5-7 | `SalesInvoiceLineOption` + explosión en `ConfirmAsync` (T19: omite BOM si `IdInventoryLot` pre-asignado) | ✅ |
 
 ### C6 — Combo multi-slot: tareas pendientes
 

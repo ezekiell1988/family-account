@@ -47,8 +47,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<BankStatementImport>      BankStatementImport      => Set<BankStatementImport>();
     public DbSet<BankStatementTransaction> BankStatementTransaction => Set<BankStatementTransaction>();
     public DbSet<ProductAccount>           ProductAccount           => Set<ProductAccount>();
-    public DbSet<ProductOptionGroup>          ProductOptionGroup          => Set<ProductOptionGroup>();
-    public DbSet<ProductOptionItem>           ProductOptionItem           => Set<ProductOptionItem>();
+    public DbSet<ProductOptionGroup>              ProductOptionGroup              => Set<ProductOptionGroup>();
+    public DbSet<ProductOptionItem>               ProductOptionItem               => Set<ProductOptionItem>();
+    public DbSet<ProductOptionItemAvailability>   ProductOptionItemAvailability   => Set<ProductOptionItemAvailability>();
     public DbSet<ProductComboSlot>            ProductComboSlot            => Set<ProductComboSlot>();
     public DbSet<ProductComboSlotProduct>     ProductComboSlotProduct     => Set<ProductComboSlotProduct>();
     public DbSet<ProductAttribute>            ProductAttribute            => Set<ProductAttribute>();
@@ -58,6 +59,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<PriceListItem>            PriceListItem            => Set<PriceListItem>();
     public DbSet<SalesOrder>               SalesOrder               => Set<SalesOrder>();
     public DbSet<SalesOrderLine>           SalesOrderLine           => Set<SalesOrderLine>();
+    public DbSet<SalesOrderLineOption>     SalesOrderLineOption     => Set<SalesOrderLineOption>();
     public DbSet<SalesOrderLineFulfillment> SalesOrderLineFulfillment => Set<SalesOrderLineFulfillment>();
     public DbSet<SalesOrderAdvance>        SalesOrderAdvance        => Set<SalesOrderAdvance>();
     public DbSet<ProductionOrder>          ProductionOrder          => Set<ProductionOrder>();
@@ -70,6 +72,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<SalesInvoiceType>         SalesInvoiceType         => Set<SalesInvoiceType>();
     public DbSet<SalesInvoice>             SalesInvoice             => Set<SalesInvoice>();
     public DbSet<SalesInvoiceLine>            SalesInvoiceLine            => Set<SalesInvoiceLine>();
+    public DbSet<SalesInvoiceLineOption>      SalesInvoiceLineOption      => Set<SalesInvoiceLineOption>();
     public DbSet<SalesInvoiceLineBomDetail>   SalesInvoiceLineBomDetail   => Set<SalesInvoiceLineBomDetail>();
     public DbSet<SalesInvoiceEntry>           SalesInvoiceEntry           => Set<SalesInvoiceEntry>();
     public DbSet<SalesInvoiceLineEntry>       SalesInvoiceLineEntry       => Set<SalesInvoiceLineEntry>();

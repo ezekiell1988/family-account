@@ -33,4 +33,12 @@ public sealed record SalesOrderLineResponse(
     decimal  UnitPrice,
     decimal  TaxPercent,
     decimal  TotalLineAmount,
-    string?  DescriptionLine);
+    string?  DescriptionLine,
+    IReadOnlyList<SalesOrderLineOptionResponse> Options);
+
+public sealed record SalesOrderLineOptionResponse(
+    int     IdSalesOrderLineOption,
+    int     IdProductOptionItem,
+    string  NameItem,
+    decimal PriceDelta,
+    decimal Quantity);

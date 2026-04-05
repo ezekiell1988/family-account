@@ -20,4 +20,5 @@ public sealed class SalesOrderLine
     public PriceListItem? IdPriceListItemNavigation  { get; set; }
 
     public ICollection<SalesOrderLineFulfillment> SalesOrderLineFulfillments { get; set; } = [];
+    public ICollection<SalesOrderLineOption>       SalesOrderLineOptions      { get; set; } = [];
 }

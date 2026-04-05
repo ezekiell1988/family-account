@@ -1,5 +1,6 @@
 using FamilyAccountApi.Features.ProductOptionGroups.Dtos;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FamilyAccountApi.Features.ProductOptionGroups;
 
@@ -39,6 +40,21 @@ public static class ProductOptionGroupsModule
             .WithName("DeleteProductOptionGroup")
             .WithSummary("Eliminar grupo de opciones y sus items")
             .RequireAuthorization("Admin");
+
+        // ── Availability rules ────────────────────────────────────────────────
+        group.MapPost("/items/{idItem:int}/availability-rules", CreateAvailabilityRule)
+            .WithName("CreateAvailabilityRule")
+            .WithSummary("Crear regla de disponibilidad condicional entre ítems de opción")
+            .RequireAuthorization("Admin");
+
+        group.MapDelete("/availability-rules/{idRule:int}", DeleteAvailabilityRule)
+            .WithName("DeleteAvailabilityRule")
+            .WithSummary("Eliminar regla de disponibilidad")
+            .RequireAuthorization("Admin");
+
+        group.MapGet("/available-by-product/{idProduct:int}.json", GetAvailableGroups)
+            .WithName("GetAvailableGroups")
+            .WithSummary("Obtener grupos con isAvailable calculado según los ítems activos");
 
         return app;
     }
@@ -90,5 +106,38 @@ public static class ProductOptionGroupsModule
     {
         var deleted = await service.DeleteAsync(id, ct);
         return deleted ? TypedResults.NoContent() : TypedResults.NotFound();
+    }
+
+    private static async Task<Results<Created<AvailabilityRuleResponse>, ValidationProblem>> CreateAvailabilityRule(
+        int idItem,
+        [FromBody] CreateAvailabilityRuleRequest request,
+        IProductOptionGroupService service, CancellationToken ct)
+    {
+        var (result, error) = await service.CreateAvailabilityRuleAsync(idItem, request, ct);
+        if (error is not null)
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["rule"] = [error] });
+        return TypedResults.Created($"/api/v1/product-option-groups/availability-rules/{result!.IdProductOptionItemAvailability}", result);
+    }
+
+    private static async Task<Results<NoContent, NotFound>> DeleteAvailabilityRule(
+        int idRule, IProductOptionGroupService service, CancellationToken ct)
+    {
+        var deleted = await service.DeleteAvailabilityRuleAsync(idRule, ct);
+        return deleted ? TypedResults.NoContent() : TypedResults.NotFound();
+    }
+
+    private static async Task<Ok<IReadOnlyList<AvailableGroupResponse>>> GetAvailableGroups(
+        int idProduct,
+        [FromQuery] string? activeItems,
+        IProductOptionGroupService service, CancellationToken ct)
+    {
+        var ids = activeItems?.Split(',')
+            .Select(s => int.TryParse(s.Trim(), out var id) ? (int?)id : null)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToList() ?? [];
+
+        var result = await service.GetAvailableGroupsAsync(idProduct, ids, ct);
+        return TypedResults.Ok(result);
     }
 }

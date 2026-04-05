@@ -40,15 +40,10 @@ public static class SalesOrdersModule
             [FromBody] CreateSalesOrderRequest request,
             ISalesOrderService svc, CancellationToken ct) =>
         {
-            try
-            {
-                var result = await svc.CreateAsync(request, ct);
-                return Results.Created($"/sales-orders/{result.IdSalesOrder}.json", result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.ValidationProblem(new Dictionary<string, string[]> { ["order"] = [ex.Message] });
-            }
+            var (result, error) = await svc.CreateAsync(request, ct);
+            if (error is not null)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["order"] = [error] });
+            return Results.Created($"/sales-orders/{result!.IdSalesOrder}.json", result);
         }).WithTags("SalesOrders");
 
         group.MapPut("/{id:int}", async (
@@ -56,15 +51,10 @@ public static class SalesOrdersModule
             [FromBody] UpdateSalesOrderRequest request,
             ISalesOrderService svc, CancellationToken ct) =>
         {
-            try
-            {
-                var result = await svc.UpdateAsync(id, request, ct);
-                return result is null ? Results.NotFound() : Results.Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.ValidationProblem(new Dictionary<string, string[]> { ["order"] = [ex.Message] });
-            }
+            var (result, error) = await svc.UpdateAsync(id, request, ct);
+            if (error is not null)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["order"] = [error] });
+            return result is null ? Results.NotFound() : Results.Ok(result);
         }).WithTags("SalesOrders");
 
         group.MapPost("/{id:int}/confirm", async (
@@ -145,6 +135,37 @@ public static class SalesOrdersModule
         {
             var deleted = await svc.RemoveAdvanceAsync(idAdvance, ct);
             return deleted ? Results.NoContent() : Results.NotFound();
+        }).WithTags("SalesOrders");
+
+        // ── C5: Flujo de pedido configurado ───────────────────────────────────
+        group.MapPost("/{id:int}/send-to-production", async (
+            int id, ISalesOrderService svc, CancellationToken ct) =>
+        {
+            var (result, error) = await svc.SendToProductionAsync(id, ct);
+            if (error is not null)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["order"] = [error] });
+            return Results.Ok(result);
+        }).WithTags("SalesOrders");
+
+        group.MapPost("/{id:int}/complete", async (
+            int id, ISalesOrderService svc, CancellationToken ct) =>
+        {
+            var (ok, error) = await svc.CompleteOrderAsync(id, ct);
+            return ok ? Results.Ok() : Results.ValidationProblem(new Dictionary<string, string[]> { ["order"] = [error!] });
+        }).WithTags("SalesOrders");
+
+        group.MapPost("/{id:int}/invoice", async (
+            int id, ISalesOrderService svc, CancellationToken ct) =>
+        {
+            var (result, error) = await svc.GenerateInvoiceAsync(id, ct);
+            if (error is not null)
+            {
+                // 409 Conflict si la factura ya existe (contiene "Ya existe")
+                if (error.StartsWith("Ya existe"))
+                    return Results.Conflict(new { message = error });
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["order"] = [error] });
+            }
+            return Results.Created($"/sales-invoices/{result!.IdSalesInvoice}.json", result);
         }).WithTags("SalesOrders");
 
         return endpoints;

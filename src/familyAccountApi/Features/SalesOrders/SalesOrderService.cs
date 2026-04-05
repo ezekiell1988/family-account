@@ -20,7 +20,13 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
         l.UnitPrice,
         l.TaxPercent,
         l.TotalLineAmount,
-        l.DescriptionLine);
+        l.DescriptionLine,
+        l.SalesOrderLineOptions.Select(o => new SalesOrderLineOptionResponse(
+            o.IdSalesOrderLineOption,
+            o.IdProductOptionItem,
+            o.IdProductOptionItemNavigation.NameItem,
+            o.IdProductOptionItemNavigation.PriceDelta,
+            o.Quantity)).ToList());
 
     private static IQueryable<SalesOrderResponse> ProjectOrder(IQueryable<SalesOrder> q) =>
         q.Select(so => new SalesOrderResponse(
@@ -54,7 +60,13 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
                 l.UnitPrice,
                 l.TaxPercent,
                 l.TotalLineAmount,
-                l.DescriptionLine)).ToList()));
+                l.DescriptionLine,
+                l.SalesOrderLineOptions.Select(o => new SalesOrderLineOptionResponse(
+                    o.IdSalesOrderLineOption,
+                    o.IdProductOptionItem,
+                    o.IdProductOptionItemNavigation.NameItem,
+                    o.IdProductOptionItemNavigation.PriceDelta,
+                    o.Quantity)).ToList())).ToList()));
 
     // ── Lecturas ─────────────────────────────────────────────────────────────
 
@@ -75,23 +87,35 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
 
     // ── Creates / Updates ────────────────────────────────────────────────────
 
-    public async Task<SalesOrderResponse> CreateAsync(CreateSalesOrderRequest request, CancellationToken ct = default)
+    public async Task<(SalesOrderResponse? Result, string? Error)> CreateAsync(CreateSalesOrderRequest request, CancellationToken ct = default)
     {
+        var optionError = await ValidateOptionsAsync(request.Lines, ct);
+        if (optionError is not null) return (null, optionError);
+
         var entity = BuildOrder(request);
+
+        await PopulateOptionsAsync(entity.SalesOrderLines, request.Lines, ct);
+        RecalcLineAmountsWithOptions(entity);
+        RecalcTotals(entity);
+
         db.SalesOrder.Add(entity);
         await db.SaveChangesAsync(ct);
-        return (await GetByIdAsync(entity.IdSalesOrder, ct))!;
+        return ((await GetByIdAsync(entity.IdSalesOrder, ct))!, null);
     }
 
-    public async Task<SalesOrderResponse?> UpdateAsync(int idSalesOrder, UpdateSalesOrderRequest request, CancellationToken ct = default)
+    public async Task<(SalesOrderResponse? Result, string? Error)> UpdateAsync(int idSalesOrder, UpdateSalesOrderRequest request, CancellationToken ct = default)
     {
         var entity = await db.SalesOrder
             .Include(so => so.SalesOrderLines)
+                .ThenInclude(l => l.SalesOrderLineOptions)
             .FirstOrDefaultAsync(so => so.IdSalesOrder == idSalesOrder, ct);
 
-        if (entity is null) return null;
+        if (entity is null) return (null, null);
         if (entity.StatusOrder != "Borrador")
-            throw new InvalidOperationException("Solo se puede editar un pedido en estado Borrador.");
+            return (null, "Solo se puede editar un pedido en estado Borrador.");
+
+        var optionError = await ValidateOptionsAsync(request.Lines, ct);
+        if (optionError is not null) return (null, optionError);
 
         db.SalesOrderLine.RemoveRange(entity.SalesOrderLines);
 
@@ -105,10 +129,12 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
         entity.DescriptionOrder  = request.DescriptionOrder;
 
         ApplyLines(entity, request.Lines);
+        await PopulateOptionsAsync(entity.SalesOrderLines, request.Lines, ct);
+        RecalcLineAmountsWithOptions(entity);
         RecalcTotals(entity);
 
         await db.SaveChangesAsync(ct);
-        return (await GetByIdAsync(idSalesOrder, ct))!;
+        return ((await GetByIdAsync(idSalesOrder, ct))!, null);
     }
 
     // ── Estado ───────────────────────────────────────────────────────────────
@@ -328,6 +354,102 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
 
     // ── Helpers privados ─────────────────────────────────────────────────────
 
+    /// <summary>T9: valida que los option items pertenezcan al producto de cada línea,
+    /// sin duplicados dentro del mismo grupo. T10: valida availability rules.</summary>
+    private async Task<string?> ValidateOptionsAsync(IReadOnlyList<SalesOrderLineRequest> lines, CancellationToken ct)
+    {
+        for (var idx = 0; idx < lines.Count; idx++)
+        {
+            var line = lines[idx];
+            if (line.Options is null || line.Options.Count == 0) continue;
+
+            var requestedIds = line.Options.Select(o => o.IdProductOptionItem).ToList();
+
+            // Cargar los option items con su grupo (filtrando por producto)
+            var items = await db.ProductOptionItem
+                .AsNoTracking()
+                .Include(i => i.IdProductOptionGroupNavigation)
+                .Where(i => requestedIds.Contains(i.IdProductOptionItem)
+                         && i.IdProductOptionGroupNavigation.IdProduct == line.IdProduct)
+                .ToListAsync(ct);
+
+            // T9-a: todos los ids deben pertenecer al producto
+            var foundIds  = items.Select(i => i.IdProductOptionItem).ToHashSet();
+            var invalidIds = requestedIds.Where(id => !foundIds.Contains(id)).ToList();
+            if (invalidIds.Count > 0)
+                return $"Línea {idx + 1}: los siguientes option items no pertenecen al producto: {string.Join(", ", invalidIds)}.";
+
+            // T9-b: sin duplicados dentro del mismo grupo (máximo 1 item por grupo por línea)
+            var dupGroup = items
+                .GroupBy(i => i.IdProductOptionGroup)
+                .FirstOrDefault(g => g.Count() > 1 && line.Options.Count(o => g.Any(i => i.IdProductOptionItem == o.IdProductOptionItem)) > 1);
+            if (dupGroup is not null)
+                return $"Línea {idx + 1}: el grupo '{dupGroup.First().IdProductOptionGroupNavigation.NameGroup}' tiene más de un ítem seleccionado.";
+
+            // T10: availability rules — cargar reglas de los items solicitados
+            var availabilityRules = await db.ProductOptionItemAvailability
+                .AsNoTracking()
+                .Where(r => requestedIds.Contains(r.IdRestrictedItem))
+                .ToListAsync(ct);
+
+            foreach (var rule in availabilityRules.GroupBy(r => r.IdRestrictedItem))
+            {
+                var enablerIds = rule.Select(r => r.IdEnablingItem).ToHashSet();
+                var anEnabler  = requestedIds.Any(id => enablerIds.Contains(id));
+                if (!anEnabler)
+                    return $"Línea {idx + 1}: el ítem de opción {rule.Key} requiere que al menos uno de sus habilitadores esté seleccionado: {string.Join(", ", enablerIds)}.";
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>T11: carga los option items y los asigna a las líneas del pedido,
+    /// ajustando UnitPrice con la suma de PriceDeltas.</summary>
+    private async Task PopulateOptionsAsync(
+        ICollection<SalesOrderLine> salesLines,
+        IReadOnlyList<SalesOrderLineRequest> requestLines,
+        CancellationToken ct)
+    {
+        var linesArray = salesLines.ToArray();
+
+        for (var i = 0; i < requestLines.Count; i++)
+        {
+            var reqLine  = requestLines[i];
+            var saleLine = linesArray[i];
+
+            if (reqLine.Options is null || reqLine.Options.Count == 0) continue;
+
+            var itemIds = reqLine.Options.Select(o => o.IdProductOptionItem).Distinct().ToList();
+            var itemMap = await db.ProductOptionItem
+                .AsNoTracking()
+                .Where(x => itemIds.Contains(x.IdProductOptionItem))
+                .ToDictionaryAsync(x => x.IdProductOptionItem, ct);
+
+            foreach (var opt in reqLine.Options)
+            {
+                saleLine.SalesOrderLineOptions.Add(new SalesOrderLineOption
+                {
+                    IdProductOptionItem = opt.IdProductOptionItem,
+                    Quantity            = opt.Quantity
+                });
+            }
+
+            // Ajustar UnitPrice con suma de PriceDeltas
+            var deltaSum = reqLine.Options.Sum(o =>
+                itemMap.TryGetValue(o.IdProductOptionItem, out var item) ? item.PriceDelta * o.Quantity : 0m);
+
+            saleLine.UnitPrice = reqLine.UnitPrice + deltaSum;
+        }
+    }
+
+    /// <summary>Recalcula TotalLineAmount por línea después de aplicar las opciones.</summary>
+    private static void RecalcLineAmountsWithOptions(SalesOrder order)
+    {
+        foreach (var line in order.SalesOrderLines)
+            line.TotalLineAmount = Math.Round(line.Quantity * line.UnitPrice * (1 + line.TaxPercent / 100m), 2);
+    }
+
     private static SalesOrder BuildOrder(CreateSalesOrderRequest request)
     {
         var order = new SalesOrder
@@ -382,5 +504,279 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
     {
         var count = await db.SalesOrder.CountAsync(so => so.StatusOrder != "Borrador", ct);
         return $"PED-{DateTime.UtcNow:yyyy}-{(count + 1):D4}";
+    }
+
+    // ── C5: Flujo de pedido configurado ──────────────────────────────────────
+
+    public async Task<(SendToProductionResponse? Result, string? Error)> SendToProductionAsync(
+        int idSalesOrder, CancellationToken ct = default)
+    {
+        // 1. Cargar pedido con líneas, opciones y producto
+        var order = await db.SalesOrder
+            .Include(so => so.SalesOrderLines)
+                .ThenInclude(l => l.IdProductNavigation)
+            .Include(so => so.SalesOrderLines)
+                .ThenInclude(l => l.SalesOrderLineOptions)
+                    .ThenInclude(o => o.IdProductOptionItemNavigation)
+            .FirstOrDefaultAsync(so => so.IdSalesOrder == idSalesOrder, ct);
+
+        if (order is null) return (null, "Pedido no encontrado.");
+
+        // 2. Validar estado
+        if (order.StatusOrder != "Confirmado")
+            return (null, "El pedido debe estar en estado 'Confirmado' para enviarse a producción.");
+
+        // 3. Validar que no exista OP activa vinculada
+        var existsActiveOp = await db.ProductionOrder
+            .AnyAsync(po => po.IdSalesOrder == idSalesOrder
+                         && po.StatusProductionOrder != "Anulado", ct);
+        if (existsActiveOp)
+            return (null, "El pedido ya tiene una orden de producción activa. Use el endpoint de completado.");
+
+        var createdOrders = new List<CreatedProductionOrderInfo>();
+        var opCount       = await db.ProductionOrder.CountAsync(po => po.StatusProductionOrder != "Borrador", ct);
+
+        foreach (var line in order.SalesOrderLines)
+        {
+            // Cargar receta base del producto (activa)
+            var baseRecipe = await db.ProductRecipe
+                .Include(r => r.ProductRecipeLines)
+                .FirstOrDefaultAsync(r => r.IdProductOutput == line.IdProduct && r.IsActive, ct);
+
+            if (baseRecipe is null) continue;  // Sin receta activa → no genera OP
+
+            // Acumular insumos base
+            var inputAgg = baseRecipe.ProductRecipeLines
+                .ToDictionary(
+                    rl => rl.IdProductInput,
+                    rl => rl.QuantityInput * line.QuantityBase / baseRecipe.QuantityOutput);
+
+            // Agregar insumos de recetas de opciones
+            foreach (var opt in line.SalesOrderLineOptions)
+            {
+                var optItem = opt.IdProductOptionItemNavigation;
+                if (optItem.IdProductRecipe is null) continue;
+
+                var optRecipe = await db.ProductRecipe
+                    .Include(r => r.ProductRecipeLines)
+                    .FirstOrDefaultAsync(r => r.IdProductRecipe == optItem.IdProductRecipe, ct);
+
+                if (optRecipe is null) continue;
+
+                foreach (var rl in optRecipe.ProductRecipeLines)
+                {
+                    var qty = rl.QuantityInput * opt.Quantity / optRecipe.QuantityOutput;
+                    inputAgg[rl.IdProductInput] = inputAgg.TryGetValue(rl.IdProductInput, out var existing)
+                        ? existing + qty
+                        : qty;
+                }
+            }
+
+            // Obtener unidad base del producto final
+            var baseUnit = await db.ProductUnit
+                .FirstOrDefaultAsync(pu => pu.IdProduct == line.IdProduct && pu.IsBase, ct);
+            var idUnit = baseUnit?.IdProductUnit
+                      ?? (await db.ProductUnit.FirstOrDefaultAsync(pu => pu.IdProduct == line.IdProduct, ct))?.IdProductUnit
+                      ?? line.IdProductUnit;
+
+            // Crear OP con los insumos combinados
+            opCount++;
+            var opNumber = $"OP-{DateTime.UtcNow:yyyy}-{opCount:D4}";
+            var po = new ProductionOrder
+            {
+                IdFiscalPeriod        = order.IdFiscalPeriod,
+                IdSalesOrder          = order.IdSalesOrder,
+                IdWarehouse           = null,
+                NumberProductionOrder = opNumber,
+                DateOrder             = order.DateOrder,
+                DateRequired          = order.DateDelivery,
+                StatusProductionOrder = "Pendiente",
+                DescriptionOrder      = $"Auto-generada desde pedido {order.NumberOrder}, línea #{line.IdSalesOrderLine}",
+                CreatedAt             = DateTime.UtcNow
+            };
+
+            // Líneas de insumos (MP)
+            foreach (var (idProduct, qty) in inputAgg)
+            {
+                var inpUnit = await db.ProductUnit
+                    .FirstOrDefaultAsync(pu => pu.IdProduct == idProduct && pu.IsBase, ct)
+                    ?? await db.ProductUnit.FirstOrDefaultAsync(pu => pu.IdProduct == idProduct, ct);
+
+                po.ProductionOrderLines.Add(new ProductionOrderLine
+                {
+                    IdProduct        = idProduct,
+                    IdProductUnit    = inpUnit?.IdProductUnit ?? 0,
+                    IdSalesOrderLine = line.IdSalesOrderLine,
+                    QuantityRequired = Math.Round(qty, 4),
+                    QuantityProduced = 0m
+                });
+            }
+
+            db.ProductionOrder.Add(po);
+
+            // Crear Fulfillment entre línea del pedido y la OP
+            db.SalesOrderLineFulfillment.Add(new SalesOrderLineFulfillment
+            {
+                IdSalesOrderLine  = line.IdSalesOrderLine,
+                FulfillmentType   = "Produccion",
+                IdProductionOrder = 0,  // se actualizará tras SaveChanges
+                QuantityBase      = line.QuantityBase,
+                CreatedAt         = DateTime.UtcNow
+            });
+
+            createdOrders.Add(new CreatedProductionOrderInfo(
+                0,
+                opNumber,
+                line.IdSalesOrderLine,
+                line.IdProductNavigation.NameProduct));
+        }
+
+        if (createdOrders.Count == 0)
+            return (null, "Ninguna línea del pedido tiene una receta activa para generar órdenes de producción.");
+
+        // 5. Cambiar estado
+        order.StatusOrder = "EnProduccion";
+        await db.SaveChangesAsync(ct);
+
+        // 6. Actualizar IdProductionOrder en fulfillments (ahora tenemos los IDs)
+        var fulfillments = await db.SalesOrderLineFulfillment
+            .Where(f => f.IdSalesOrderLineNavigation.IdSalesOrder == idSalesOrder
+                     && f.FulfillmentType == "Produccion"
+                     && f.IdProductionOrder == 0)
+            .ToListAsync(ct);
+
+        var opsList = await db.ProductionOrder
+            .Where(po => po.IdSalesOrder == idSalesOrder && po.StatusProductionOrder != "Anulado")
+            .OrderBy(po => po.IdProductionOrder)
+            .ToListAsync(ct);
+
+        for (var i = 0; i < fulfillments.Count && i < opsList.Count; i++)
+            fulfillments[i].IdProductionOrder = opsList[i].IdProductionOrder;
+
+        await db.SaveChangesAsync(ct);
+
+        // Completar respuesta con IDs reales
+        var finalCreated = opsList.Select((po, i) => new CreatedProductionOrderInfo(
+            po.IdProductionOrder,
+            po.NumberProductionOrder,
+            createdOrders[i].IdSalesOrderLine,
+            createdOrders[i].ProductName)).ToList();
+
+        return (new SendToProductionResponse(finalCreated), null);
+    }
+
+    // ── T17: complete ─────────────────────────────────────────────────────────
+
+    public async Task<(bool Ok, string? Error)> CompleteOrderAsync(int idSalesOrder, CancellationToken ct = default)
+    {
+        var order = await db.SalesOrder.FindAsync([idSalesOrder], ct);
+        if (order is null) return (false, "Pedido no encontrado.");
+        if (order.StatusOrder != "EnProduccion")
+            return (false, "El pedido debe estar en estado 'EnProduccion' para completarse.");
+
+        // Verificar que todas las OPs vinculadas están completadas
+        var ops = await db.ProductionOrder
+            .Where(po => po.IdSalesOrder == idSalesOrder && po.StatusProductionOrder != "Anulado")
+            .Select(po => new { po.IdProductionOrder, po.NumberProductionOrder, po.StatusProductionOrder })
+            .ToListAsync(ct);
+
+        var pending = ops.Where(po => po.StatusProductionOrder != "Completado").ToList();
+        if (pending.Count > 0)
+        {
+            var detail = string.Join(", ", pending.Select(po => $"{po.NumberProductionOrder} ({po.StatusProductionOrder})"));
+            return (false, $"Las siguientes órdenes de producción no están completadas: {detail}.");
+        }
+
+        order.StatusOrder = "Completado";
+        await db.SaveChangesAsync(ct);
+        return (true, null);
+    }
+
+    // ── T18: invoice ──────────────────────────────────────────────────────────
+
+    public async Task<(GenerateInvoiceResponse? Result, string? Error)> GenerateInvoiceAsync(
+        int idSalesOrder, CancellationToken ct = default)
+    {
+        var order = await db.SalesOrder
+            .Include(so => so.SalesOrderLines)
+                .ThenInclude(l => l.SalesOrderLineOptions)
+                    .ThenInclude(o => o.IdProductOptionItemNavigation)
+            .Include(so => so.SalesOrderLines)
+                .ThenInclude(l => l.SalesOrderLineFulfillments)
+            .FirstOrDefaultAsync(so => so.IdSalesOrder == idSalesOrder, ct);
+
+        if (order is null) return (null, "Pedido no encontrado.");
+        if (order.StatusOrder != "Completado")
+            return (null, "El pedido debe estar en estado 'Completado' para facturarse.");
+
+        // Verificar que no exista ya una factura
+        var existingInvoice = await db.SalesInvoice
+            .AsNoTracking()
+            .FirstOrDefaultAsync(si => si.IdSalesOrder == idSalesOrder, ct);
+        if (existingInvoice is not null)
+            return (null, $"Ya existe la factura #{existingInvoice.NumberInvoice} para este pedido (IdSalesInvoice={existingInvoice.IdSalesInvoice}).");
+
+        // Obtener el primer tipo de factura de venta disponible
+        var invoiceType = await db.SalesInvoiceType
+            .AsNoTracking()
+            .FirstOrDefaultAsync(ct);
+        if (invoiceType is null) return (null, "No se encontró ningún tipo de factura de venta configurado.");
+
+        var invoice = new SalesInvoice
+        {
+            IdFiscalPeriod    = order.IdFiscalPeriod,
+            IdCurrency        = order.IdCurrency,
+            IdSalesInvoiceType = invoiceType.IdSalesInvoiceType,
+            IdContact         = order.IdContact,
+            IdSalesOrder      = order.IdSalesOrder,
+            NumberInvoice     = "BORRADOR",
+            DateInvoice       = DateOnly.FromDateTime(DateTime.UtcNow),
+            StatusInvoice     = "Borrador",
+            ExchangeRateValue = order.ExchangeRateValue,
+            DescriptionInvoice = order.DescriptionOrder,
+            CreatedAt         = DateTime.UtcNow
+        };
+
+        foreach (var line in order.SalesOrderLines)
+        {
+            // Buscar si hay fulfillment de producción con lote PT
+            var fulfillment = line.SalesOrderLineFulfillments
+                .FirstOrDefault(f => f.FulfillmentType == "Produccion" && f.IdInventoryLot.HasValue);
+
+            var sil = new SalesInvoiceLine
+            {
+                IsNonProductLine = false,
+                IdProduct        = line.IdProduct,
+                IdUnit           = line.IdProductUnit,
+                IdInventoryLot   = fulfillment?.IdInventoryLot,
+                DescriptionLine  = line.DescriptionLine ?? string.Empty,
+                Quantity         = line.Quantity,
+                UnitPrice        = line.UnitPrice,
+                TaxPercent       = line.TaxPercent,
+                TotalLineAmount  = line.TotalLineAmount
+            };
+
+            // Copiar options
+            foreach (var opt in line.SalesOrderLineOptions)
+            {
+                sil.SalesInvoiceLineOptions.Add(new SalesInvoiceLineOption
+                {
+                    IdProductOptionItem = opt.IdProductOptionItem,
+                    Quantity            = opt.Quantity
+                });
+            }
+
+            invoice.SalesInvoiceLines.Add(sil);
+        }
+
+        // Recalcular totales de la factura
+        invoice.SubTotalAmount = invoice.SalesInvoiceLines.Sum(l => Math.Round(l.Quantity * l.UnitPrice, 2));
+        invoice.TaxAmount      = invoice.SalesInvoiceLines.Sum(l => Math.Round(l.Quantity * l.UnitPrice * l.TaxPercent / 100m, 2));
+        invoice.TotalAmount    = invoice.SubTotalAmount + invoice.TaxAmount;
+
+        db.SalesInvoice.Add(invoice);
+        await db.SaveChangesAsync(ct);
+
+        return (new GenerateInvoiceResponse(invoice.IdSalesInvoice), null);
     }
 }

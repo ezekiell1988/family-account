@@ -45,5 +45,14 @@ public sealed class ProductOptionItemConfiguration : IEntityTypeConfiguration<Pr
             .WithMany(g => g.ProductOptionItems)
             .HasForeignKey(i => i.IdProductOptionGroup)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // ── FK: ProductRecipe (opcional) ─────────────────────────────────────
+        builder.Property(i => i.IdProductRecipe)
+            .HasComment("FK opcional a la receta que se usa para producir este option item (ej: receta de masa delgada).");
+
+        builder.HasOne(i => i.IdProductRecipeNavigation)
+            .WithMany()
+            .HasForeignKey(i => i.IdProductRecipe)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -5,4 +5,5 @@ public sealed record ProductOptionItemResponse(
     string  NameItem,
     decimal PriceDelta,
     bool    IsDefault,
-    int     SortOrder);
+    int     SortOrder,
+    int?    IdProductRecipe);

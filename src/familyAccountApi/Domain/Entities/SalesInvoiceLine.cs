@@ -23,6 +23,7 @@ public sealed class SalesInvoiceLine
     public InventoryLot?   IdInventoryLotNavigation    { get; set; }
     public ProductRecipe?  IdProductRecipeNavigation   { get; set; }
 
-    public ICollection<SalesInvoiceLineEntry>    SalesInvoiceLineEntries { get; set; } = [];
-    public ICollection<SalesInvoiceLineBomDetail> BomDetails             { get; set; } = [];
+    public ICollection<SalesInvoiceLineEntry>    SalesInvoiceLineEntries  { get; set; } = [];
+    public ICollection<SalesInvoiceLineBomDetail> BomDetails              { get; set; } = [];
+    public ICollection<SalesInvoiceLineOption>    SalesInvoiceLineOptions  { get; set; } = [];
 }

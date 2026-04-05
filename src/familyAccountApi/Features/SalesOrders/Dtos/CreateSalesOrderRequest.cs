@@ -77,4 +77,11 @@ public sealed record SalesOrderLineRequest
     [StringLength(500)]
     [Description("Descripción opcional de la línea")]
     public string? DescriptionLine { get; init; }
+
+    [Description("Opciones configurables seleccionadas para este producto. Opcional.")]
+    public IReadOnlyList<SalesOrderLineOptionRequest>? Options { get; init; }
 }
+
+public sealed record SalesOrderLineOptionRequest(
+    [property: Required] int IdProductOptionItem,
+    decimal Quantity = 1m);
