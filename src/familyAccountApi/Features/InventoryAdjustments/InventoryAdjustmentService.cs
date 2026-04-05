@@ -381,7 +381,7 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
     {
         var adjustment = await db.InventoryAdjustment
             .Include(ia => ia.InventoryAdjustmentLines)
-                .ThenInclude(l => l.IdInventoryLotNavigation)
+                .ThenInclude(l => l.IdInventoryLotNavigation!)
                     .ThenInclude(il => il.Product)
             .FirstOrDefaultAsync(ia => ia.IdInventoryAdjustment == idInventoryAdjustment, ct);
 
@@ -396,7 +396,7 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
         {
             if (line.QuantityDelta == 0) continue;  // ajuste de costo puro: sin cambio de cantidad
 
-            var lot = line.IdInventoryLotNavigation;
+            var lot = line.IdInventoryLotNavigation!;
             var newQty = lot.QuantityAvailable - line.QuantityDelta;
             if (newQty < 0)
                 return (null,
@@ -410,7 +410,7 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
         {
             if (line.QuantityDelta == 0) continue;
 
-            var lot     = line.IdInventoryLotNavigation;
+            var lot     = line.IdInventoryLotNavigation!;
             var product = lot.Product;
 
             lot.QuantityAvailable -= line.QuantityDelta;
