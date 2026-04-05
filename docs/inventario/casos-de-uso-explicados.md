@@ -1,0 +1,150 @@
+# Los 6 casos de uso del inventario — Guía para todos
+
+> Este documento explica de forma sencilla cómo funciona el inventario en cada situación del negocio.
+> No se necesita conocimiento técnico. Solo leer y seguir los pasos.
+
+---
+
+## Caso 1 — Reventa (ejemplo: Coca-Cola)
+
+**¿Qué es?** Compro algo, lo guardo en bodega y luego lo vendo con ganancia.
+
+**Pasos:**
+
+1. El proveedor me entrega **100 cajas de Coca-Cola**.
+2. Registro la compra en el sistema → el sistema anota que tengo 100 cajas disponibles en bodega.
+3. Un cliente me pide **10 cajas**.
+4. Al confirmar la venta, elijo de qué lote de compra salen esas 10 cajas.
+5. El sistema descuenta 10 cajas → quedan 90 disponibles.
+6. El sistema calcula automáticamente cuánto me costó lo que vendí.
+
+**Si cancelo la venta:** las 10 cajas vuelven a la bodega automáticamente.
+
+---
+
+## Caso 2 — Manufactura (ejemplo: Chile embotellado)
+
+**¿Qué es?** Compro materias primas, las transformo en un producto terminado y luego vendo ese producto.
+
+**Pasos:**
+
+1. Compro los insumos: **chiles, vinagre, sal, frascos**.
+2. El sistema registra cada insumo en bodega como disponible.
+3. Abro una **Orden de Producción** para hacer "Chile embotellado marca X".
+4. La orden ya sabe qué ingredientes necesita y en qué cantidad (eso está en la receta).
+5. Cuando termino de producir, marco la orden como **Completada**.
+6. El sistema descuenta los insumos usados de bodega (auto, de los lotes más antiguos primero).
+7. El sistema crea un lote nuevo de "Chile embotellado" con las unidades producidas.
+8. Cuando llega un cliente, vendo desde ese lote de producto terminado.
+
+**Ejemplo concreto:**
+- Receta: 1 frasco de chile necesita 200g de chile, 50ml de vinagre, 5g de sal.
+- Produzco 100 frascos → el sistema descuenta 20 kg de chile, 5 lt de vinagre y 500g de sal.
+- Quedan 100 frascos disponibles para vender.
+
+---
+
+## Caso 3 — Ensamble en venta (ejemplo: Hot dog)
+
+**¿Qué es?** No produzco con anticipación. Los ingredientes se descuentan en el mismo momento en que confirmo la venta.
+
+**Pasos:**
+
+1. Tengo en bodega: **panes, salchichas, mostaza, catsup**.
+2. El cliente pide **3 hot dogs**.
+3. Agrego "Hot dog" a la factura.
+4. Al confirmar la factura, el sistema busca automáticamente la receta del hot dog.
+5. El sistema descuenta por cada hot dog: 1 pan, 1 salchicha, una porción de mostaza y catsup.
+6. No necesito indicarle nada al sistema — él solo sabe qué descontar.
+
+**Diferencia con Manufactura:**
+- En manufactura produzco primero y luego vendo el producto terminado.
+- En ensamble no hay producción previa; los ingredientes salen directo al vender.
+
+**Si cancelo la factura:** todos los ingredientes regresan a bodega automáticamente.
+
+---
+
+## Caso 4 — Variantes (ejemplo: Ropa por talla y color)
+
+**¿Qué es?** Vendo un mismo producto en varias versiones (talla S, M, L / color azul, rojo). Cada versión tiene su propio inventario separado.
+
+**Pasos:**
+
+1. En el catálogo creo el producto padre: **"Camisa Oxford"**.
+2. Defino sus variantes: Talla S Azul, Talla M Azul, Talla L Azul, Talla S Rojo, etc.
+3. Compro **20 camisas Talla M Azul** → solo ese inventario sube.
+4. El cliente quiere una **Talla L Rojo** → si no hay stock de esa variante exacta, el sistema avisa.
+5. Al facturar, el operador elige la variante exacta (Talla M Azul) y el sistema descuenta de ese inventario.
+
+**Ejemplo concreto:**
+- Talla S Azul: 5 unidades disponibles.
+- Talla M Azul: 20 unidades disponibles.
+- Talla L Rojo: 0 unidades → no se puede vender.
+
+---
+
+## Caso 5 — Pedido configurado (ejemplo: Pizza)
+
+**¿Qué es?** El cliente arma su pedido eligiendo opciones (tamaño, masa, sabor, extras). El pedido pasa a producción y luego se entrega y factura.
+
+**Pasos:**
+
+1. El cliente hace un **pedido de 1 pizza**.
+2. Elige las opciones: **Grande, Masa Delgada, Pepperoni, Extra Queso**.
+3. El sistema guarda el pedido con todas esas opciones.
+4. El operador confirma el pedido.
+5. Se envía a producción → el sistema crea una Orden de Producción automáticamente.
+6. La orden calcula todos los ingredientes necesarios sumando: la receta base de la pizza + los ingredientes de cada opción elegida.
+   - Ejemplo: Grande agrega más harina y agua. Extra Queso agrega mozzarella.
+7. Los cocineros trabajan la orden.
+8. Al marcar la orden como **Completada**, el sistema descuenta los ingredientes de bodega.
+9. Se crea un lote de "Pizza terminada".
+10. El operador marca el pedido como entregado.
+11. Se genera la factura al cliente mostrando: Pizza + opciones elegidas + precio total.
+
+---
+
+## Caso 6 — Combo configurado (ejemplo: 2 Pizzas + Bebida)
+
+**¿Qué es?** El cliente compra un combo que tiene varios "espacios" (slots). En cada espacio elige un producto y sus opciones. El negocio puede fijar algunas opciones de antemano (por ejemplo: todas las pizzas del combo son Grandes).
+
+**Pasos:**
+
+1. El cliente pide el combo **"2 Pizzas + Bebida"** (precio base $25.00).
+2. El sistema le muestra los 3 espacios del combo:
+   - **Espacio 1 — Pizza #1**: Tamaño ya fijado en Grande. El cliente elige masa, sabor y extras.
+   - **Espacio 2 — Pizza #2**: Igual, Tamaño ya fijado en Grande. El cliente elige masa, sabor y extras.
+   - **Espacio 3 — Bebida**: El cliente elige entre Coca-Cola, Sprite o agua.
+3. Cliente elige:
+   - Pizza #1: Masa Delgada, Pepperoni, Doble Queso (+$1.50)
+   - Pizza #2: Masa Clásica, Hawaiian
+   - Bebida: Coca-Cola
+4. El sistema calcula el precio final: $25.00 base + $1.50 del Doble Queso = **$26.50 total**.
+5. El operador confirma el pedido.
+6. Se envían **2 Órdenes de Producción** automáticamente, una por cada pizza.
+   - OP #1: ingredientes de Pizza Grande + Masa Delgada + Pepperoni + Doble Queso.
+   - OP #2: ingredientes de Pizza Grande + Masa Clásica + Hawaiian.
+7. La bebida no va a producción — se sirve directo de bodega.
+8. Cuando ambas órdenes quedan **Completadas**, el sistema descuenta todos los ingredientes usados.
+9. El operador marca el pedido como entregado.
+10. Se genera la factura mostrando:
+    - Combo 2 Pizzas + Bebida ........... $25.00
+    - → Pizza #1: Grande, Delgada, Pepperoni
+    - → → Extra: Doble Queso ............. $1.50
+    - → Pizza #2: Grande, Clásica, Hawaiian
+    - → Bebida: Coca-Cola
+    - **Total: $26.50**
+
+---
+
+## Resumen rápido
+
+| Caso | ¿Qué hago? | ¿Cuándo sale el stock? |
+|------|-----------|----------------------|
+| C1 Reventa | Compro y vendo tal cual | Al confirmar la venta |
+| C2 Manufactura | Compro MP, produzco y vendo el producto terminado | Al completar la producción |
+| C3 Ensamble | Vendo un producto que se arma al momento con ingredientes | Al confirmar la factura |
+| C4 Variantes | Vendo un producto en diferentes versiones (talla/color) | Al confirmar la venta de la variante |
+| C5 Pedido configurado | El cliente elige opciones → pasa a producción → se entrega | Al completar la producción |
+| C6 Combo configurado | El cliente arma un combo con varios productos y opciones | Al completar cada producción del combo |
