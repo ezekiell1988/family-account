@@ -57,6 +57,10 @@ public sealed record UpdatePurchaseInvoiceRequest
     public string? DescriptionInvoice { get; init; }
 
     [Required]
+    [Range(1, int.MaxValue)]
+    [Description("ID del almacén destino de la mercadería. Opcional; si se omite se conserva el valor actual.")]
+    public int? IdWarehouse { get; init; }
+
     [Range(typeof(decimal), "0.0001", "999999999999.9999", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     [Description("Tipo de cambio al momento del registro")]
     public required decimal ExchangeRateValue { get; init; }

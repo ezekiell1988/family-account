@@ -24,7 +24,7 @@
 | Distribución contable por producto | ✅ `ProductAccount` — validación de suma = 100% al confirmar | Específico |
 | Concurrencia optimista en costo | ✅ `Product.RowVersion` | Buena práctica |
 | Múltiples métodos de costeo | ❌ Solo WAC | Básico |
-| Múltiples almacenes / ubicaciones | ❌ No existe `Warehouse` ni `Location` | Ausente |
+| Múltiples almacenes / ubicaciones | ✅ `Warehouse` table — `InventoryLot.idWarehouse` FK | Estándar |
 | Control de series/números de serie | ❌ No existe `SerialNumber` | Ausente |
 | Punto de reorden / stock de seguridad | ✅ `Product.ReorderPoint`, `SafetyStock`, `ReorderQuantity`. Endpoint `GET /products/below-reorder-point.json` | Estándar |
 | Conteo cíclico (cycle count) | ✅ `POST /inventory-adjustments/cycle-count` — el operador ingresa cantidad física por lote, el system calcula `quantityDelta = físico − libro` automáticamente. Preview sin persistir vía `POST /cycle-count/preview`. Usa tipo `CONTEO` (seed). | Estándar |
@@ -69,6 +69,21 @@
 | **family-account (hoy)** | Sin almacenes — el stock es por lote a nivel de empresa |
 
 **Brecha identificada**: todos los ERPs comparados, incluso los de entrada como QuickBooks Commerce, manejan al menos múltiples almacenes. Con una sola tienda esto no es crítico, pero en cuanto se agregue una segunda sucursal, bodega de producción separada o bodega de materia prima vs producto terminado, el modelo actual no lo soporta.
+
+**Estado: ✅ Implementado (abril 2026 — M2)**
+
+Cambios realizados:
+- **`Warehouse`** — nueva entidad `{ IdWarehouse, NameWarehouse, IsDefault, IsActive }`. Seed: `IdWarehouse=1, NameWarehouse='Principal', IsDefault=true`.
+- **`InventoryLot.IdWarehouse INT NOT NULL DEFAULT 1`** — todos los lotes existentes quedan asignados al almacén Principal.
+- **`PurchaseInvoice.IdWarehouse INT? FK`** — opcional en la cabecera; si es nulo al confirmar, el sistema busca el almacén marcado como `IsDefault`. Si no hay ninguno, la confirmación falla con error descriptivo.
+- **`InventoryAdjustmentConfiguration`** — FK `Restrict` (no se puede eliminar un almacén con lotes asociados).
+- **`InventoryLotResponse`** — expone `IdWarehouse` y `NameWarehouse`.
+- **`InventoryLotService.GetByProductAsync`** — acepta `int? idWarehouse` opcional para filtrar por almacén.
+- **`InventoryLotService.GetSuggestedLotAsync`** — acepta `int? idWarehouse` opcional; el FEFO interno de `SalesInvoiceService` sigue sin filtro de almacén (backward compatible).
+- **Endpoints `GET /inventory-lots/by-product/{id}.json?idWarehouse=`** y **`GET /inventory-lots/suggest/{id}.json?idWarehouse=`** actualizados.
+- **`WarehouseService / WarehousesModule`** — CRUD completo en `GET|POST|PUT|DELETE /api/v1/warehouses`. Al establecer `IsDefault=true` en un almacén, los demás pierden esa condición automáticamente.
+- **Transferencias entre almacenes**: se implementan creando un `InventoryAdjustmentType` de tipo transferencia y dos ajustes delta (-/+) en cada almacén respectivo (sin cambio de modelo adicional).
+- **Migración**: `20260405180401_AddWarehouse`.
 
 > **Mejora potencial M2**: agregar `Warehouse { IdWarehouse, NameWarehouse, IsDefault }` y `IdWarehouse INT FK` en `InventoryLot`. Prácticamente sin cambios en la lógica de confirmación: la selección de lote en FEFO ya filtra por `IdProduct`; agregar un filtro adicional `IdWarehouse = ?` es mínimo. Transferencias entre almacenes serían un nuevo `InventoryAdjustmentType` predefinido.
 
@@ -237,7 +252,7 @@ Cambios realizados:
 | # | Capacidad faltante | Complejidad de modelo | Impacto operativo | Prioridad sugerida |
 |---|---|---|---|---|
 | M1 | Métodos de costeo múltiples (FIFO, Specific) | Media | Alto si hay productos de alto valor | Media |
-| M2 | Múltiples almacenes / bodegas | Alta | Crítico en cuanto haya 2+ locales | Alta |
+| M2 | Múltiples almacenes / bodegas | Alta | Crítico en cuanto haya 2+ locales | ✅ Implementado |
 | M3 | Reserva de stock contra pedido | Baja | Alta — evita doble-asignación | ✅ Implementado |
 | M4 | Números de serie | Media | Alto para equipos o garantías | Media |
 | M5 | Estado de calidad / cuarentena en lote | Muy baja | Crítico para alimentos (HACCP) | ✅ Implementado |
@@ -273,7 +288,7 @@ Estas capacidades están implementadas de forma más ro­bus­ta que en sistemas
 
 ### Mediano plazo (requieren diseño nuevo)
 
-4. **M2 — Múltiples almacenes**: agregar `Warehouse` + `IdWarehouse` en `InventoryLot`. Requiere revisar todos los servicios que consultan stock.
+4. ~~**M2 — Múltiples almacenes**~~: ✅ Implementado (abril 2026). `Warehouse` + `IdWarehouse` en `InventoryLot` y `PurchaseInvoice` — migración `20260405180401_AddWarehouse`.
 5. **M8 — Opciones con stock**: ampliar `ProductOptionItem` + nueva tabla `SalesInvoiceLineOption`. Requiere colaboración con UI.
 
 ### Largo plazo / condicional

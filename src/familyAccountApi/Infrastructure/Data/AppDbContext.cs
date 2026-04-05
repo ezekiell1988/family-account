@@ -24,6 +24,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ProductRecipeLine>        ProductRecipeLine        => Set<ProductRecipeLine>();
     public DbSet<InventoryLot>             InventoryLot             => Set<InventoryLot>();
     public DbSet<InventoryAdjustmentType>  InventoryAdjustmentType  => Set<InventoryAdjustmentType>();
+    public DbSet<Warehouse>                Warehouse                => Set<Warehouse>();
     public DbSet<InventoryAdjustment>      InventoryAdjustment      => Set<InventoryAdjustment>();
     public DbSet<InventoryAdjustmentLine>  InventoryAdjustmentLine  => Set<InventoryAdjustmentLine>();
     public DbSet<InventoryAdjustmentEntry> InventoryAdjustmentEntry => Set<InventoryAdjustmentEntry>();

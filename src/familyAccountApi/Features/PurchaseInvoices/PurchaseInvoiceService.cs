@@ -17,6 +17,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
             .Include(pi => pi.IdPurchaseInvoiceTypeNavigation)
             .Include(pi => pi.IdBankAccountNavigation)
             .Include(pi => pi.IdContactNavigation)
+            .Include(pi => pi.IdWarehouseNavigation)
             .Include(pi => pi.PurchaseInvoiceLines)
                 .ThenInclude(l => l.IdProductNavigation)
             .Include(pi => pi.PurchaseInvoiceLines)
@@ -49,6 +50,8 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
         pi.ExchangeRateValue,
         pi.CreatedAt,
         pi.PurchaseInvoiceEntries.FirstOrDefault()?.IdAccountingEntry,
+        pi.IdWarehouse,
+        pi.IdWarehouseNavigation?.NameWarehouse,
         pi.PurchaseInvoiceLines
             .Select(l => new PurchaseInvoiceLineResponse(
                 l.IdPurchaseInvoiceLine,
@@ -102,6 +105,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
             IdPurchaseInvoiceType = request.IdPurchaseInvoiceType,
             IdBankAccount         = request.IdBankAccount,
             IdContact             = idContact,
+            IdWarehouse           = request.IdWarehouse,
             NumberInvoice         = request.NumberInvoice.Trim(),
             ProviderName          = providerName,
             DateInvoice           = request.DateInvoice,
@@ -145,6 +149,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
         entity.IdPurchaseInvoiceType = request.IdPurchaseInvoiceType;
         entity.IdBankAccount         = request.IdBankAccount;
         entity.IdContact             = idContact;
+        entity.IdWarehouse           = request.IdWarehouse;
         entity.NumberInvoice         = request.NumberInvoice.Trim();
         entity.ProviderName          = providerName;
         entity.DateInvoice           = request.DateInvoice;
@@ -439,6 +444,18 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
         await db.SaveChangesAsync(CancellationToken.None);
 
         // ── L1: Crear lotes de inventario y actualizar QuantityBase ─────────
+        var warehouseId = invoice.IdWarehouse
+            ?? await db.Warehouse
+                .Where(w => w.IsDefault)
+                .Select(w => w.IdWarehouse)
+                .FirstOrDefaultAsync(CancellationToken.None);
+
+        if (warehouseId == 0)
+            return (false,
+                "La factura no tiene almacén asignado y no existe un almacén predeterminado. " +
+                "Asigne un almacén a la factura o configure uno como predeterminado.",
+                null);
+
         foreach (var line in invoice.PurchaseInvoiceLines)
         {
             if (line.IdProduct is null || line.IdUnit is null) continue;
@@ -466,6 +483,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
                 QuantityAvailable = quantityBase,
                 SourceType        = "Compra",
                 IdPurchaseInvoice = invoice.IdPurchaseInvoice,
+                IdWarehouse       = warehouseId,
                 CreatedAt         = DateTime.UtcNow
             };
 

@@ -104,6 +104,10 @@ public sealed class PurchaseInvoiceConfiguration : IEntityTypeConfiguration<Purc
         builder.HasIndex(pi => pi.IdContact)
             .HasDatabaseName("IX_purchaseInvoice_idContact");
 
+        builder.HasIndex(pi => pi.IdWarehouse)
+            .HasFilter("[idWarehouse] IS NOT NULL")
+            .HasDatabaseName("IX_purchaseInvoice_idWarehouse");
+
         builder.HasOne(pi => pi.IdFiscalPeriodNavigation)
             .WithMany()
             .HasForeignKey(pi => pi.IdFiscalPeriod)
@@ -128,5 +132,13 @@ public sealed class PurchaseInvoiceConfiguration : IEntityTypeConfiguration<Purc
             .WithMany()
             .HasForeignKey(pi => pi.IdContact)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(pi => pi.IdWarehouseNavigation)
+            .WithMany(w => w.PurchaseInvoices)
+            .HasForeignKey(pi => pi.IdWarehouse)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(pi => pi.IdWarehouse)
+            .HasComment("FK al almacén destino de la mercadería. Opcional; si es nulo al confirmar se usa el almacén predeterminado.");
     }
 }

@@ -26,4 +26,6 @@ public sealed record PurchaseInvoiceResponse(
     decimal  ExchangeRateValue,
     DateTime CreatedAt,
     int?     IdAccountingEntry,
+    int?     IdWarehouse,
+    string?  NameWarehouse,
     IReadOnlyList<PurchaseInvoiceLineResponse> Lines);

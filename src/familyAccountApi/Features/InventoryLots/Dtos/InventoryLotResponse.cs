@@ -15,4 +15,6 @@ public sealed record InventoryLotResponse(
     string   SourceType,
     int?     IdPurchaseInvoice,
     int?     IdInventoryAdjustment,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int      IdWarehouse,
+    string   NameWarehouse);

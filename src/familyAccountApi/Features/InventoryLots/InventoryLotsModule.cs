@@ -20,7 +20,8 @@ public static class InventoryLotsModule
 
         group.MapGet("/by-product/{idProduct:int}.json", GetByProduct)
             .WithName("GetInventoryLotsByProduct")
-            .WithSummary("Obtener lotes de inventario de un producto ordenados FEFO");
+            .WithSummary("Obtener lotes de inventario de un producto ordenados FEFO. " +
+                         "Parámetro opcional ?idWarehouse={id} para filtrar por almacén.");
 
         group.MapGet("/{id:int}.json", GetById)
             .WithName("GetInventoryLotById")
@@ -33,7 +34,8 @@ public static class InventoryLotsModule
         group.MapGet("/suggest/{idProduct:int}.json", GetSuggestedLot)
             .WithName("GetSuggestedInventoryLot")
             .WithSummary("Sugerir el lote más antiguo no vencido con stock disponible (FEFO). " +
-                         "Parámetro opcional ?date=yyyy-MM-dd (por defecto: fecha UTC de hoy).");
+                         "Parámetros opcionales: ?date=yyyy-MM-dd (por defecto: fecha UTC de hoy), " +
+                         "?idWarehouse={id} para restringir la búsqueda a un almacén.");
 
         group.MapPatch("/{id:int}/status", UpdateStatus)
             .WithName("UpdateInventoryLotStatus")
@@ -45,9 +47,9 @@ public static class InventoryLotsModule
     }
 
     private static async Task<Ok<IReadOnlyList<InventoryLotResponse>>> GetByProduct(
-        int idProduct, IInventoryLotService service, CancellationToken ct)
+        int idProduct, [FromQuery] int? idWarehouse, IInventoryLotService service, CancellationToken ct)
     {
-        var items = await service.GetByProductAsync(idProduct, ct);
+        var items = await service.GetByProductAsync(idProduct, idWarehouse, ct);
         return TypedResults.Ok(items);
     }
 
@@ -68,11 +70,12 @@ public static class InventoryLotsModule
     private static async Task<Results<Ok<InventoryLotResponse>, NotFound>> GetSuggestedLot(
         int idProduct,
         [FromQuery] DateOnly? date,
+        [FromQuery] int? idWarehouse,
         IInventoryLotService service,
         CancellationToken ct)
     {
         var referenceDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        var item = await service.GetSuggestedLotAsync(idProduct, referenceDate, ct);
+        var item = await service.GetSuggestedLotAsync(idProduct, referenceDate, idWarehouse, ct);
         return item is not null ? TypedResults.Ok(item) : TypedResults.NotFound();
     }
 

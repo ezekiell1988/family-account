@@ -56,6 +56,10 @@ public sealed record CreatePurchaseInvoiceRequest
     [Description("Notas adicionales opcionales")]
     public string? DescriptionInvoice { get; init; }
 
+    [Range(1, int.MaxValue)]
+    [Description("ID del almacén destino de la mercadería. Si se omite se usa el almacén predeterminado al confirmar.")]
+    public int? IdWarehouse { get; init; }
+
     [Required]
     [Range(typeof(decimal), "0.0001", "999999999999.9999", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
     [Description("Tipo de cambio al momento del registro")]

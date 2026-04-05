@@ -6,13 +6,13 @@ namespace FamilyAccountApi.Features.InventoryLots;
 
 public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
 {
-    public async Task<IReadOnlyList<InventoryLotResponse>> GetByProductAsync(int idProduct, CancellationToken ct = default)
+    public async Task<IReadOnlyList<InventoryLotResponse>> GetByProductAsync(
+        int idProduct, int? idWarehouse = null, CancellationToken ct = default)
         => await db.InventoryLot
             .AsNoTracking()
-            .Include(il => il.Product).ThenInclude(p => p.IdUnitNavigation)
-            .Where(il => il.IdProduct == idProduct)
-            .OrderBy(il =>
-                il.ExpirationDate == null ? 1 : 0)
+            .Where(il => il.IdProduct == idProduct
+                      && (idWarehouse == null || il.IdWarehouse == idWarehouse))
+            .OrderBy(il => il.ExpirationDate == null ? 1 : 0)
             .ThenBy(il => il.ExpirationDate)
             .ThenBy(il => il.IdInventoryLot)
             .Select(il => new InventoryLotResponse(
@@ -30,7 +30,9 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
                 il.SourceType,
                 il.IdPurchaseInvoice,
                 il.IdInventoryAdjustment,
-                il.CreatedAt))
+                il.CreatedAt,
+                il.IdWarehouse,
+                il.Warehouse.NameWarehouse))
             .ToListAsync(ct);
 
     public async Task<InventoryLotResponse?> GetByIdAsync(int idInventoryLot, CancellationToken ct = default)
@@ -38,6 +40,7 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
         var il = await db.InventoryLot
             .AsNoTracking()
             .Include(il => il.Product).ThenInclude(p => p.IdUnitNavigation)
+            .Include(il => il.Warehouse)
             .FirstOrDefaultAsync(il => il.IdInventoryLot == idInventoryLot, ct);
 
         if (il is null) return null;
@@ -47,7 +50,8 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
             il.ExpirationDate, il.UnitCost, il.QuantityAvailable, il.QuantityReserved,
             il.QuantityAvailable - il.QuantityReserved,
             il.Product.IdUnitNavigation.CodeUnit, il.StatusLot, il.SourceType,
-            il.IdPurchaseInvoice, il.IdInventoryAdjustment, il.CreatedAt);
+            il.IdPurchaseInvoice, il.IdInventoryAdjustment, il.CreatedAt,
+            il.IdWarehouse, il.Warehouse.NameWarehouse);
     }
 
     public async Task<decimal> GetStockTotalAsync(int idProduct, CancellationToken ct = default)
@@ -56,14 +60,14 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
             .SumAsync(il => il.QuantityAvailable, ct);
 
     public async Task<InventoryLotResponse?> GetSuggestedLotAsync(
-        int idProduct, DateOnly referenceDate, CancellationToken ct = default)
+        int idProduct, DateOnly referenceDate, int? idWarehouse = null, CancellationToken ct = default)
         => await db.InventoryLot
             .AsNoTracking()
-            .Include(il => il.Product).ThenInclude(p => p.IdUnitNavigation)
             .Where(il => il.IdProduct == idProduct
-                      && il.StatusLot == "Disponible"           // solo lotes en estado disponible
-                      && il.QuantityAvailable > il.QuantityReserved   // stock neto > 0
-                      && (il.ExpirationDate == null || il.ExpirationDate >= referenceDate))
+                      && il.StatusLot == "Disponible"
+                      && il.QuantityAvailable > il.QuantityReserved
+                      && (il.ExpirationDate == null || il.ExpirationDate >= referenceDate)
+                      && (idWarehouse == null || il.IdWarehouse == idWarehouse))
             .OrderBy(il => il.ExpirationDate == null ? 1 : 0)  // primero lotes con vencimiento
             .ThenBy(il => il.ExpirationDate)                   // FEFO
             .ThenBy(il => il.IdInventoryLot)                   // FIFO de respaldo
@@ -82,7 +86,9 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
                 il.SourceType,
                 il.IdPurchaseInvoice,
                 il.IdInventoryAdjustment,
-                il.CreatedAt))
+                il.CreatedAt,
+                il.IdWarehouse,
+                il.Warehouse.NameWarehouse))
             .FirstOrDefaultAsync(ct);
 
     public async Task<InventoryLotResponse?> UpdateStatusAsync(
@@ -90,6 +96,7 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
     {
         var lot = await db.InventoryLot
             .Include(il => il.Product).ThenInclude(p => p.IdUnitNavigation)
+            .Include(il => il.Warehouse)
             .FirstOrDefaultAsync(il => il.IdInventoryLot == idInventoryLot, ct);
 
         if (lot is null) return null;
@@ -102,6 +109,7 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
             lot.ExpirationDate, lot.UnitCost, lot.QuantityAvailable, lot.QuantityReserved,
             lot.QuantityAvailable - lot.QuantityReserved,
             lot.Product.IdUnitNavigation.CodeUnit, lot.StatusLot, lot.SourceType,
-            lot.IdPurchaseInvoice, lot.IdInventoryAdjustment, lot.CreatedAt);
+            lot.IdPurchaseInvoice, lot.IdInventoryAdjustment, lot.CreatedAt,
+            lot.IdWarehouse, lot.Warehouse.NameWarehouse);
     }
 }

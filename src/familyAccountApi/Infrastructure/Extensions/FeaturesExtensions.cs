@@ -25,6 +25,7 @@ using FamilyAccountApi.Features.ProductRecipes;
 using FamilyAccountApi.Features.InventoryLots;
 using FamilyAccountApi.Features.InventoryAdjustments;
 using FamilyAccountApi.Features.InventoryAdjustmentTypes;
+using FamilyAccountApi.Features.Warehouses;
 using FamilyAccountApi.Features.UnitsOfMeasure;
 using FamilyAccountApi.Features.PurchaseInvoiceTypes;
 using FamilyAccountApi.Features.PurchaseInvoices;
@@ -55,6 +56,7 @@ public static class FeaturesExtensions
             .AddInventoryLotsModule()
             .AddInventoryAdjustmentTypesModule()
             .AddInventoryAdjustmentsModule()
+            .AddWarehousesModule()
             .AddAccountsModule()
             .AddFiscalPeriodsModule()
             .AddAccountingEntriesModule()
@@ -100,6 +102,7 @@ public static class FeaturesExtensions
         v1.MapInventoryLotsEndpoints();
         v1.MapInventoryAdjustmentTypesEndpoints();
         v1.MapInventoryAdjustmentsEndpoints();
+        v1.MapWarehousesEndpoints();
         v1.MapAccountsEndpoints();
         v1.MapFiscalPeriodsEndpoints();
         v1.MapAccountingEntriesEndpoints();

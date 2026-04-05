@@ -71,6 +71,11 @@ public sealed class InventoryLotConfiguration : IEntityTypeConfiguration<Invento
         builder.Property(il => il.IdInventoryAdjustment)
             .HasComment("FK al ajuste de inventario que originó este lote. Poblado si sourceType = 'Ajuste' o 'Producción' (V1).");
 
+        builder.Property(il => il.IdWarehouse)
+            .IsRequired()
+            .HasDefaultValue(1)
+            .HasComment("FK al almacén donde se encuentra este lote. Por defecto el almacén Principal (id=1).");
+
         builder.Property(il => il.CreatedAt)
             .IsRequired()
             .HasDefaultValueSql("GETUTCDATE()")
@@ -105,5 +110,14 @@ public sealed class InventoryLotConfiguration : IEntityTypeConfiguration<Invento
             .WithMany()
             .HasForeignKey(il => il.IdInventoryAdjustment)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // ── FK: Warehouse ─────────────────────────────────────
+        builder.HasOne(il => il.Warehouse)
+            .WithMany(w => w.InventoryLots)
+            .HasForeignKey(il => il.IdWarehouse)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(il => il.IdWarehouse)
+            .HasDatabaseName("IX_inventoryLot_idWarehouse");
     }
 }

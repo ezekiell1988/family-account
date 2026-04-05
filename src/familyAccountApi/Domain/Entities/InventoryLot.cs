@@ -13,9 +13,11 @@ public sealed class InventoryLot
     public string    SourceType              { get; set; } = null!;
     public int?      IdPurchaseInvoice       { get; set; }
     public int?      IdInventoryAdjustment   { get; set; }
+    public int       IdWarehouse             { get; set; }
     public DateTime  CreatedAt               { get; set; }
 
     public Product            Product                           { get; set; } = null!;
+    public Warehouse          Warehouse                         { get; set; } = null!;
     public PurchaseInvoice?   IdPurchaseInvoiceNavigation       { get; set; }
     public InventoryAdjustment? IdInventoryAdjustmentNavigation { get; set; }
 
