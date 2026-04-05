@@ -82,11 +82,19 @@
 | **Odoo 17** | `Reserved` (Demand) vs `Available` vs `On Hand` — tres layers |
 | **NetSuite** | `Quantity Committed` por location |
 | **Cin7** | `Allocated` por orden de venta o producción confirmada |
-| **family-account (hoy)** | `SalesOrderLineFulfillment` con `IdInventoryLot` — "asignación" manual, no decrementa `QuantityAvailable` hasta factura confirmada |
+| **family-account (hoy)** | `InventoryLot.QuantityReserved` — se incrementa al asignar un `SalesOrderLineFulfillment` tipo `Stock` y se decrementa al confirmar la factura o eliminar el fulfillment. `QuantityAvailableNet = QuantityAvailable - QuantityReserved` expuesto en el DTO. |
 
-**Brecha identificada**: family-account usa fulfillment como pseudo-reserva, pero `QuantityAvailable` en `InventoryLot` no se modifica hasta que se confirma la factura. Si el mismo lote se asigna a dos pedidos diferentes antes de confirmar cualquiera de los dos, el segundo podría quedarse sin stock en el momento de confirmar.
+**Estado: ✅ Implementado (abril 2026 — M3)**
 
-> **Mejora potencial M3**: agregar `QuantityReserved DECIMAL(18,4) DEFAULT 0` en `InventoryLot`. Al asignar un `SalesOrderLineFulfillment` con `FulfillmentType = 'Stock'`, incrementar `QuantityReserved` y exponer `QuantityAvailableNet = QuantityAvailable - QuantityReserved` en las consultas. Al confirmar la factura, decrementar `QuantityAvailable` y `QuantityReserved` simultáneamente (transacción atómica). El CHECK constraint existente de `>= 0` aplicaría a `QuantityAvailable - QuantityReserved`.
+Cambios realizados:
+- **`InventoryLot`** — nuevo campo `QuantityReserved DECIMAL(18,6) DEFAULT 0` con CHECK constraint `>= 0`.
+- **`InventoryLotResponse`** — expone `QuantityReserved` y `QuantityAvailableNet` (calculado).
+- **`InventoryLotService.GetSuggestedLotAsync`** — filtra por `QuantityAvailable > QuantityReserved` (stock neto > 0).
+- **`SalesInvoiceService.GetFefoLotAsync`** — igual filtro para FEFO en BOM y combos.
+- **`SalesOrderService.AddFulfillmentAsync`** — valida stock neto antes de reservar e incrementa `QuantityReserved`.
+- **`SalesOrderService.RemoveFulfillmentAsync`** — decrementa `QuantityReserved` al eliminar el fulfillment.
+- **`SalesInvoiceService.DeductLotAsync`** — al confirmar factura, decrementa `QuantityAvailable` y libera `QuantityReserved` simultáneamente.
+- **Migración**: `20260405172645_AddInventoryLotQuantityReserved`.
 
 ---
 
@@ -198,7 +206,7 @@
 |---|---|---|---|---|
 | M1 | Métodos de costeo múltiples (FIFO, Specific) | Media | Alto si hay productos de alto valor | Media |
 | M2 | Múltiples almacenes / bodegas | Alta | Crítico en cuanto haya 2+ locales | Alta |
-| M3 | Reserva de stock contra pedido | Baja | Alta — evita doble-asignación | Alta |
+| M3 | Reserva de stock contra pedido | Baja | Alta — evita doble-asignación | ✅ Implementado |
 | M4 | Números de serie | Media | Alto para equipos o garantías | Media |
 | M5 | Estado de calidad / cuarentena en lote | Muy baja | Crítico para alimentos (HACCP) | Alta |
 | M6 | Conteo cíclico como flujo (no solo ajuste manual) | Ningún cambio de modelo | Media | Baja |
@@ -227,7 +235,7 @@ Estas capacidades están implementadas de forma más ro­bus­ta que en sistemas
 
 ### Corto plazo (impacto con mínimos cambios de modelo)
 
-1. **M3 — Reserva de stock**: agregar `QuantityReserved` en `InventoryLot`. Sin migraciones de datos. Alta ganancia operativa.
+1. ~~**M3 — Reserva de stock**~~: ✅ Implementado (abril 2026). `QuantityReserved` en `InventoryLot` — migración `20260405172645_AddInventoryLotQuantityReserved`.
 2. **M5 — Estado de calidad en lote**: agregar `StatusLot` con CHECK constraint. Una migración simple. Crítico para alimentos.
 3. **M7 — Punto de reorden**: tres campos opcionales en `Product`. No requiere cambios en lógica de confirmación.
 

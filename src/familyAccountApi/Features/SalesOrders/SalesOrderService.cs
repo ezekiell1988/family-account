@@ -177,6 +177,20 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
         if (request.FulfillmentType == "Produccion" && request.IdProductionOrder is null)
             return (null, "Para FulfillmentType 'Produccion' debe indicarse IdProductionOrder.");
 
+        // ── Reserva de stock (M3) ────────────────────────────────────────────
+        if (request.FulfillmentType == "Stock" && request.IdInventoryLot.HasValue)
+        {
+            var lot = await db.InventoryLot.FindAsync([request.IdInventoryLot.Value], ct);
+            if (lot is null)
+                return (null, "El lote de inventario indicado no existe.");
+
+            decimal netAvailable = lot.QuantityAvailable - lot.QuantityReserved;
+            if (netAvailable < request.QuantityBase)
+                return (null, $"Stock neto insuficiente en el lote '{lot.LotNumber ?? lot.IdInventoryLot.ToString()}'. Disponible neto: {netAvailable:N4}, solicitado: {request.QuantityBase:N4}.");
+
+            lot.QuantityReserved += request.QuantityBase;
+        }
+
         var entity = new SalesOrderLineFulfillment
         {
             IdSalesOrderLine = request.IdSalesOrderLine,
@@ -210,10 +224,22 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
 
     public async Task<bool> RemoveFulfillmentAsync(int idSalesOrderLineFulfillment, CancellationToken ct = default)
     {
-        var deleted = await db.SalesOrderLineFulfillment
-            .Where(f => f.IdSalesOrderLineFulfillment == idSalesOrderLineFulfillment)
-            .ExecuteDeleteAsync(ct);
-        return deleted > 0;
+        var fulfillment = await db.SalesOrderLineFulfillment
+            .FirstOrDefaultAsync(f => f.IdSalesOrderLineFulfillment == idSalesOrderLineFulfillment, ct);
+
+        if (fulfillment is null) return false;
+
+        // ── Liberar reserva de stock (M3) ────────────────────────────────────
+        if (fulfillment.FulfillmentType == "Stock" && fulfillment.IdInventoryLot.HasValue)
+        {
+            var lot = await db.InventoryLot.FindAsync([fulfillment.IdInventoryLot.Value], ct);
+            if (lot is not null)
+                lot.QuantityReserved = Math.Max(0m, lot.QuantityReserved - fulfillment.QuantityBase);
+        }
+
+        db.SalesOrderLineFulfillment.Remove(fulfillment);
+        await db.SaveChangesAsync(ct);
+        return true;
     }
 
     // ── Advances ─────────────────────────────────────────────────────────────

@@ -23,6 +23,8 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
                 il.ExpirationDate,
                 il.UnitCost,
                 il.QuantityAvailable,
+                il.QuantityReserved,
+                il.QuantityAvailable - il.QuantityReserved,
                 il.Product.IdUnitNavigation.CodeUnit,
                 il.SourceType,
                 il.IdPurchaseInvoice,
@@ -41,7 +43,8 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
 
         return new InventoryLotResponse(
             il.IdInventoryLot, il.IdProduct, il.Product.NameProduct, il.LotNumber,
-            il.ExpirationDate, il.UnitCost, il.QuantityAvailable,
+            il.ExpirationDate, il.UnitCost, il.QuantityAvailable, il.QuantityReserved,
+            il.QuantityAvailable - il.QuantityReserved,
             il.Product.IdUnitNavigation.CodeUnit, il.SourceType,
             il.IdPurchaseInvoice, il.IdInventoryAdjustment, il.CreatedAt);
     }
@@ -57,7 +60,7 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
             .AsNoTracking()
             .Include(il => il.Product).ThenInclude(p => p.IdUnitNavigation)
             .Where(il => il.IdProduct == idProduct
-                      && il.QuantityAvailable > 0
+                      && il.QuantityAvailable > il.QuantityReserved   // stock neto > 0
                       && (il.ExpirationDate == null || il.ExpirationDate >= referenceDate))
             .OrderBy(il => il.ExpirationDate == null ? 1 : 0)  // primero lotes con vencimiento
             .ThenBy(il => il.ExpirationDate)                   // FEFO
@@ -70,6 +73,8 @@ public sealed class InventoryLotService(AppDbContext db) : IInventoryLotService
                 il.ExpirationDate,
                 il.UnitCost,
                 il.QuantityAvailable,
+                il.QuantityReserved,
+                il.QuantityAvailable - il.QuantityReserved,
                 il.Product.IdUnitNavigation.CodeUnit,
                 il.SourceType,
                 il.IdPurchaseInvoice,

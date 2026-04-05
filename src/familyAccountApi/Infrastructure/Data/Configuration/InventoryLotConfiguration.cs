@@ -10,9 +10,10 @@ public sealed class InventoryLotConfiguration : IEntityTypeConfiguration<Invento
     {
         builder.ToTable(t =>
         {
-            t.HasComment("Registro de stock de inventario por producto y lote. Es la unidad mínima de trazabilidad. quantityAvailable nunca se edita directamente: solo se modifica al confirmar purchaseInvoice, salesInvoice o inventoryAdjustment.");
+            t.HasComment("Registro de stock de inventario por producto y lote. Es la unidad mínima de trazabilidad. quantityAvailable nunca se edita directamente: solo se modifica al confirmar purchaseInvoice, salesInvoice o inventoryAdjustment. quantityReserved se incrementa al asignar un SalesOrderLineFulfillment tipo Stock y se decrementa al confirmar o eliminar el fulfillment.");
             t.HasCheckConstraint("CK_inventoryLot_sourceType", "sourceType IN ('Compra', 'Producción', 'Ajuste')");
             t.HasCheckConstraint("CK_inventoryLot_quantityAvailable", "quantityAvailable >= 0");
+            t.HasCheckConstraint("CK_inventoryLot_quantityReserved", "quantityReserved >= 0");
         });
 
         builder.HasKey(il => il.IdInventoryLot);
@@ -43,6 +44,12 @@ public sealed class InventoryLotConfiguration : IEntityTypeConfiguration<Invento
             .IsRequired()
             .HasDefaultValue(0m)
             .HasComment("Stock disponible en unidad base. Solo se modifica al confirmar documentos. Nunca editable directamente.");
+
+        builder.Property(il => il.QuantityReserved)
+            .HasPrecision(18, 6)
+            .IsRequired()
+            .HasDefaultValue(0m)
+            .HasComment("Stock reservado por SalesOrderLineFulfillment de tipo Stock pendientes de confirmar. Se incrementa al asignar un fulfillment y se decrementa al confirmar o eliminar el fulfillment. QuantityAvailableNet = QuantityAvailable - QuantityReserved.");
 
         builder.Property(il => il.SourceType)
             .HasMaxLength(20)

@@ -8,6 +8,8 @@ public sealed record InventoryLotResponse(
     DateOnly? ExpirationDate,
     decimal  UnitCost,
     decimal  QuantityAvailable,
+    decimal  QuantityReserved,
+    decimal  QuantityAvailableNet,
     string   CodeUnit,
     string   SourceType,
     int?     IdPurchaseInvoice,

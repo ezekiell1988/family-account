@@ -705,6 +705,9 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
         if (lot.QuantityAvailable < 0)
             return (0m, $"El lote '{lot.LotNumber ?? lot.IdInventoryLot.ToString()}' del producto {idProduct} quedaría con stock negativo ({lot.QuantityAvailable + qtyBase:N4} disponible, se intenta decrementar {qtyBase:N4}).");
 
+        // Liberar la reserva que se creó al asignar el SalesOrderLineFulfillment (M3)
+        lot.QuantityReserved = Math.Max(0m, lot.QuantityReserved - qtyBase);
+
         await db.SaveChangesAsync(ct);
         await RecalcAverageCostAsync(idProduct, ct);
 
@@ -733,11 +736,11 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
             product.AverageCost = totalQty > 0 ? Math.Round(totalCost / totalQty, 6) : 0m;
     }
 
-    /// Obtiene el primer lote FEFO con stock disponible para el producto.
+    /// Obtiene el primer lote FEFO con stock neto disponible (QuantityAvailable - QuantityReserved) y no vencido para el producto.
     private Task<InventoryLot?> GetFefoLotAsync(int idProduct, DateOnly referenceDate)
         => db.InventoryLot
             .Where(il => il.IdProduct == idProduct
-                      && il.QuantityAvailable > 0
+                      && il.QuantityAvailable > il.QuantityReserved   // stock neto > 0
                       && (il.ExpirationDate == null || il.ExpirationDate >= referenceDate))
             .OrderBy(il => il.ExpirationDate == null ? 1 : 0)
             .ThenBy(il => il.ExpirationDate)
