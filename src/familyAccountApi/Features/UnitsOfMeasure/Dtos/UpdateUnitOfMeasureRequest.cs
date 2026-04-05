@@ -14,6 +14,6 @@ public sealed record UpdateUnitOfMeasureRequest
     public required string NameUnit { get; init; }
 
     [Required]
-    [Description("Clasificación dimensional: Volumen | Masa | Unidad | Longitud")]
-    public required string TypeUnit { get; init; }
+    [Description("Identificador del tipo dimensional (idUnitType): 1=Unidad | 2=Volumen | 3=Masa | 4=Longitud.")]
+    public required int IdUnitType { get; init; }
 }

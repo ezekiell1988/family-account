@@ -17,6 +17,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ProductCategory>          ProductCategory          => Set<ProductCategory>();
     public DbSet<ProductProductCategory>   ProductProductCategory   => Set<ProductProductCategory>();
     public DbSet<UnitOfMeasure>            UnitOfMeasure            => Set<UnitOfMeasure>();
+    public DbSet<UnitType>                 UnitType                 => Set<UnitType>();
     public DbSet<ProductType>              ProductType              => Set<ProductType>();
     public DbSet<ProductUnit>              ProductUnit              => Set<ProductUnit>();
     public DbSet<ProductRecipe>            ProductRecipe            => Set<ProductRecipe>();

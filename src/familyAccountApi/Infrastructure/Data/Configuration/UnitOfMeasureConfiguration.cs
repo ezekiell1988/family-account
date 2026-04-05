@@ -8,11 +8,7 @@ public sealed class UnitOfMeasureConfiguration : IEntityTypeConfiguration<UnitOf
 {
     public void Configure(EntityTypeBuilder<UnitOfMeasure> builder)
     {
-        builder.ToTable(t =>
-        {
-            t.HasComment("Catálogo global de unidades de medida utilizadas en productos, recetas e inventario.");
-            t.HasCheckConstraint("CK_unitOfMeasure_typeUnit", "typeUnit IN ('Volumen', 'Masa', 'Unidad', 'Longitud')");
-        });
+        builder.ToTable(t => t.HasComment("Catálogo global de unidades de medida utilizadas en productos, recetas e inventario."));
 
         builder.HasKey(u => u.IdUnit);
         builder.Property(u => u.IdUnit)
@@ -30,11 +26,11 @@ public sealed class UnitOfMeasureConfiguration : IEntityTypeConfiguration<UnitOf
             .IsRequired()
             .HasComment("Nombre legible de la unidad: Mililitro, Gramo, Botella 160ml, etc.");
 
-        builder.Property(u => u.TypeUnit)
-            .HasMaxLength(20)
-            .IsRequired()
-            .IsUnicode(false)
-            .HasComment("Clasificación dimensional: Volumen | Masa | Unidad | Longitud.");
+        builder.HasOne(u => u.UnitType)
+            .WithMany(ut => ut.UnitsOfMeasure)
+            .HasForeignKey(u => u.IdUnitType)
+            .OnDelete(DeleteBehavior.Restrict)
+            .HasConstraintName("FK_unitOfMeasure_unitType");
 
         builder.HasIndex(u => u.CodeUnit)
             .IsUnique()
@@ -42,10 +38,10 @@ public sealed class UnitOfMeasureConfiguration : IEntityTypeConfiguration<UnitOf
 
         // ── Seed ──────────────────────────────────────────────────────────────
         builder.HasData(
-            new UnitOfMeasure { IdUnit = 1, CodeUnit = "U",  NameUnit = "Unidad",       TypeUnit = "Unidad"  },
-            new UnitOfMeasure { IdUnit = 2, CodeUnit = "M3", NameUnit = "Metro Cúbico", TypeUnit = "Volumen"  },
-            new UnitOfMeasure { IdUnit = 3, CodeUnit = "KG", NameUnit = "Kilogramo",    TypeUnit = "Masa"     },
-            new UnitOfMeasure { IdUnit = 4, CodeUnit = "M",  NameUnit = "Metro",        TypeUnit = "Longitud" }
+            new UnitOfMeasure { IdUnit = 1, CodeUnit = "U",  NameUnit = "Unidad",       IdUnitType = 1 },
+            new UnitOfMeasure { IdUnit = 2, CodeUnit = "M3", NameUnit = "Metro Cúbico", IdUnitType = 2 },
+            new UnitOfMeasure { IdUnit = 3, CodeUnit = "KG", NameUnit = "Kilogramo",    IdUnitType = 3 },
+            new UnitOfMeasure { IdUnit = 4, CodeUnit = "M",  NameUnit = "Metro",        IdUnitType = 4 }
         );
     }
 }

@@ -4,4 +4,5 @@ public sealed record UnitOfMeasureResponse(
     int    IdUnit,
     string CodeUnit,
     string NameUnit,
-    string TypeUnit);
+    int    IdUnitType,
+    string NameUnitType);

@@ -346,9 +346,12 @@ Si se elimina un centro de costo, los `ProductAccount` quedan con `idCostCenter 
 
 ---
 
-#### O4 — `UnitOfMeasure.TypeUnit` sin CHECK constraint ni catálogo
+#### O4 — `UnitOfMeasure.TypeUnit` sin CHECK constraint ni catálogo ✅ IMPLEMENTADO
 
-No se definen los valores permitidos para `TypeUnit`. Si se espera un dominio cerrado (e.g., `Masa | Volumen | Unidad | Longitud`), conviene un CHECK constraint o una tabla `UnitType`.
+> **Resuelto** (abril 2026): Se creó la entidad `UnitType` (catálogo de sistema sin CRUD) con seed de 4 tipos: Unidad (1), Volumen (2), Masa (3), Longitud (4). `UnitOfMeasure.TypeUnit string` fue reemplazado por `IdUnitType int FK → UnitType (RESTRICT)`. Se eliminó el CHECK constraint y la columna `typeUnit`. Migración aplicada: `20260405160710_AddUnitType`.
+>
+> - **DTOs**: `TypeUnit string` → `IdUnitType int` en requests; response incluye `IdUnitType` + `NameUnitType` proyectados desde la navegación.
+> - **Catálogo**: `GET /unit-types` no existe (catálogo de sistema); los valores se exponen en la respuesta de `unitOfMeasure`.
 
 ---
 

@@ -10,30 +10,31 @@ public sealed class UnitOfMeasureService(AppDbContext db) : IUnitOfMeasureServic
     public async Task<IReadOnlyList<UnitOfMeasureResponse>> GetAllAsync(CancellationToken ct = default)
         => await db.UnitOfMeasure
             .AsNoTracking()
-            .OrderBy(u => u.TypeUnit).ThenBy(u => u.CodeUnit)
-            .Select(u => new UnitOfMeasureResponse(u.IdUnit, u.CodeUnit, u.NameUnit, u.TypeUnit))
+            .OrderBy(u => u.UnitType.NameUnitType).ThenBy(u => u.CodeUnit)
+            .Select(u => new UnitOfMeasureResponse(u.IdUnit, u.CodeUnit, u.NameUnit, u.IdUnitType, u.UnitType.NameUnitType))
             .ToListAsync(ct);
 
     public async Task<UnitOfMeasureResponse?> GetByIdAsync(int idUnit, CancellationToken ct = default)
         => await db.UnitOfMeasure
             .AsNoTracking()
             .Where(u => u.IdUnit == idUnit)
-            .Select(u => new UnitOfMeasureResponse(u.IdUnit, u.CodeUnit, u.NameUnit, u.TypeUnit))
+            .Select(u => new UnitOfMeasureResponse(u.IdUnit, u.CodeUnit, u.NameUnit, u.IdUnitType, u.UnitType.NameUnitType))
             .FirstOrDefaultAsync(ct);
 
     public async Task<UnitOfMeasureResponse> CreateAsync(CreateUnitOfMeasureRequest request, CancellationToken ct = default)
     {
         var entity = new UnitOfMeasure
         {
-            CodeUnit = request.CodeUnit,
-            NameUnit = request.NameUnit,
-            TypeUnit = request.TypeUnit
+            CodeUnit   = request.CodeUnit,
+            NameUnit   = request.NameUnit,
+            IdUnitType = request.IdUnitType
         };
 
         db.UnitOfMeasure.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        return new UnitOfMeasureResponse(entity.IdUnit, entity.CodeUnit, entity.NameUnit, entity.TypeUnit);
+        await db.Entry(entity).Reference(u => u.UnitType).LoadAsync(ct);
+        return new UnitOfMeasureResponse(entity.IdUnit, entity.CodeUnit, entity.NameUnit, entity.IdUnitType, entity.UnitType.NameUnitType);
     }
 
     public async Task<UnitOfMeasureResponse?> UpdateAsync(int idUnit, UpdateUnitOfMeasureRequest request, CancellationToken ct = default)
@@ -41,13 +42,14 @@ public sealed class UnitOfMeasureService(AppDbContext db) : IUnitOfMeasureServic
         var entity = await db.UnitOfMeasure.FindAsync([idUnit], ct);
         if (entity is null) return null;
 
-        entity.CodeUnit = request.CodeUnit;
-        entity.NameUnit = request.NameUnit;
-        entity.TypeUnit = request.TypeUnit;
+        entity.CodeUnit   = request.CodeUnit;
+        entity.NameUnit   = request.NameUnit;
+        entity.IdUnitType = request.IdUnitType;
 
         await db.SaveChangesAsync(ct);
 
-        return new UnitOfMeasureResponse(entity.IdUnit, entity.CodeUnit, entity.NameUnit, entity.TypeUnit);
+        await db.Entry(entity).Reference(u => u.UnitType).LoadAsync(ct);
+        return new UnitOfMeasureResponse(entity.IdUnit, entity.CodeUnit, entity.NameUnit, entity.IdUnitType, entity.UnitType.NameUnitType);
     }
 
     public async Task<bool> DeleteAsync(int idUnit, CancellationToken ct = default)
