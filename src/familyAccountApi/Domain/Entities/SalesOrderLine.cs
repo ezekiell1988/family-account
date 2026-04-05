@@ -19,6 +19,7 @@ public sealed class SalesOrderLine
     public ProductUnit    IdProductUnitNavigation    { get; set; } = null!;
     public PriceListItem? IdPriceListItemNavigation  { get; set; }
 
-    public ICollection<SalesOrderLineFulfillment> SalesOrderLineFulfillments { get; set; } = [];
-    public ICollection<SalesOrderLineOption>       SalesOrderLineOptions      { get; set; } = [];
+    public ICollection<SalesOrderLineFulfillment>          SalesOrderLineFulfillments { get; set; } = [];
+    public ICollection<SalesOrderLineOption>                 SalesOrderLineOptions      { get; set; } = [];
+    public ICollection<SalesOrderLineComboSlotSelection>     ComboSlotSelections        { get; set; } = [];
 }

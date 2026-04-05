@@ -34,7 +34,8 @@ public sealed record SalesOrderLineResponse(
     decimal  TaxPercent,
     decimal  TotalLineAmount,
     string?  DescriptionLine,
-    IReadOnlyList<SalesOrderLineOptionResponse> Options);
+    IReadOnlyList<SalesOrderLineOptionResponse>              Options,
+    IReadOnlyList<SalesOrderLineComboSlotSelectionResponse>  ComboSlotSelections);
 
 public sealed record SalesOrderLineOptionResponse(
     int     IdSalesOrderLineOption,
@@ -42,3 +43,19 @@ public sealed record SalesOrderLineOptionResponse(
     string  NameItem,
     decimal PriceDelta,
     decimal Quantity);
+
+public sealed record SalesOrderLineComboSlotSelectionResponse(
+    int    IdSalesOrderLineComboSlotSelection,
+    int    IdProductComboSlot,
+    string SlotName,
+    int    IdProduct,
+    string ProductName,
+    IReadOnlyList<SalesOrderLineSlotOptionResponse> SlotOptions);
+
+public sealed record SalesOrderLineSlotOptionResponse(
+    int     IdSalesOrderLineSlotOption,
+    int     IdProductOptionItem,
+    string  NameItem,
+    decimal PriceDelta,
+    decimal Quantity,
+    bool    IsPreset);

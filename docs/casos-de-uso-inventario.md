@@ -324,7 +324,7 @@ En `ConfirmAsync` (factura): si la línea tiene `SalesInvoiceLineOptions` cuyo `
 | `SalesInvoiceService.ConfirmAsync` (T19) — omite `ExplodeBomAsync` cuando la línea ya tiene `IdInventoryLot` pre-asignado desde producción | ✅ |
 
 ---
-## C6 — Combo configurado multi-slot (2 pizzas + bebida) 🔴 15% implementado
+## C6 — Combo configurado multi-slot (2 pizzas + bebida) 🟡 55% implementado
 
 ### Diferencia clave con C5
 
@@ -1026,7 +1026,7 @@ Cada canal tiene su propio **adaptador de presentación** pero comparte la misma
 | **C3 — Ensamble en venta (BOM)** | ✅ **Completo** | Revisar bug de escala `QuantityOutput` |
 | **C4 — Variantes (talla/color)** | � **80%** — backend completo, frontend pendiente | UI Angular selector de variantes (~0.5 día) |
 | **C5 — Pedido configurado (pizza)** | ✅ **Completo** | — |
-| **C6 — Combo configurado multi-slot** | 🔴 **15%** | Muy Alta (~5–7 días) |
+| **C6 — Combo configurado multi-slot** | 🟡 **55%** — schema + CRUD presets + SalesOrder completo | Alta (~2–3 días restantes) |
 
 ---
 
@@ -1130,17 +1130,83 @@ C5 (Pedido configurado)
 | C5-6 | `POST /sales-orders/{id}/invoice` | ✅ |
 | C5-7 | `SalesInvoiceLineOption` + explosión en `ConfirmAsync` (T19: omite BOM si `IdInventoryLot` pre-asignado) | ✅ |
 
-### C6 — Combo multi-slot: tareas pendientes
+### C6 — Combo multi-slot: tareas
 
 | # | Tarea | Estado |
 |---|---|---|
-| C6-1 | `ProductComboSlotPresetOption` entidad + Fluent API + endpoints CRUD | ⏳ |
-| C6-2 | `SalesOrderLineComboSlotSelection` + `SalesOrderLineSlotOption` entidades | ⏳ |
-| C6-3 | `SalesInvoiceLineComboSlotSelection` + `SalesInvoiceLineSlotOption` entidades | ⏳ |
-| C6-4 | `SalesOrderService`: copiar presets al crear línea de combo | ⏳ |
-| C6-5 | `ExplodeComboAsync` revisado: usar `SalesInvoiceLineComboSlotSelection` | ⏳ |
-| C6-6 | `ExplodeBomWithOptionsAsync`: receta base + recetas de opciones del slot | ⏳ |
-| C6-7 | `send-to-production` para combo: N OPs, una por slot con receta | ⏳ |
-| C6-8 | Migración EF Core: 5 tablas nuevas | ⏳ |
-| C6-9 | UI Angular: flujo de configuración de slots en pedido | ⏳ |
-| C6-10 | Factura: jerarquía visual Agrupador → Slot → Opciones | ⏳ |
+| C6-1 | `ProductComboSlotPresetOption` entidad + Fluent API + endpoints CRUD | ✅ |
+| C6-2 | `SalesOrderLineComboSlotSelection` + `SalesOrderLineSlotOption` entidades + Fluent API | ✅ |
+| C6-3 | `SalesInvoiceLineComboSlotSelection` + `SalesInvoiceLineSlotOption` entidades + Fluent API | ✅ |
+| C6-4 | `SalesOrderService.ValidateComboSlotSelectionsAsync` — V-COMBO-1 a V-COMBO-5 | ✅ |
+| C6-5 | `SalesOrderService.PopulateComboSlotSelectionsAsync` — copia presets, opciones libres, ajuste precio | ✅ |
+| C6-6 | `GET /sales-orders/{id}.json` incluye `comboSlotSelections[]` con `slotOptions[]` | ✅ |
+| C6-7 | `IsPreset` en `SalesOrderLineSlotOption` y `SalesInvoiceLineSlotOption` | ✅ |
+| C6-8 | `SalesOrderService.SendToProductionAsync` extendido: N OPs, una por slot con receta | ⏳ |
+| C6-9 | `SalesOrderService.GenerateInvoiceAsync` extendido: copiar selecciones → `SalesInvoiceLineComboSlotSelection` | ⏳ |
+| C6-10 | `ExplodeComboAsync` revisado: usar `SalesInvoiceLineComboSlotSelection` en lugar de `FirstOrDefault()` | ⏳ |
+| C6-11 | Migr. `AddC6ComboSelections` + `AddC6SlotOptionIsPreset` aplicadas | ✅ |
+| C6-12 | UI Angular: flujo de configuración de slots en pedido | ⏳ |
+| C6-13 | Factura: respuesta anidada Agrupador → Slot → Opciones (`SalesInvoiceDtos` + query) | ⏳ |
+
+---
+
+### Sesión 5-abril-2026 — C6 Bloque 1 + Bloque 2
+
+**Lo que se hizo:**
+
+#### Bloque 1 — Schema y migración `AddC6ComboSelections` ✅
+- Creadas 5 entidades nuevas: `ProductComboSlotPresetOption`, `SalesOrderLineComboSlotSelection`, `SalesOrderLineSlotOption`, `SalesInvoiceLineComboSlotSelection`, `SalesInvoiceLineSlotOption`
+- Creadas 5 configuraciones Fluent API correspondientes (índices únicos, FK behaviors, comentarios)
+- `ProductComboSlot` extendida con `ICollection<ProductComboSlotPresetOption> PresetOptions`
+- `SalesOrderLine` extendida con `ICollection<SalesOrderLineComboSlotSelection> ComboSlotSelections`
+- `SalesInvoiceLine` extendida con `ICollection<SalesInvoiceLineComboSlotSelection> ComboSlotSelections`
+- `SalesInvoiceLineComboSlotSelection` incluye `IdInventoryLot?` para lotes PT pre-asignados desde producción
+- Registradas 5 entidades en `AppDbContext`
+- Migración `AddC6ComboSelections` generada y aplicada a la BD ✅
+
+#### Bloque 2 — CRUD `ProductComboSlotPresetOption` ✅
+- `POST /product-combo-slots/{slotId}/preset-options` — V-PRESET-1 (item pertenece a producto del slot) + V-PRESET-2 (sin duplicados)
+- `DELETE /product-combo-slots/{slotId}/preset-options/{presetOptionId}`
+- `GET` endpoints del slot ahora incluyen `presetOptions[]` con nombre e ítem
+- `ProductComboSlotResponse` extendido con `IReadOnlyList<ProductComboSlotPresetOptionResponse> PresetOptions`
+
+**Próximos pasos (Bloque 3):**
+- `SalesOrderService`: agregar `comboSlotSelections[]` a `CreateSalesOrderLineRequest` / `UpdateSalesOrderLineRequest`
+- Validaciones V-COMBO-1 a V-COMBO-5
+- `PopulateComboSlotSelectionsAsync`: copiar presets automáticamente + calcular `PriceAdjustment` por producto elegido
+- Persistir `SalesOrderLineComboSlotSelection` + `SalesOrderLineSlotOptions`
+- `GET /sales-orders/{id}.json` incluir selecciones por línea
+
+---
+
+### Sesión 5-abril-2026 (continuación) — C6 Bloque 3
+
+**Lo que se hizo:**
+
+#### Bloque 3 — `SalesOrderLine` acepta selecciones de slot (T14–T22) ✅
+
+**DTOs nuevos (`CreateSalesOrderRequest.cs`):**
+- `SalesOrderLineComboSlotSelectionRequest` — `{idProductComboSlot, idProduct, options?:[]}`
+- `SalesOrderLineSlotOptionRequest` — `{idProductOptionItem, quantity}`
+- `ComboSlotSelections?` agregado a `SalesOrderLineRequest`
+
+**Response DTOs (`SalesOrderResponse.cs`):**
+- `SalesOrderLineComboSlotSelectionResponse` — `{id, idSlot, slotName, idProduct, productName, slotOptions[]}`
+- `SalesOrderLineSlotOptionResponse` — `{id, idItem, nameItem, priceDelta, quantity, isPreset}`
+- `SalesOrderLineResponse` extendido con `ComboSlotSelections`
+
+**Service (`SalesOrderService.cs`):**
+- `ValidateComboSlotSelectionsAsync` — implementa V-COMBO-1 a V-COMBO-5 + validación de opciones de slot
+- `PopulateComboSlotSelectionsAsync` — copia `ProductComboSlotPresetOption` con `IsPreset=true`, agrega opciones libres con `IsPreset=false`, calcula `PriceAdjustment` del producto elegido + `PriceDelta` de opciones libres → suma al `UnitPrice` de la línea
+- `ProjectOrder` y `MapLine` actualizados para proyectar `ComboSlotSelections → SlotOptions`
+- `CreateAsync` y `UpdateAsync` llaman a los nuevos métodos
+
+**Entidades + migración:**
+- `IsPreset` agregado a `SalesOrderLineSlotOption` y `SalesInvoiceLineSlotOption`
+- Migración `AddC6SlotOptionIsPreset` generada y aplicada ✅
+
+**Próximos pasos (Bloque 4):**
+- `SendToProductionAsync` extendido: detectar líneas combo + `ComboSlotSelections`, crear N OPs (una por slot con receta activa)
+- `GenerateInvoiceAsync` extendido: copiar `SalesOrderLineComboSlotSelection` → `SalesInvoiceLineComboSlotSelection` con `SlotOptions`  
+- `ExplodeComboAsync` refactorizado: usar selección real del cliente en lugar de `FirstOrDefault()`
+

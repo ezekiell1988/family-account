@@ -4,6 +4,7 @@ using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260405230507_AddC6ComboSelections")]
+    partial class AddC6ComboSelections
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5802,13 +5805,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("idSalesInvoiceLineComboSlotSelection")
                         .HasComment("FK a la selección de slot de la línea de factura.");
 
-                    b.Property<bool>("IsPreset")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false)
-                        .HasColumnName("isPreset")
-                        .HasComment("true = opción copiada automáticamente del preset del slot; false = elegida libremente por el cliente.");
-
                     b.Property<decimal>("Quantity")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(12, 4)
@@ -6423,13 +6419,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("idSalesOrderLineComboSlotSelection")
                         .HasComment("FK a la selección de slot de la línea del pedido.");
-
-                    b.Property<bool>("IsPreset")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false)
-                        .HasColumnName("isPreset")
-                        .HasComment("true = opción copiada automáticamente del preset del slot; false = elegida libremente por el cliente.");
 
                     b.Property<decimal>("Quantity")
                         .ValueGeneratedOnAdd()

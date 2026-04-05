@@ -22,11 +22,20 @@ public sealed class ProductComboSlotService(AppDbContext db) : IProductComboSlot
                 sp.IdProductNavigation.NameProduct,
                 sp.PriceAdjustment,
                 sp.SortOrder))
+            .ToList(),
+        s.PresetOptions
+            .Select(po => new ProductComboSlotPresetOptionResponse(
+                po.IdProductComboSlotPresetOption,
+                po.IdProductOptionItem,
+                po.IdProductOptionItemNavigation.NameItem,
+                po.IdProductOptionItemNavigation.PriceDelta))
             .ToList());
 
     private static IQueryable<ProductComboSlot> WithIncludes(IQueryable<ProductComboSlot> q)
         => q.Include(s => s.ProductComboSlotProducts)
-               .ThenInclude(sp => sp.IdProductNavigation);
+               .ThenInclude(sp => sp.IdProductNavigation)
+             .Include(s => s.PresetOptions)
+               .ThenInclude(po => po.IdProductOptionItemNavigation);
 
     public async Task<IReadOnlyList<ProductComboSlotResponse>> GetByComboAsync(int idProductCombo, CancellationToken ct = default)
     {
@@ -155,6 +164,71 @@ public sealed class ProductComboSlotService(AppDbContext db) : IProductComboSlot
         if (slot is null) return false;
 
         db.ProductComboSlot.Remove(slot);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Preset options
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public async Task<(ProductComboSlotPresetOptionResponse? result, string? error)> CreatePresetOptionAsync(
+        int slotId, CreateProductComboSlotPresetOptionRequest request, CancellationToken ct = default)
+    {
+        // Cargar slot con productos permitidos
+        var slot = await db.ProductComboSlot
+            .Include(s => s.ProductComboSlotProducts)
+            .FirstOrDefaultAsync(s => s.IdProductComboSlot == slotId, ct);
+
+        if (slot is null)
+            return (null, null);  // 404
+
+        // V-PRESET-1: el item debe pertenecer a algún producto permitido en el slot
+        var allowedProductIds = slot.ProductComboSlotProducts.Select(p => p.IdProduct).ToList();
+        var optionItem = await db.ProductOptionItem
+            .AsNoTracking()
+            .Include(oi => oi.IdProductOptionGroupNavigation)
+            .FirstOrDefaultAsync(oi => oi.IdProductOptionItem == request.IdProductOptionItem, ct);
+
+        if (optionItem is null)
+            return (null!, "Ítem de opción no encontrado.");
+
+        if (!allowedProductIds.Contains(optionItem.IdProductOptionGroupNavigation.IdProduct))
+            return (null!, "V-PRESET-1: el ítem de opción no pertenece a ningún producto permitido en este slot.");
+
+        // V-PRESET-2: sin duplicado por slot
+        var exists = await db.ProductComboSlotPresetOption.AsNoTracking()
+            .AnyAsync(p => p.IdProductComboSlot == slotId
+                        && p.IdProductOptionItem == request.IdProductOptionItem, ct);
+
+        if (exists)
+            return (null!, "V-PRESET-2: el ítem de opción ya está registrado como preset en este slot.");
+
+        var preset = new ProductComboSlotPresetOption
+        {
+            IdProductComboSlot  = slotId,
+            IdProductOptionItem = request.IdProductOptionItem
+        };
+
+        db.ProductComboSlotPresetOption.Add(preset);
+        await db.SaveChangesAsync(ct);
+
+        return (new ProductComboSlotPresetOptionResponse(
+            preset.IdProductComboSlotPresetOption,
+            optionItem.IdProductOptionItem,
+            optionItem.NameItem,
+            optionItem.PriceDelta), null);
+    }
+
+    public async Task<bool> DeletePresetOptionAsync(int slotId, int presetOptionId, CancellationToken ct = default)
+    {
+        var preset = await db.ProductComboSlotPresetOption
+            .FirstOrDefaultAsync(p => p.IdProductComboSlotPresetOption == presetOptionId
+                                   && p.IdProductComboSlot == slotId, ct);
+
+        if (preset is null) return false;
+
+        db.ProductComboSlotPresetOption.Remove(preset);
         await db.SaveChangesAsync(ct);
         return true;
     }

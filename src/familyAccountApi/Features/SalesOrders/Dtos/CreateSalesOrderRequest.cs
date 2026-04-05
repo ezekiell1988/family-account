@@ -80,8 +80,20 @@ public sealed record SalesOrderLineRequest
 
     [Description("Opciones configurables seleccionadas para este producto. Opcional.")]
     public IReadOnlyList<SalesOrderLineOptionRequest>? Options { get; init; }
+
+    [Description("Selecciones de slot para líneas de combo (IsCombo=true). Opcional.")]
+    public IReadOnlyList<SalesOrderLineComboSlotSelectionRequest>? ComboSlotSelections { get; init; }
 }
 
 public sealed record SalesOrderLineOptionRequest(
+    [property: Required] int IdProductOptionItem,
+    decimal Quantity = 1m);
+
+public sealed record SalesOrderLineComboSlotSelectionRequest(
+    [property: Required][property: Description("FK al slot del combo")] int IdProductComboSlot,
+    [property: Required][property: Description("Producto elegido por el cliente en este slot")] int IdProduct,
+    [property: Description("Opciones libres del cliente en este slot (sin presets)")] IReadOnlyList<SalesOrderLineSlotOptionRequest>? Options);
+
+public sealed record SalesOrderLineSlotOptionRequest(
     [property: Required] int IdProductOptionItem,
     decimal Quantity = 1m);

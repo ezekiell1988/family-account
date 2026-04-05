@@ -11,5 +11,6 @@ public sealed class ProductComboSlot
 
     public Product IdProductComboNavigation { get; set; } = null!;
 
-    public ICollection<ProductComboSlotProduct> ProductComboSlotProducts { get; set; } = [];
+    public ICollection<ProductComboSlotProduct>       ProductComboSlotProducts { get; set; } = [];
+    public ICollection<ProductComboSlotPresetOption>    PresetOptions            { get; set; } = [];
 }

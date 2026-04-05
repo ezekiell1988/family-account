@@ -19,7 +19,7 @@ public static class ProductComboSlotsModule
 
         group.MapGet("/by-combo/{idProductCombo:int}.json", GetByCombo)
             .WithName("GetProductComboSlotsByCombo")
-            .WithSummary("Obtener slots de un combo (con productos permitidos)");
+            .WithSummary("Obtener slots de un combo (con productos permitidos y presets)");
 
         group.MapGet("/{id:int}.json", GetById)
             .WithName("GetProductComboSlotById")
@@ -38,6 +38,18 @@ public static class ProductComboSlotsModule
         group.MapDelete("/{id:int}", Delete)
             .WithName("DeleteProductComboSlot")
             .WithSummary("Eliminar slot del combo")
+            .RequireAuthorization("Admin");
+
+        // T11 — Preset options
+        group.MapPost("/{slotId:int}/preset-options", CreatePresetOption)
+            .WithName("CreateProductComboSlotPresetOption")
+            .WithSummary("Agregar opción preset a un slot (el cliente la verá bloqueada)")
+            .RequireAuthorization("Admin");
+
+        // T12 — Delete preset option
+        group.MapDelete("/{slotId:int}/preset-options/{presetOptionId:int}", DeletePresetOption)
+            .WithName("DeleteProductComboSlotPresetOption")
+            .WithSummary("Eliminar opción preset de un slot")
             .RequireAuthorization("Admin");
 
         return app;
@@ -91,4 +103,30 @@ public static class ProductComboSlotsModule
         var deleted = await service.DeleteAsync(id, ct);
         return deleted ? TypedResults.NoContent() : TypedResults.NotFound();
     }
+
+    private static async Task<Results<Created<ProductComboSlotPresetOptionResponse>, NotFound, ValidationProblem>> CreatePresetOption(
+        int slotId, CreateProductComboSlotPresetOptionRequest request, IProductComboSlotService service, CancellationToken ct)
+    {
+        var (result, error) = await service.CreatePresetOptionAsync(slotId, request, ct);
+
+        if (error is not null)
+        {
+            var errors = new Dictionary<string, string[]> { [""] = [error] };
+            return TypedResults.ValidationProblem(errors);
+        }
+
+        if (result is null) return TypedResults.NotFound();
+
+        return TypedResults.Created(
+            $"/api/v1/product-combo-slots/{slotId}/preset-options/{result.IdProductComboSlotPresetOption}",
+            result);
+    }
+
+    private static async Task<Results<NoContent, NotFound>> DeletePresetOption(
+        int slotId, int presetOptionId, IProductComboSlotService service, CancellationToken ct)
+    {
+        var deleted = await service.DeletePresetOptionAsync(slotId, presetOptionId, ct);
+        return deleted ? TypedResults.NoContent() : TypedResults.NotFound();
+    }
 }
+

@@ -26,7 +26,20 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
             o.IdProductOptionItem,
             o.IdProductOptionItemNavigation.NameItem,
             o.IdProductOptionItemNavigation.PriceDelta,
-            o.Quantity)).ToList());
+            o.Quantity)).ToList(),
+        l.ComboSlotSelections.Select(cs => new SalesOrderLineComboSlotSelectionResponse(
+            cs.IdSalesOrderLineComboSlotSelection,
+            cs.IdProductComboSlot,
+            cs.IdProductComboSlotNavigation.NameSlot,
+            cs.IdProduct,
+            cs.IdProductNavigation.NameProduct,
+            cs.SalesOrderLineSlotOptions.Select(so => new SalesOrderLineSlotOptionResponse(
+                so.IdSalesOrderLineSlotOption,
+                so.IdProductOptionItem,
+                so.IdProductOptionItemNavigation.NameItem,
+                so.IdProductOptionItemNavigation.PriceDelta,
+                so.Quantity,
+                so.IsPreset)).ToList())).ToList());
 
     private static IQueryable<SalesOrderResponse> ProjectOrder(IQueryable<SalesOrder> q) =>
         q.Select(so => new SalesOrderResponse(
@@ -66,7 +79,20 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
                     o.IdProductOptionItem,
                     o.IdProductOptionItemNavigation.NameItem,
                     o.IdProductOptionItemNavigation.PriceDelta,
-                    o.Quantity)).ToList())).ToList()));
+                    o.Quantity)).ToList(),
+                l.ComboSlotSelections.Select(cs => new SalesOrderLineComboSlotSelectionResponse(
+                    cs.IdSalesOrderLineComboSlotSelection,
+                    cs.IdProductComboSlot,
+                    cs.IdProductComboSlotNavigation.NameSlot,
+                    cs.IdProduct,
+                    cs.IdProductNavigation.NameProduct,
+                    cs.SalesOrderLineSlotOptions.Select(so => new SalesOrderLineSlotOptionResponse(
+                        so.IdSalesOrderLineSlotOption,
+                        so.IdProductOptionItem,
+                        so.IdProductOptionItemNavigation.NameItem,
+                        so.IdProductOptionItemNavigation.PriceDelta,
+                        so.Quantity,
+                        so.IsPreset)).ToList())).ToList())).ToList()));
 
     // ── Lecturas ─────────────────────────────────────────────────────────────
 
@@ -92,9 +118,13 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
         var optionError = await ValidateOptionsAsync(request.Lines, ct);
         if (optionError is not null) return (null, optionError);
 
+        var comboError = await ValidateComboSlotSelectionsAsync(request.Lines, ct);
+        if (comboError is not null) return (null, comboError);
+
         var entity = BuildOrder(request);
 
         await PopulateOptionsAsync(entity.SalesOrderLines, request.Lines, ct);
+        await PopulateComboSlotSelectionsAsync(entity.SalesOrderLines, request.Lines, ct);
         RecalcLineAmountsWithOptions(entity);
         RecalcTotals(entity);
 
@@ -117,6 +147,9 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
         var optionError = await ValidateOptionsAsync(request.Lines, ct);
         if (optionError is not null) return (null, optionError);
 
+        var comboError = await ValidateComboSlotSelectionsAsync(request.Lines, ct);
+        if (comboError is not null) return (null, comboError);
+
         db.SalesOrderLine.RemoveRange(entity.SalesOrderLines);
 
         entity.IdFiscalPeriod    = request.IdFiscalPeriod;
@@ -130,6 +163,7 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
 
         ApplyLines(entity, request.Lines);
         await PopulateOptionsAsync(entity.SalesOrderLines, request.Lines, ct);
+        await PopulateComboSlotSelectionsAsync(entity.SalesOrderLines, request.Lines, ct);
         RecalcLineAmountsWithOptions(entity);
         RecalcTotals(entity);
 
@@ -504,6 +538,176 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
     {
         var count = await db.SalesOrder.CountAsync(so => so.StatusOrder != "Borrador", ct);
         return $"PED-{DateTime.UtcNow:yyyy}-{(count + 1):D4}";
+    }
+
+    // ── C6: validación y población de selecciones de slot ────────────────────
+
+    /// <summary>T15–T19: valida selecciones de slot para líneas de combo.</summary>
+    private async Task<string?> ValidateComboSlotSelectionsAsync(
+        IReadOnlyList<SalesOrderLineRequest> lines, CancellationToken ct)
+    {
+        for (var idx = 0; idx < lines.Count; idx++)
+        {
+            var line = lines[idx];
+            if (line.ComboSlotSelections is null || line.ComboSlotSelections.Count == 0) continue;
+
+            // T15: el producto de la línea debe tener IsCombo = true
+            var product = await db.Product.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.IdProduct == line.IdProduct, ct);
+
+            if (product is null)
+                return $"Línea {idx + 1}: producto no encontrado.";
+
+            if (!product.IsCombo)
+                return $"Línea {idx + 1}: V-COMBO-1 — solo líneas con producto IsCombo=true pueden enviar comboSlotSelections.";
+
+            // Cargar todos los slots del combo con sus productos permitidos y presets
+            var slots = await db.ProductComboSlot
+                .AsNoTracking()
+                .Include(s => s.ProductComboSlotProducts)
+                .Include(s => s.PresetOptions)
+                .Where(s => s.IdProductCombo == line.IdProduct)
+                .ToListAsync(ct);
+
+            var slotMap = slots.ToDictionary(s => s.IdProductComboSlot);
+
+            // Sin duplicados de slot en la misma línea
+            var slotIds = line.ComboSlotSelections.Select(cs => cs.IdProductComboSlot).ToList();
+            if (slotIds.Distinct().Count() != slotIds.Count)
+                return $"Línea {idx + 1}: hay slots duplicados en comboSlotSelections.";
+
+            foreach (var sel in line.ComboSlotSelections)
+            {
+                // T16: el slot debe pertenecer al combo
+                if (!slotMap.TryGetValue(sel.IdProductComboSlot, out var slot))
+                    return $"Línea {idx + 1}: V-COMBO-2 — el slot {sel.IdProductComboSlot} no pertenece al combo {line.IdProduct}.";
+
+                // T17: el producto elegido debe estar en ProductComboSlotProducts
+                var allowedProductIds = slot.ProductComboSlotProducts.Select(p => p.IdProduct).ToHashSet();
+                if (!allowedProductIds.Contains(sel.IdProduct))
+                    return $"Línea {idx + 1}: V-COMBO-3 — el producto {sel.IdProduct} no es una opción válida para el slot '{slot.NameSlot}'.";
+
+                if (sel.Options is null || sel.Options.Count == 0) continue;
+
+                var requestedOptionIds = sel.Options.Select(o => o.IdProductOptionItem).ToList();
+
+                // T18: las opciones deben pertenecer al producto elegido en el slot
+                var validOptions = await db.ProductOptionItem
+                    .AsNoTracking()
+                    .Include(oi => oi.IdProductOptionGroupNavigation)
+                    .Where(oi => requestedOptionIds.Contains(oi.IdProductOptionItem)
+                              && oi.IdProductOptionGroupNavigation.IdProduct == sel.IdProduct)
+                    .Select(oi => oi.IdProductOptionItem)
+                    .ToListAsync(ct);
+
+                var validSet  = validOptions.ToHashSet();
+                var invalidOpts = requestedOptionIds.Where(id => !validSet.Contains(id)).ToList();
+                if (invalidOpts.Count > 0)
+                    return $"Línea {idx + 1}: V-COMBO-4 — las siguientes opciones no pertenecen al producto del slot '{slot.NameSlot}': {string.Join(", ", invalidOpts)}.";
+
+                // T19: el cliente no puede enviar ítems preset
+                var presetItemIds = slot.PresetOptions.Select(p => p.IdProductOptionItem).ToHashSet();
+                var sentPresets   = requestedOptionIds.Where(id => presetItemIds.Contains(id)).ToList();
+                if (sentPresets.Count > 0)
+                    return $"Línea {idx + 1}: V-COMBO-5 — las opciones preset no deben enviarse manualmente; el sistema las agrega automáticamente. Items bloqueados: {string.Join(", ", sentPresets)}.";
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>T19+T20+T21: copia presets, agrega opciones libres, ajusta precio y persiste selecciones.</summary>
+    private async Task PopulateComboSlotSelectionsAsync(
+        ICollection<SalesOrderLine> salesLines,
+        IReadOnlyList<SalesOrderLineRequest> requestLines,
+        CancellationToken ct)
+    {
+        var linesArray = salesLines.ToArray();
+
+        for (var i = 0; i < requestLines.Count; i++)
+        {
+            var reqLine  = requestLines[i];
+            var saleLine = linesArray[i];
+
+            if (reqLine.ComboSlotSelections is null || reqLine.ComboSlotSelections.Count == 0) continue;
+
+            // Cargar slots con ProductComboSlotProducts (para PriceAdjustment) y PresetOptions
+            var slotIds = reqLine.ComboSlotSelections.Select(cs => cs.IdProductComboSlot).ToList();
+            var slots = await db.ProductComboSlot
+                .AsNoTracking()
+                .Include(s => s.ProductComboSlotProducts)
+                .Include(s => s.PresetOptions)
+                    .ThenInclude(po => po.IdProductOptionItemNavigation)
+                .Where(s => slotIds.Contains(s.IdProductComboSlot))
+                .ToDictionaryAsync(s => s.IdProductComboSlot, ct);
+
+            // Cargar option items de opciones libres para calcular PriceDelta
+            var allFreeOptionIds = reqLine.ComboSlotSelections
+                .SelectMany(cs => cs.Options ?? [])
+                .Select(o => o.IdProductOptionItem)
+                .Distinct()
+                .ToList();
+
+            var freeOptionMap = allFreeOptionIds.Count > 0
+                ? await db.ProductOptionItem
+                    .AsNoTracking()
+                    .Where(oi => allFreeOptionIds.Contains(oi.IdProductOptionItem))
+                    .ToDictionaryAsync(oi => oi.IdProductOptionItem, ct)
+                : new Dictionary<int, ProductOptionItem>();
+
+            decimal priceAdjustmentTotal = 0m;
+
+            foreach (var sel in reqLine.ComboSlotSelections)
+            {
+                var slot = slots[sel.IdProductComboSlot];
+
+                // T20a: PriceAdjustment del producto elegido en el slot
+                var slotProduct = slot.ProductComboSlotProducts
+                    .FirstOrDefault(sp => sp.IdProduct == sel.IdProduct);
+                if (slotProduct is not null)
+                    priceAdjustmentTotal += slotProduct.PriceAdjustment;
+
+                var selection = new SalesOrderLineComboSlotSelection
+                {
+                    IdProductComboSlot = sel.IdProductComboSlot,
+                    IdProduct          = sel.IdProduct
+                };
+
+                // T19+T21: copiar presets → IsPreset = true
+                foreach (var preset in slot.PresetOptions)
+                {
+                    selection.SalesOrderLineSlotOptions.Add(new SalesOrderLineSlotOption
+                    {
+                        IdProductOptionItem = preset.IdProductOptionItem,
+                        Quantity            = 1m,
+                        IsPreset            = true
+                    });
+                }
+
+                // T21: opciones libres del cliente → IsPreset = false
+                if (sel.Options is not null)
+                {
+                    foreach (var opt in sel.Options)
+                    {
+                        selection.SalesOrderLineSlotOptions.Add(new SalesOrderLineSlotOption
+                        {
+                            IdProductOptionItem = opt.IdProductOptionItem,
+                            Quantity            = opt.Quantity,
+                            IsPreset            = false
+                        });
+
+                        // T20b: PriceDelta de opciones libres
+                        if (freeOptionMap.TryGetValue(opt.IdProductOptionItem, out var optItem))
+                            priceAdjustmentTotal += optItem.PriceDelta * opt.Quantity;
+                    }
+                }
+
+                saleLine.ComboSlotSelections.Add(selection);
+            }
+
+            // T20: ajustar UnitPrice sumando todos los ajustes de precio del combo
+            saleLine.UnitPrice = reqLine.UnitPrice + priceAdjustmentTotal;
+        }
     }
 
     // ── C5: Flujo de pedido configurado ──────────────────────────────────────
