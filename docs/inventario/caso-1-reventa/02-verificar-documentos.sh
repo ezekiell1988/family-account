@@ -326,6 +326,33 @@ assert_gte "FV tiene idAccountingEntry"      "1"          "${ID_ENTRY_FV_FROM_FV
 log_info   "  FV idAccountingEntry (ingreso FV-): ${ID_ENTRY_FV_FROM_FV:-?}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# SECCIÓN 4b — GUARDIA DE DEVOLUCIÓN PARCIAL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+section "SECCIÓN 4b — Guardia devolución parcial (cantidad > vendida → debe fallar)"
+
+# Fix Bug 4: PartialReturnAsync valida que quantity <= salesLine.QuantityBase.
+# Se vendieron 10 cajas del lote; intentar devolver 11 debe ser rechazado con HTTP 422.
+log_info "Probando guardia: devolver 11 cajas (>10 vendidas) desde lote $ID_LOT"
+
+HTTP_STATUS_EXCESS=$(curl -k -s -o "$TEMP_RESPONSE" -w "%{http_code}" \
+  -X POST "${HOST}/sales-invoices/${ID_SALES_INVOICE}/partial-return" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"dateReturn\":\"$(date '+%Y-%m-%d')\",\"descriptionReturn\":\"Test guardia — debe fallar\",\"lines\":[{\"idInventoryLot\":${ID_LOT},\"quantity\":11,\"totalLineAmount\":16500}]}")
+
+if [[ "$HTTP_STATUS_EXCESS" == "422" ]]; then
+  ERR_MSG=$(jq -r '.error // empty' "$TEMP_RESPONSE" 2>/dev/null | head -1)
+  log_ok  "Guardia exceso: HTTP 422 — devolver 11 cajas rechazado correctamente"
+  [[ -n "$ERR_MSG" ]] && log_info "  Mensaje API: $ERR_MSG"
+elif [[ "$HTTP_STATUS_EXCESS" == "200" ]]; then
+  log_fail "Guardia exceso: HTTP 200 — la API ACEPTÓ 11 cajas (regresión Bug 4)"
+  log_warn "  Verificar que PartialReturnAsync valida quantity <= salesLine.QuantityBase"
+else
+  log_fail "Guardia exceso: HTTP inesperado $HTTP_STATUS_EXCESS (esperado 422)"
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # SECCIÓN 5 — ÓRDENES DE PRODUCCIÓN (no aplica Caso 1)
 # ═══════════════════════════════════════════════════════════════════════════════
 

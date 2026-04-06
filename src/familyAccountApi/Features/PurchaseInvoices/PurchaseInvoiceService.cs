@@ -196,6 +196,24 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
     public async Task<(bool Success, string? Error, PurchaseInvoiceResponse? Invoice)> ConfirmAsync(
         int idPurchaseInvoice, CancellationToken ct = default)
     {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var result = await ConfirmInternalAsync(idPurchaseInvoice, ct);
+            if (result.Success) await tx.CommitAsync(ct);
+            else await tx.RollbackAsync(ct);
+            return result;
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    private async Task<(bool Success, string? Error, PurchaseInvoiceResponse? Invoice)> ConfirmInternalAsync(
+        int idPurchaseInvoice, CancellationToken ct = default)
+    {
         // Cargar factura completa con todo lo necesario para generar el asiento
         var invoice = await db.PurchaseInvoice
             .Include(pi => pi.IdPurchaseInvoiceTypeNavigation)
@@ -543,7 +561,10 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
     // ── ANULAR ────────────────────────────────────────────────────────────────
     public async Task<PurchaseInvoiceResponse?> CancelAsync(int idPurchaseInvoice, CancellationToken ct = default)
     {
-        var entity = await db.PurchaseInvoice.FindAsync([idPurchaseInvoice], ct);
+        var entity = await db.PurchaseInvoice
+            .Include(pi => pi.PurchaseInvoiceLines)
+            .FirstOrDefaultAsync(pi => pi.IdPurchaseInvoice == idPurchaseInvoice, ct);
+
         if (entity is null) return null;
 
         if (entity.StatusInvoice == "Anulado")
@@ -551,6 +572,50 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
 
         if (entity.StatusInvoice != "Confirmado" && entity.StatusInvoice != "Borrador")
             throw new InvalidOperationException($"No se puede anular una factura en estado '{entity.StatusInvoice}'.");
+
+        // ── Revertir lotes de inventario (solo si estaba confirmada) ────────
+        if (entity.StatusInvoice == "Confirmado")
+        {
+            var lots = await db.InventoryLot
+                .Where(il => il.IdPurchaseInvoice == idPurchaseInvoice)
+                .ToListAsync(CancellationToken.None);
+
+            var affectedProducts = new HashSet<int>();
+
+            foreach (var lot in lots)
+            {
+                // Determinar cuánto aportó esta factura al lote
+                var purchaseLine = entity.PurchaseInvoiceLines
+                    .FirstOrDefault(l => l.IdProduct == lot.IdProduct);
+
+                decimal originalQty = purchaseLine?.QuantityBase ?? lot.QuantityAvailable;
+
+                // Bloquear si el lote fue parcialmente consumido por ventas
+                if (lot.QuantityAvailable < originalQty)
+                    throw new InvalidOperationException(
+                        $"No se puede anular la factura: el lote '{lot.LotNumber ?? lot.IdInventoryLot.ToString()}' " +
+                        $"del producto {lot.IdProduct} ya fue parcialmente consumido por una venta. " +
+                        $"Anule primero las facturas de venta que usan este lote.");
+
+                lot.QuantityAvailable -= originalQty;
+                affectedProducts.Add(lot.IdProduct);
+            }
+
+            // Recalcular costo promedio de cada producto afectado
+            foreach (var idProduct in affectedProducts)
+            {
+                var product = await db.Product.FindAsync([idProduct], CancellationToken.None);
+                var allLots = await db.InventoryLot
+                    .Where(il => il.IdProduct == idProduct)
+                    .ToListAsync(CancellationToken.None);
+
+                var totalQty  = allLots.Sum(il => il.QuantityAvailable);
+                var totalCost = allLots.Sum(il => il.QuantityAvailable * il.UnitCost);
+
+                if (product is not null)
+                    product.AverageCost = totalQty > 0 ? Math.Round(totalCost / totalQty, 6) : 0m;
+            }
+        }
 
         entity.StatusInvoice = "Anulado";
 

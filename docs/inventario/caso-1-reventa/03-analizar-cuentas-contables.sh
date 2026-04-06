@@ -249,6 +249,40 @@ check_account_balance 119
 check_account_balance 124
 check_account_balance 127
 
+# ── Verificar asiento DEV-COGS-FV (Bug 2 fix: usa fecha factura; Bug 5: cuenta != 0) ──
+printf "\n  ${BOLD}Asiento DEV-COGS-FV — reversión COGS devolución parcial${NC}\n"
+echo "" >> "$OUTPUT_FILE"
+echo "  Asiento DEV-COGS-FV" >> "$OUTPUT_FILE"
+
+DEV_COGS_COUNT=$(jq '[.[] | select(.numberEntry | startswith("DEV-COGS-FV-"))] | length' "$TEMP_ENTRIES")
+if [[ "${DEV_COGS_COUNT:-0}" -ge 1 ]]; then
+  log_ok "Asiento DEV-COGS-FV existe ($DEV_COGS_COUNT encontrado(s))"
+  echo "    DEV-COGS-FV existe: $DEV_COGS_COUNT" >> "$OUTPUT_FILE"
+
+  # Verificar montos del asiento (3 cajas × ₡1,000 = ₡3,000)
+  DEV_COGS_DR=$(jq '[.[] | select(.numberEntry | startswith("DEV-COGS-FV-")) | .lines[] | .debitAmount] | add // 0' "$TEMP_ENTRIES")
+  DEV_COGS_CR=$(jq '[.[] | select(.numberEntry | startswith("DEV-COGS-FV-")) | .lines[] | .creditAmount] | add // 0' "$TEMP_ENTRIES")
+  assert_float_eq "    DEV-COGS-FV DR total (inventario recuperado)" "3000" "$DEV_COGS_DR"
+  assert_float_eq "    DEV-COGS-FV CR total (reversa COGS)"         "3000" "$DEV_COGS_CR"
+  echo "    DR=$DEV_COGS_DR  CR=$DEV_COGS_CR" >> "$OUTPUT_FILE"
+else
+  log_fail "Asiento DEV-COGS-FV no encontrado — la devolución parcial no generó reversión de COGS"
+  echo "    [FAIL] DEV-COGS-FV no encontrado" >> "$OUTPUT_FILE"
+fi
+
+# Verificar que ninguna línea de COGS usa cuenta 0 (code smell fix: IdAccountCOGS ?? 0)
+COGS_ZERO_COUNT=$(jq '
+  [.[] | select(.numberEntry | startswith("COGS-FV-") or startswith("DEV-COGS-FV-"))
+  | .lines[] | select(.idAccount == 0)] | length
+' "$TEMP_ENTRIES")
+if [[ "${COGS_ZERO_COUNT:-0}" -eq 0 ]]; then
+  log_ok "Ninguna línea COGS/DEV-COGS usa cuenta=0 (IdAccountCOGS configurado correctamente)"
+  echo "    [OK] Ninguna línea COGS usa cuenta=0" >> "$OUTPUT_FILE"
+else
+  log_fail "¡${COGS_ZERO_COUNT} línea(s) de COGS con idAccount=0! Verificar IdAccountCOGS en tipo de factura."
+  echo "    [FAIL] $COGS_ZERO_COUNT línea(s) de COGS con cuenta=0" >> "$OUTPUT_FILE"
+fi
+
 # ── Verificación de partida doble ─────────────────────────────────────────────
 printf "\n  ${BOLD}Partida doble (DR = CR)${NC}\n"
 assert_float_eq "    ΣDR = ΣCR" "$GRAND_DR" "$GRAND_CR"

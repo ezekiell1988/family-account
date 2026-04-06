@@ -186,6 +186,24 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
     public async Task<(bool Success, string? Error, SalesInvoiceResponse? Invoice)> ConfirmAsync(
         int idSalesInvoice, CancellationToken ct = default)
     {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var result = await ConfirmInternalAsync(idSalesInvoice, ct);
+            if (result.Success) await tx.CommitAsync(ct);
+            else await tx.RollbackAsync(ct);
+            return result;
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    private async Task<(bool Success, string? Error, SalesInvoiceResponse? Invoice)> ConfirmInternalAsync(
+        int idSalesInvoice, CancellationToken ct = default)
+    {
         var invoice = await db.SalesInvoice
             .Include(si => si.IdSalesInvoiceTypeNavigation)
                 .ThenInclude(sit => sit.IdBankMovementTypeNavigation)
@@ -555,16 +573,10 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
                     var lot = await db.InventoryLot.FindAsync([invoiceLine.IdInventoryLot!.Value], CancellationToken.None);
                     if (lot is null) continue;
 
-                    if (lot.ExpirationDate.HasValue && lot.ExpirationDate.Value < invoice.DateInvoice)
-                        return (false,
-                            $"El lote '{lot.LotNumber ?? lot.IdInventoryLot.ToString()}' del producto {invoiceLine.IdProduct} " +
-                            $"está vencido (vence {lot.ExpirationDate.Value:yyyy-MM-dd}, fecha de factura {invoice.DateInvoice:yyyy-MM-dd}).",
-                            null);
-
                     decimal lineCogs;
                     (lineCogs, bomError) = await DeductLotAsync(
                         lot, lineQtyBase, invoiceLine.IdProduct.Value, invoiceLine.DescriptionLine,
-                        invoiceType, invoiceLine, cogsLines, CancellationToken.None);
+                        invoiceType, invoiceLine, cogsLines, invoice.DateInvoice, CancellationToken.None);
 
                     if (bomError is not null)
                         return (false, bomError, null);
@@ -723,10 +735,14 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
         InventoryLot lot, decimal qtyBase, int idProduct, string description,
         SalesInvoiceType invoiceType, SalesInvoiceLine sourceLine,
         List<(AccountingEntryLine, SalesInvoiceLine)> cogsLines,
+        DateOnly referenceDate,
         CancellationToken ct)
     {
-        if (lot.ExpirationDate.HasValue && lot.ExpirationDate.Value < DateOnly.FromDateTime(DateTime.UtcNow))
+        if (lot.ExpirationDate.HasValue && lot.ExpirationDate.Value < referenceDate)
             return (0m, $"El lote '{lot.LotNumber ?? lot.IdInventoryLot.ToString()}' del producto {idProduct} está vencido.");
+
+        if (invoiceType.IdAccountCOGS is null)
+            return (0m, $"El tipo de factura de venta no tiene configurada la cuenta COGS (IdAccountCOGS). Configure el catálogo antes de confirmar.");
 
         decimal unitCost       = lot.UnitCost;
         decimal lineCogsAmount = Math.Round(qtyBase * unitCost, 2);
@@ -743,7 +759,7 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
 
         cogsLines.Add((new AccountingEntryLine
         {
-            IdAccount       = invoiceType.IdAccountCOGS ?? 0,
+            IdAccount       = invoiceType.IdAccountCOGS.Value,
             DebitAmount     = lineCogsAmount,
             CreditAmount    = 0,
             DescriptionLine = description
@@ -799,7 +815,7 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
             var (lineCogs, error) = await DeductLotAsync(
                 lot, qtyToConsume, recipeLine.IdProductInput,
                 $"BOM — {recipe.NameRecipe} / {sourceLine.DescriptionLine}",
-                invoiceType, sourceLine, cogsLines, ct);
+                invoiceType, sourceLine, cogsLines, invoice.DateInvoice, ct);
 
             if (error is not null) return (runningTotal, error);
 
@@ -876,7 +892,7 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
                 var (lineCogs, slotError) = await DeductLotAsync(
                     lot, slotQty, slotProduct.IdProduct,
                     $"Combo slot '{slot.NameSlot}' — {sourceLine.DescriptionLine}",
-                    invoiceType, sourceLine, cogsLines, ct);
+                    invoiceType, sourceLine, cogsLines, invoice.DateInvoice, ct);
 
                 if (slotError is not null) return (runningTotal, slotError);
 
@@ -958,6 +974,27 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
                 null);
 
         var invoiceType = invoice.IdSalesInvoiceTypeNavigation;
+
+        // ── 0. Validar que la cantidad devuelta no supere lo vendido ─────────
+        var salesLines = await db.SalesInvoiceLine
+            .Where(l => l.IdSalesInvoice == idSalesInvoice)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        foreach (var line in request.Lines)
+        {
+            var salesLine = salesLines.FirstOrDefault(l => l.IdInventoryLot == line.IdInventoryLot);
+            if (salesLine is null)
+                return (false,
+                    $"El lote {line.IdInventoryLot} no corresponde a ninguna línea de esta factura de venta.",
+                    null);
+
+            if (line.Quantity > salesLine.QuantityBase)
+                return (false,
+                    $"La cantidad a devolver ({line.Quantity:N4}) supera la cantidad originalmente vendida " +
+                    $"({salesLine.QuantityBase:N4}) para el lote {line.IdInventoryLot}.",
+                    null);
+        }
 
         decimal totalReturnAmount = 0m;
         decimal totalCogsReversed = 0m;

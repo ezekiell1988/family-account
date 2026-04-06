@@ -44,6 +44,8 @@ El cliente devuelve **3 cajas** dañadas en tránsito. El sistema las reintegra 
 
 - `POST /sales-invoices/{id}/partial-return`
 
+> La cantidad a devolver por líte no puede superar la cantidad originalmente vendida en esa línea. El sistema responde HTTP 422 si se intenta devolver un exceso.
+
 ---
 
 ### 5. Reintegro bancario al cliente (manual)
@@ -70,3 +72,5 @@ Un administrador regala **2 cajas** a un cliente VIP. Se registra un ajuste de i
 **Fórmula:** 100 (compra) − 10 (venta) + 3 (devolución) − 2 (regalía) = **91 unidades**
 
 **Si se cancela la venta:** las 10 cajas vuelven al lote automáticamente.
+
+**Si se anula la factura de compra:** los lotes creados al confirmarla se reducen automáticamente. Si alguno ya fue consumido parcialmente por una venta, la anulación es bloqueada hasta que se anulen primero las facturas de venta que dependen de ese lote.
