@@ -40,25 +40,9 @@ Un cliente pide **10 cajas**. Se consultan los lotes disponibles, se elige el lo
 
 ### 4. Devolución parcial
 
-El cliente devuelve **3 cajas** dañadas en tránsito. Al confirmar, el sistema:
-- Reintegra las 3 cajas al lote (quedan 93).
-- Genera el asiento de reversión de COGS (`DEV-COGS-FV-`).
-- Genera el asiento de reintegro al cliente (`DEV-ING-FV-`), revirtiendo ingresos e IVA por separado y acreditando la cuenta bancaria o de nota de crédito según el modo elegido.
+El cliente devuelve **3 cajas** dañadas en tránsito. Se registra la devolución indicando el modo de reintegro (`EfectivoInmediato` o `NotaCredito`).
 
-```
-DEV-COGS-FV:  DR Inventario / CR COGS
-DEV-ING-FV:   DR Ingresos (neto) + DR IVA por Pagar / CR Banco·Caja  [EfectivoInmediato]
-              DR Ingresos (neto) + DR IVA por Pagar / CR Cuentas×Pagar·Cliente  [NotaCredito]
-```
-
-- `POST /sales-invoices/{id}/partial-return`
-
-| Campo | Descripción |
-|---|---|
-| `refundMode` | `"EfectivoInmediato"` — saldo a devolver en Banco/Caja; `"NotaCredito"` — saldo a favor del cliente |
-| `idAccountCreditNote` | Cuenta contable destino (requerida solo para `NotaCredito`) |
-
-> La cantidad a devolver por lote no puede superar la cantidad originalmente vendida en esa línea. El sistema responde HTTP 422 si se intenta devolver un exceso.
+1. `POST /sales-invoices/{id}/partial-return` — reintegra las 3 cajas al lote (quedan 93) y genera los asientos de reversión de COGS e ingresos automáticamente.
 
 ---
 
