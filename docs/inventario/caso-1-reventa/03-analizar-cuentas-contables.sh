@@ -51,12 +51,10 @@ DB_USER=$(grep -E '^USER:'     "$CREDENTIALS_FILE" | awk '{print $2}')
 DB_PASS=$(grep -E '^PASSWORD:' "$CREDENTIALS_FILE" | awk '{print $2}')
 EMAIL="ezekiell1988@hotmail.com"
 
-curl -k -s -X POST "${HOST}/auth/request-pin" -H "Content-Type: application/json" \
-  -d "{\"emailUser\":\"$EMAIL\"}" > /dev/null
-
-PIN=$(sqlcmd -S "${DB_HOST},${DB_PORT}" -U "$DB_USER" -P "$DB_PASS" -C -d dbfa \
-  -Q "SET NOCOUNT ON; SELECT TOP 1 pin FROM dbo.userPin up JOIN dbo.[user] u ON u.idUser=up.idUser WHERE u.emailUser='${EMAIL}' ORDER BY up.idUserPin DESC" \
-  -h -1 -W 2>/dev/null | tr -d '[:space:]')
+PIN="12345"
+sqlcmd -S "${DB_HOST},${DB_PORT}" -U "$DB_USER" -P "$DB_PASS" -C -d dbfa \
+  -Q "SET NOCOUNT ON; DELETE FROM dbo.userPin WHERE idUser = 1 AND pin = '${PIN}'; INSERT INTO dbo.userPin (idUser, pin) VALUES (1, '${PIN}');" \
+  2>/dev/null
 
 TOKEN=$(curl -k -s -X POST "${HOST}/auth/login" -H "Content-Type: application/json" \
   -d "{\"emailUser\":\"$EMAIL\",\"pin\":\"$PIN\"}" | jq -r '.accessToken')

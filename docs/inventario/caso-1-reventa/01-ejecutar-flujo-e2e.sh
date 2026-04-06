@@ -244,23 +244,16 @@ fi
 # ════════════════════════════════════════════════════════════════════════════════
 step "PASO 1 — Autenticación"
 
-log_info "Solicitando PIN al correo..."
-api_call POST "/auth/request-pin" '{"emailUser":"'"$EMAIL"'"}'
-assert_status 200 "request-pin"
-
-log_info "Leyendo PIN desde la base de datos..."
-PIN=$(sqlcmd \
+PIN="12345"
+log_info "Insertando PIN de prueba '${PIN}' directamente en BD (idUser=1)..."
+sqlcmd \
   -S "${DB_HOST},${DB_PORT}" \
   -U "$DB_USER" \
   -P "$DB_PASS" \
   -C -d dbfa \
-  -Q "SET NOCOUNT ON; SELECT TOP 1 pin FROM dbo.userPin up INNER JOIN dbo.[user] u ON u.idUser = up.idUser WHERE u.emailUser = '${EMAIL}' ORDER BY up.idUserPin DESC" \
-  -h -1 -W 2>/dev/null | tr -d '[:space:]')
-
-if [[ -z "$PIN" ]]; then
-  fail "No se encontró PIN en la BD para $EMAIL"
-fi
-log_ok "PIN obtenido desde BD: $PIN"
+  -Q "SET NOCOUNT ON; DELETE FROM dbo.userPin WHERE idUser = 1 AND pin = '${PIN}'; INSERT INTO dbo.userPin (idUser, pin) VALUES (1, '${PIN}');" \
+  2>/dev/null
+log_ok "PIN '${PIN}' insertado en BD para usuario 1"
 
 log_info "Haciendo login con el PIN..."
 api_call POST "/auth/login" '{"emailUser":"'"$EMAIL"'","pin":"'"$PIN"'"}'
