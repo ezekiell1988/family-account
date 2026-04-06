@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260406081513_InitialCreate")]
+    [Migration("20260406191340_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1158,12 +1158,34 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         new
                         {
                             IdAccount = 113,
-                            AllowsMovements = true,
+                            AllowsMovements = false,
                             CodeAccount = "5.14.01",
                             IdAccountParent = 112,
                             IsActive = true,
                             LevelAccount = 3,
                             NameAccount = "Faltantes de Inventario (Merma)",
+                            TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 129,
+                            AllowsMovements = true,
+                            CodeAccount = "5.14.01.01",
+                            IdAccountParent = 113,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "Merma Normal",
+                            TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 130,
+                            AllowsMovements = true,
+                            CodeAccount = "5.14.01.02",
+                            IdAccountParent = 113,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "Merma Anormal",
                             TypeAccount = "Gasto"
                         },
                         new
@@ -2389,7 +2411,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             ColumnMappings = "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}",
                             DateFormat = "dd/MM/yyyy",
                             IsActive = true,
-                            KeywordRules = "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]",
+                            KeywordRules = "[\r\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\r\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\r\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\r\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\r\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\r\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\r\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\r\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\r\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\r\n]",
                             NameTemplate = "BCR – Movimientos de Cuenta (HTML-XLS)",
                             Notes = "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.",
                             TimeFormat = "HH:mm:ss"
@@ -3514,7 +3536,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             IdInventoryAdjustmentType = 1,
                             CodeInventoryAdjustmentType = "CONTEO",
                             IdAccountCounterpartEntry = 114,
-                            IdAccountCounterpartExit = 113,
+                            IdAccountCounterpartExit = 130,
                             IdAccountInventoryDefault = 109,
                             IsActive = true,
                             NameInventoryAdjustmentType = "Conteo Físico"
@@ -3534,10 +3556,19 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             IdInventoryAdjustmentType = 3,
                             CodeInventoryAdjustmentType = "AJUSTE_COSTO",
                             IdAccountCounterpartEntry = 114,
-                            IdAccountCounterpartExit = 113,
+                            IdAccountCounterpartExit = 130,
                             IdAccountInventoryDefault = 109,
                             IsActive = true,
                             NameInventoryAdjustmentType = "Ajuste de Costo"
+                        },
+                        new
+                        {
+                            IdInventoryAdjustmentType = 4,
+                            CodeInventoryAdjustmentType = "REGALIA",
+                            IdAccountCounterpartExit = 130,
+                            IdAccountInventoryDefault = 109,
+                            IsActive = true,
+                            NameInventoryAdjustmentType = "Regalía"
                         });
                 });
 

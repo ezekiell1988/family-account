@@ -2532,7 +2532,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
             migrationBuilder.InsertData(
                 table: "bankStatementTemplate",
                 columns: new[] { "idBankStatementTemplate", "bankName", "codeTemplate", "columnMappings", "dateFormat", "isActive", "keywordRules", "nameTemplate", "notes", "timeFormat" },
-                values: new object[] { 1, "Banco de Costa Rica", "BCR-HTML-XLS-V1", "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]", "BCR – Movimientos de Cuenta (HTML-XLS)", "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.", "HH:mm:ss" });
+                values: new object[] { 1, "Banco de Costa Rica", "BCR-HTML-XLS-V1", "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}", "dd/MM/yyyy", true, "[\r\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\r\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\r\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\r\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\r\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\r\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\r\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\r\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\r\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\r\n]", "BCR – Movimientos de Cuenta (HTML-XLS)", "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.", "HH:mm:ss" });
 
             migrationBuilder.InsertData(
                 table: "company",
@@ -2774,7 +2774,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 104, true, "5.13.01", 103, true, 3, "Diferencial Cambiario Desfavorable", "Gasto" },
                     { 105, false, "1.1.06", 7, true, 3, "Caja / Efectivo", "Activo" },
                     { 108, false, "1.1.07", 7, true, 3, "Inventario", "Activo" },
-                    { 113, true, "5.14.01", 112, true, 3, "Faltantes de Inventario (Merma)", "Gasto" },
+                    { 113, false, "5.14.01", 112, true, 3, "Faltantes de Inventario (Merma)", "Gasto" },
                     { 114, true, "5.14.02", 112, true, 3, "Sobrantes de Inventario", "Gasto" },
                     { 115, true, "5.14.03", 112, true, 3, "Costos de Producción", "Gasto" },
                     { 117, true, "4.5.01", 116, true, 3, "Ingresos por Ventas — Mercadería", "Ingreso" },
@@ -2883,7 +2883,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 124, true, "1.1.09.01", 123, true, 4, "IVA Acreditable CRC (₡)", "Activo" },
                     { 125, true, "1.1.09.02", 123, true, 4, "IVA Acreditable USD ($)", "Activo" },
                     { 127, true, "2.1.04.01", 126, true, 4, "IVA por Pagar CRC (₡)", "Pasivo" },
-                    { 128, true, "2.1.04.02", 126, true, 4, "IVA por Pagar USD ($)", "Pasivo" }
+                    { 128, true, "2.1.04.02", 126, true, 4, "IVA por Pagar USD ($)", "Pasivo" },
+                    { 129, true, "5.14.01.01", 113, true, 4, "Merma Normal", "Gasto" },
+                    { 130, true, "5.14.01.02", 113, true, 4, "Merma Anormal", "Gasto" }
                 });
 
             migrationBuilder.InsertData(
@@ -3009,9 +3011,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 columns: new[] { "idInventoryAdjustmentType", "codeInventoryAdjustmentType", "idAccountCounterpartEntry", "idAccountCounterpartExit", "idAccountInventoryDefault", "isActive", "nameInventoryAdjustmentType" },
                 values: new object[,]
                 {
-                    { 1, "CONTEO", 114, 113, 109, true, "Conteo Físico" },
+                    { 1, "CONTEO", 114, 130, 109, true, "Conteo Físico" },
                     { 2, "PRODUCCION", 115, 115, 111, true, "Producción" },
-                    { 3, "AJUSTE_COSTO", 114, 113, 109, true, "Ajuste de Costo" }
+                    { 3, "AJUSTE_COSTO", 114, 130, 109, true, "Ajuste de Costo" },
+                    { 4, "REGALIA", null, 130, 109, true, "Regalía" }
                 });
 
             migrationBuilder.InsertData(

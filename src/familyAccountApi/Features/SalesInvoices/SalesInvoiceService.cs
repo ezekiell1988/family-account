@@ -336,7 +336,11 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
             }
         }
 
-        // ── 2. Construir líneas CR de ingresos (por ProductAccount o fallback) ──
+        // ── 2. Construir líneas CR de ingresos ──
+        // Prioridad: IdAccountSalesRevenue del tipo de factura (cuando está configurado).
+        // Fallback: ProductAccount del producto (distribución contable por producto).
+        // Nota: ProductAccount también se usa para la cuenta de inventario PT en PROD-CAP;
+        //       por eso no debe usarse para ingresos cuando el tipo ya tiene cuenta configurada.
         // SourceLine es nullable: la línea de IVA por Pagar no corresponde a ninguna línea de factura específica.
         var crLines = new List<(AccountingEntryLine Line, SalesInvoiceLine? SourceLine)>();
         bool isUsdSale = invoice.IdCurrencyNavigation.CodeCurrency.Equals("USD", StringComparison.OrdinalIgnoreCase);
@@ -344,6 +348,21 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
 
         foreach (var invoiceLine in invoice.SalesInvoiceLines)
         {
+            if (invoiceType.IdAccountSalesRevenue is not null)
+            {
+                // Cuenta de ingresos configurada en el tipo: usarla directamente
+                var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
+                crLines.Add((new AccountingEntryLine
+                {
+                    IdAccount       = invoiceType.IdAccountSalesRevenue.Value,
+                    DebitAmount     = 0,
+                    CreditAmount    = lineNetAmount,
+                    DescriptionLine = invoiceLine.DescriptionLine,
+                }, invoiceLine));
+                continue;
+            }
+
+            // Sin IdAccountSalesRevenue: intentar distribución por ProductAccount
             if (invoiceLine.IdProduct is not null)
             {
                 var productAccounts = await db.ProductAccount
@@ -359,7 +378,6 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
                             $"La distribución contable del producto {invoiceLine.IdProduct} suma {totalPct:N2}% en lugar de 100%. Corrija los porcentajes antes de confirmar.",
                             null);
 
-                    // Usar monto neto (sin IVA) para la cuenta de ingresos
                     var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
                     foreach (var pa in productAccounts)
                     {
@@ -374,20 +392,7 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
                             IdCostCenter    = pa.IdCostCenter
                         }, invoiceLine));
                     }
-                    continue;
                 }
-            }
-
-            if (invoiceType.IdAccountSalesRevenue is not null)
-            {
-                var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
-                crLines.Add((new AccountingEntryLine
-                {
-                    IdAccount       = invoiceType.IdAccountSalesRevenue.Value,
-                    DebitAmount     = 0,
-                    CreditAmount    = lineNetAmount,
-                    DescriptionLine = invoiceLine.DescriptionLine,
-                }, invoiceLine));
             }
         }
 
@@ -1150,41 +1155,10 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
             decimal lineTax      = Math.Round(line.TotalLineAmount - lineSubtotal, 2);
             totalRefundGross += line.TotalLineAmount;
 
-            // Determinar cuenta(s) de ingresos: ProductAccount o fallback
-            bool addedViaProductAccount = false;
-            if (salesLine.IdProduct.HasValue)
+            // Determinar cuenta de ingresos: IdAccountSalesRevenue del tipo tiene prioridad.
+            // ProductAccount se usa para inventario (PROD-CAP), no para revenue en ventas.
+            if (invoiceType.IdAccountSalesRevenue is not null)
             {
-                var productAccounts = await db.ProductAccount
-                    .AsNoTracking()
-                    .Where(pa => pa.IdProduct == salesLine.IdProduct.Value)
-                    .ToListAsync(CancellationToken.None);
-
-                if (productAccounts.Count > 0)
-                {
-                    foreach (var pa in productAccounts)
-                    {
-                        decimal drAmt = Math.Round(lineSubtotal * pa.PercentageAccount / 100m, 2);
-                        refundLines.Add(new AccountingEntryLine
-                        {
-                            IdAccount       = pa.IdAccount,
-                            DebitAmount     = drAmt,
-                            CreditAmount    = 0,
-                            DescriptionLine = line.DescriptionLine
-                                             ?? $"Reversión ingreso — lote {line.IdInventoryLot}"
-                        });
-                    }
-                    addedViaProductAccount = true;
-                }
-            }
-
-            if (!addedViaProductAccount)
-            {
-                if (invoiceType.IdAccountSalesRevenue is null)
-                    return (false,
-                        "El tipo de factura no tiene cuenta de ingresos configurada (IdAccountSalesRevenue). " +
-                        "Configure el campo o asigne distribución contable (ProductAccount) al producto.",
-                        null);
-
                 refundLines.Add(new AccountingEntryLine
                 {
                     IdAccount       = invoiceType.IdAccountSalesRevenue.Value,
@@ -1193,6 +1167,41 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
                     DescriptionLine = line.DescriptionLine
                                      ?? $"Reversión ingreso — lote {line.IdInventoryLot}"
                 });
+            }
+            else
+            {
+                // Fallback: ProductAccount cuando no hay IdAccountSalesRevenue configurado
+                bool addedViaProductAccount = false;
+                if (salesLine.IdProduct.HasValue)
+                {
+                    var productAccounts = await db.ProductAccount
+                        .AsNoTracking()
+                        .Where(pa => pa.IdProduct == salesLine.IdProduct.Value)
+                        .ToListAsync(CancellationToken.None);
+
+                    if (productAccounts.Count > 0)
+                    {
+                        foreach (var pa in productAccounts)
+                        {
+                            decimal drAmt = Math.Round(lineSubtotal * pa.PercentageAccount / 100m, 2);
+                            refundLines.Add(new AccountingEntryLine
+                            {
+                                IdAccount       = pa.IdAccount,
+                                DebitAmount     = drAmt,
+                                CreditAmount    = 0,
+                                DescriptionLine = line.DescriptionLine
+                                                 ?? $"Reversión ingreso — lote {line.IdInventoryLot}"
+                            });
+                        }
+                        addedViaProductAccount = true;
+                    }
+                }
+
+                if (!addedViaProductAccount)
+                    return (false,
+                        "El tipo de factura no tiene cuenta de ingresos configurada (IdAccountSalesRevenue). " +
+                        "Configure el campo o asigne distribución contable (ProductAccount) al producto.",
+                        null);
             }
 
             // DR IVA por Pagar (reduce el pasivo hacia el gobierno)
