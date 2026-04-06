@@ -1,9 +1,11 @@
 using FamilyAccountApi.Features.Email;
+using Hangfire;
 
 namespace FamilyAccountApi.BackgroundJobs;
 
 public sealed class EmailJobs(IEmailService emailService)
 {
+    [AutomaticRetry(Attempts = 0)]
     public async Task SendPinEmailAsync(string emailTo, string userName, string pin)
     {
         var subject = "Tu PIN de acceso — Family Account";

@@ -4,21 +4,20 @@
 #  02-verificar-documentos.sh — Verificación de Documentos e Inventario
 #
 #  Propósito:
-#   Lee automáticamente el archivo resultado_caso1_*.txt más reciente,
-#   consulta cada documento generado por 01-ejecutar-flujo-e2e.sh y verifica
-#   que los documentos se generaron correctamente y el inventario es correcto.
-#   Genera verificacion_docs_caso1_*.txt con el reporte completo.
+#   Descubre automáticamente los IDs de los documentos del Caso 1 consultando
+#   los asientos contables y la API, sin depender de resultado_caso1_*.txt.
+#   Verifica que los documentos se generaron correctamente y el inventario es
+#   correcto. Genera verificacion_docs_caso1_*.txt con el reporte completo.
 #   El análisis de cuentas contables (T-accounts, saldos DR/CR) se hace en
 #   03-analizar-cuentas-contables.sh.
 #
 #  Requisitos previos:
-#   - curl y jq instalados.
+#   - curl, jq y sqlcmd instalados.
 #   - API corriendo en https://localhost:8000.
-#   - Al menos un resultado_caso1_*.txt en el mismo directorio.
+#   - Credenciales en credentials/db.txt.
 #
 #  Uso:
 #   bash docs/inventario/caso-1-reventa/02-verificar-documentos.sh
-#   bash docs/inventario/caso-1-reventa/02-verificar-documentos.sh resultado_caso1_XXXX.txt
 # ============================================================================
 
 set -uo pipefail
@@ -119,50 +118,30 @@ assert_float_eq() {
   fi
 }
 
-# ── Leer archivo de resultado ─────────────────────────────────────────────────
+# ── Autenticación ──────────────────────────────────────────────────────────────
 
-if [[ $# -ge 1 ]]; then
-  RESULTADO_FILE="$SCRIPT_DIR/$1"
-else
-  # Tomar el más reciente
-  RESULTADO_FILE=$(ls -t "$SCRIPT_DIR"/resultado_caso1_*.txt 2>/dev/null | head -1)
+EMAIL="ezekiell1988@hotmail.com"
+CREDENTIALS_FILE="$(cd "$SCRIPT_DIR/../../.." && pwd)/credentials/db.txt"
+DB_HOST=$(grep -E '^HOST:'     "$CREDENTIALS_FILE" | awk '{print $2}')
+DB_PORT=$(grep -E '^PORT:'     "$CREDENTIALS_FILE" | awk '{print $2}')
+DB_USER=$(grep -E '^USER:'     "$CREDENTIALS_FILE" | awk '{print $2}')
+DB_PASS=$(grep -E '^PASSWORD:' "$CREDENTIALS_FILE" | awk '{print $2}')
+
+curl -k -s -X POST "${HOST}/auth/request-pin" -H "Content-Type: application/json" \
+  -d "{\"emailUser\":\"$EMAIL\"}" > /dev/null
+
+PIN=$(sqlcmd -S "${DB_HOST},${DB_PORT}" -U "$DB_USER" -P "$DB_PASS" -C -d dbfa \
+  -Q "SET NOCOUNT ON; SELECT TOP 1 pin FROM dbo.userPin up JOIN dbo.[user] u ON u.idUser=up.idUser WHERE u.emailUser='${EMAIL}' ORDER BY up.idUserPin DESC" \
+  -h -1 -W 2>/dev/null | tr -d '[:space:]')
+
+TOKEN=$(curl -k -s -X POST "${HOST}/auth/login" -H "Content-Type: application/json" \
+  -d "{\"emailUser\":\"$EMAIL\",\"pin\":\"$PIN\"}" | jq -r '.accessToken')
+
+if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
+  printf "${RED}❌  No se pudo obtener token${NC}\n"; exit 1
 fi
 
-if [[ -z "$RESULTADO_FILE" || ! -f "$RESULTADO_FILE" ]]; then
-  printf "${RED}❌  No se encontró ningún archivo resultado_caso1_*.txt${NC}\n"
-  printf "    Ejecuta 01-ejecutar-flujo-e2e.sh primero.\n"
-  exit 1
-fi
-
-printf "${BOLD}╔══════════════════════════════════════════════════════╗${NC}\n"
-printf "${BOLD}║   CASO 1 — REVENTA · Verificación de Documentos     ║${NC}\n"
-printf "${BOLD}╚══════════════════════════════════════════════════════╝${NC}\n"
-printf "  Resultado leído: %s\n" "$(basename "$RESULTADO_FILE")"
-
-# Escribir encabezado del reporte
-{
-  echo "# =================================================================="
-  echo "#  CASO 1 — REVENTA · Verificación de Documentos e Inventario"
-  echo "#  Generado: $(date '+%Y-%m-%d %H:%M:%S')"
-  echo "#  Resultado leído: $(basename "$RESULTADO_FILE")"
-  echo "# =================================================================="
-} > "$OUTPUT_FILE"
-
-# Parsear variables del .txt (formato: CLAVE = VALOR  # comentario opcional)
-read_var() {
-  local key="$1"
-  grep -E "^${key}\s*=" "$RESULTADO_FILE" | head -1 | sed 's/.*= *//' | sed 's/  #.*//' | xargs
-}
-
-ID_PURCHASE_INVOICE=$(read_var "idPurchaseInvoice")
-ID_LOT=$(read_var "idInventoryLot")
-ID_SALES_INVOICE=$(read_var "idSalesInvoice")
-ID_ADJUSTMENT=$(read_var "idInventoryAdjustment")
-ID_ENTRY_DEV_ING=$(read_var "idEntryDevIng")
-ID_FISCAL_PERIOD=$(read_var "idFiscalPeriod" 2>/dev/null | grep -oE '^[0-9]+' || echo "4")
-[[ -z "$ID_FISCAL_PERIOD" ]] && ID_FISCAL_PERIOD="4"
-
-# Valores esperados de inventario
+# Valores esperados y constantes
 #  unitCost en la BD = precio de compra sin IVA (1000), no el costo con IVA.
 EXP_UNIT_COST="1000"
 EXP_STOCK_FINAL="91"
@@ -172,56 +151,44 @@ EXP_STATUS_LOT="Disponible"
 EXP_SOURCE_TYPE="Compra"
 ID_WAREHOUSE="1"
 
+# ── Descubrir IDs desde asientos contables ─────────────────────────────────────
+TEMP_ENTRIES="/tmp/fa_caso1_entries_disco.json"
+curl -k -s -H "Authorization: Bearer $TOKEN" "${HOST}/accounting-entries/data.json" > "$TEMP_ENTRIES"
+
+ID_PURCHASE_INVOICE=$(jq -r '[.[] | select(.numberEntry | startswith("FC-"))] | sort_by(.idAccountingEntry) | last | .idOriginRecord // empty' "$TEMP_ENTRIES")
+ID_SALES_INVOICE=$(jq -r '[.[] | select(.numberEntry | startswith("FV-"))] | sort_by(.idAccountingEntry) | last | .idOriginRecord // empty' "$TEMP_ENTRIES")
+ID_ADJUSTMENT=$(jq -r '[.[] | select(.numberEntry | startswith("AJ-"))] | sort_by(.idAccountingEntry) | last | .idOriginRecord // empty' "$TEMP_ENTRIES")
+ID_ENTRY_DEV_ING=$(jq -r '[.[] | select(.numberEntry | startswith("DEV-ING-FV-"))] | sort_by(.idAccountingEntry) | last | .idAccountingEntry // empty' "$TEMP_ENTRIES")
+rm -f "$TEMP_ENTRIES"
+
+# Lote del producto 1 — el más reciente vinculado a la FC de compra
+_tmp_lot="/tmp/fa_caso1_lot_disco.json"
+curl -k -s -H "Authorization: Bearer $TOKEN" \
+  "${HOST}/inventory-lots/by-product/1.json?idWarehouse=${ID_WAREHOUSE}" > "$_tmp_lot"
+ID_LOT=$(jq -r "[.[] | select(.idPurchaseInvoice == ${ID_PURCHASE_INVOICE})] | sort_by(.idInventoryLot) | last | .idInventoryLot // empty" "$_tmp_lot")
+rm -f "$_tmp_lot"
+
+# Período fiscal — por defecto 4
+ID_FISCAL_PERIOD="4"
+
+# ── Cabecera ───────────────────────────────────────────────────────────────────
+printf "${BOLD}╔══════════════════════════════════════════════════════╗${NC}\n"
+printf "${BOLD}║   CASO 1 — REVENTA · Verificación de Documentos     ║${NC}\n"
+printf "${BOLD}╚══════════════════════════════════════════════════════╝${NC}\n"
+
+{
+  echo "# =================================================================="
+  echo "#  CASO 1 — REVENTA · Verificación de Documentos e Inventario"
+  echo "#  Generado: $(date '+%Y-%m-%d %H:%M:%S')"
+  echo "#  IDs descubiertos desde la API (sin resultado_caso1_*.txt)"
+  echo "# =================================================================="
+} > "$OUTPUT_FILE"
+
 printf "\n"
-printf "  ${DIM}IDs cargados:${NC}\n"
+printf "  ${DIM}IDs descubiertos:${NC}\n"
 printf "  ${DIM}  PC=%s  LOT=%s  FV=%s  ADJ=%s  EntryDevIng=%s${NC}\n" \
-  "$ID_PURCHASE_INVOICE" "$ID_LOT" "$ID_SALES_INVOICE" "$ID_ADJUSTMENT" "${ID_ENTRY_DEV_ING:-(no capturado)}"
-
-# ── Autenticación ─────────────────────────────────────────────────────────────
-
-section "AUTH — Login para obtener token"
-
-CREDENTIALS_FILE="$(cd "$SCRIPT_DIR/../../.." && pwd)/credentials/db.txt"
-DB_HOST=$(grep -E '^HOST:'     "$CREDENTIALS_FILE" | awk '{print $2}')
-DB_PORT=$(grep -E '^PORT:'     "$CREDENTIALS_FILE" | awk '{print $2}')
-DB_USER=$(grep -E '^USER:'     "$CREDENTIALS_FILE" | awk '{print $2}')
-DB_PASS=$(grep -E '^PASSWORD:' "$CREDENTIALS_FILE" | awk '{print $2}')
-DB_NAME="dbfa"
-EMAIL=$(read_var "EMAIL")
-[[ -z "$EMAIL" ]] && EMAIL="ezekiell1988@hotmail.com"
-
-# Solicitar PIN
-HTTP_STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" \
-  -X POST "${HOST}/auth/request-pin" \
-  -H "Content-Type: application/json" \
-  -d "{\"emailUser\":\"$EMAIL\"}")
-assert_200 "request-pin"
-
-# Leer PIN desde BD
-PIN=$(sqlcmd \
-  -S "${DB_HOST},${DB_PORT}" \
-  -U "$DB_USER" -P "$DB_PASS" \
-  -C -d "$DB_NAME" \
-  -Q "SET NOCOUNT ON; SELECT TOP 1 pin FROM dbo.userPin up INNER JOIN dbo.[user] u ON u.idUser = up.idUser WHERE u.emailUser = '${EMAIL}' ORDER BY up.idUserPin DESC" \
-  -h -1 -W 2>/dev/null | tr -d '[:space:]')
-if [[ -z "$PIN" ]]; then
-  log_fail "No se pudo leer el PIN desde la BD"
-  exit 1
-fi
-log_info "PIN leído desde BD: $PIN"
-
-# Login
-HTTP_STATUS=$(curl -k -s -o "$TEMP_RESPONSE" -w "%{http_code}" \
-  -X POST "${HOST}/auth/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"emailUser\":\"$EMAIL\",\"pin\":\"$PIN\"}")
-assert_200 "login"
-TOKEN=$(jq_field ".accessToken")
-if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
-  log_fail "No se obtuvo accessToken"
-  exit 1
-fi
-log_ok "Token obtenido ✓"
+  "$ID_PURCHASE_INVOICE" "$ID_LOT" "$ID_SALES_INVOICE" "$ID_ADJUSTMENT" "${ID_ENTRY_DEV_ING:-(no encontrado)}"
+printf "  ${DIM}  Período fiscal: %s${NC}\n" "$ID_FISCAL_PERIOD"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECCIÓN 1 — CATÁLOGO

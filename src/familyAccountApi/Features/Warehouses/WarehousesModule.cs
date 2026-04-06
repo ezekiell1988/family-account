@@ -17,7 +17,7 @@ public static class WarehousesModule
             .WithTags("Warehouses")
             .RequireAuthorization();
 
-        group.MapGet(".json", GetAll)
+        group.MapGet("/data.json", GetAll)
             .WithName("GetWarehouses")
             .WithSummary("Listar todos los almacenes.");
 
