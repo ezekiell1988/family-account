@@ -1,11 +1,17 @@
 using FamilyAccountApi.Domain.Entities;
+using FamilyAccountApi.Features.ProductionOrders;
+using FamilyAccountApi.Features.ProductionOrders.Dtos;
+using FamilyAccountApi.Features.SalesInvoices;
 using FamilyAccountApi.Features.SalesOrders.Dtos;
 using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace FamilyAccountApi.Features.SalesOrders;
 
-public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
+public sealed class SalesOrderService(
+    AppDbContext db,
+    IProductionOrderService productionOrderService,
+    ISalesInvoiceService salesInvoiceService) : ISalesOrderService
 {
     // ── Proyección reutilizable ──────────────────────────────────────────────
     private static SalesOrderLineResponse MapLine(SalesOrderLine l) => new(
@@ -173,13 +179,14 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
 
     // ── Estado ───────────────────────────────────────────────────────────────
 
-    public async Task<(bool Ok, string? Error)> ConfirmAsync(int idSalesOrder, CancellationToken ct = default)
+    public async Task<(bool Ok, string? Error, int? IdSalesInvoice)> ConfirmAsync(
+        int idSalesOrder, ConfirmSalesOrderRequest? request = null, CancellationToken ct = default)
     {
         var entity = await db.SalesOrder
             .Include(s => s.SalesOrderLines)
             .FirstOrDefaultAsync(s => s.IdSalesOrder == idSalesOrder, ct);
-        if (entity is null) return (false, "Pedido no encontrado.");
-        if (entity.StatusOrder != "Borrador") return (false, "Solo se puede confirmar un pedido en estado Borrador.");
+        if (entity is null) return (false, "Pedido no encontrado.", null);
+        if (entity.StatusOrder != "Borrador") return (false, "Solo se puede confirmar un pedido en estado Borrador.", null);
 
         // Validar que ninguna línea use un producto padre con variantes
         var productIds = entity.SalesOrderLines
@@ -197,13 +204,66 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
 
             if (parentProducts.Count > 0)
                 return (false,
-                    $"El pedido contiene producto(s) padre con variantes: {string.Join(", ", parentProducts)}. Debe seleccionar una variante específica en cada línea.");
+                    $"El pedido contiene producto(s) padre con variantes: {string.Join(", ", parentProducts)}. Debe seleccionar una variante específica en cada línea.",
+                    null);
         }
 
         entity.StatusOrder = "Confirmado";
         entity.NumberOrder = await GenerateNumberAsync(ct);
         await db.SaveChangesAsync(ct);
-        return (true, null);
+
+        // ── Flujo automático de ensamble ────────────────────────────────────
+        // Si alguna línea tiene receta activa, se ejecuta automáticamente:
+        // OP → producción → completar pedido → factura confirmada.
+        var hasRecipe = await db.ProductRecipe
+            .AnyAsync(r => productIds.Contains(r.IdProductOutput) && r.IsActive, ct);
+
+        if (hasRecipe)
+        {
+            // Resolver bodega: usar la del request o la bodega por defecto
+            var warehouseId = request?.IdWarehouse
+                ?? await db.Warehouse
+                    .Where(w => w.IsDefault && w.IsActive)
+                    .Select(w => (int?)w.IdWarehouse)
+                    .FirstOrDefaultAsync(ct);
+
+            if (warehouseId is null)
+                return (false, "No se encontró una bodega por defecto. Configure una bodega activa con IsDefault=true.", null);
+
+            // 1. Generar órdenes de producción
+            var (prodResult, prodError) = await SendToProductionAsync(idSalesOrder, ct);
+            if (prodError is not null) return (false, $"Enviar a producción: {prodError}", null);
+
+            // 2. Completar cada OP directamente (Pendiente → Completado)
+            foreach (var opInfo in prodResult!.ProductionOrders)
+            {
+                var (opOk, opErr, _) = await productionOrderService.UpdateStatusAsync(
+                    opInfo.IdProductionOrder,
+                    new UpdateProductionOrderStatusRequest
+                    {
+                        StatusProductionOrder = "Completado",
+                        IdWarehouse           = warehouseId
+                    }, ct);
+                if (!opOk) return (false, $"Completar OP {opInfo.NumberProductionOrder}: {opErr}", null);
+            }
+
+            // 3. Completar el pedido
+            var (completeOk, completeErr) = await CompleteOrderAsync(idSalesOrder, ct);
+            if (!completeOk) return (false, completeErr, null);
+
+            // 4. Generar factura en borrador
+            var (invoiceResult, invoiceError) = await GenerateInvoiceAsync(idSalesOrder, ct);
+            if (invoiceError is not null) return (false, invoiceError, null);
+
+            // 5. Confirmar factura
+            var (confirmOk, confirmErr, _) = await salesInvoiceService.ConfirmAsync(
+                invoiceResult!.IdSalesInvoice, ct);
+            if (!confirmOk) return (false, $"Confirmar factura: {confirmErr}", null);
+
+            return (true, null, invoiceResult.IdSalesInvoice);
+        }
+
+        return (true, null, null);
     }
 
     public async Task<(bool Ok, string? Error)> CancelAsync(int idSalesOrder, CancellationToken ct = default)
@@ -742,48 +802,16 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
 
         foreach (var line in order.SalesOrderLines)
         {
-            // Cargar receta base del producto (activa)
-            var baseRecipe = await db.ProductRecipe
-                .Include(r => r.ProductRecipeLines)
-                .FirstOrDefaultAsync(r => r.IdProductOutput == line.IdProduct && r.IsActive, ct);
+            // Solo líneas cuyo producto tenga receta activa generan OP
+            var hasRecipe = await db.ProductRecipe
+                .AnyAsync(r => r.IdProductOutput == line.IdProduct && r.IsActive, ct);
+            if (!hasRecipe) continue;
 
-            if (baseRecipe is null) continue;  // Sin receta activa → no genera OP
+            // Unidad base del producto terminado
+            var ptUnit = await db.ProductUnit
+                .FirstOrDefaultAsync(pu => pu.IdProduct == line.IdProduct && pu.IsBase, ct)
+                ?? await db.ProductUnit.FirstOrDefaultAsync(pu => pu.IdProduct == line.IdProduct, ct);
 
-            // Acumular insumos base
-            var inputAgg = baseRecipe.ProductRecipeLines
-                .ToDictionary(
-                    rl => rl.IdProductInput,
-                    rl => rl.QuantityInput * line.QuantityBase / baseRecipe.QuantityOutput);
-
-            // Agregar insumos de recetas de opciones
-            foreach (var opt in line.SalesOrderLineOptions)
-            {
-                var optItem = opt.IdProductOptionItemNavigation;
-                if (optItem.IdProductRecipe is null) continue;
-
-                var optRecipe = await db.ProductRecipe
-                    .Include(r => r.ProductRecipeLines)
-                    .FirstOrDefaultAsync(r => r.IdProductRecipe == optItem.IdProductRecipe, ct);
-
-                if (optRecipe is null) continue;
-
-                foreach (var rl in optRecipe.ProductRecipeLines)
-                {
-                    var qty = rl.QuantityInput * opt.Quantity / optRecipe.QuantityOutput;
-                    inputAgg[rl.IdProductInput] = inputAgg.TryGetValue(rl.IdProductInput, out var existing)
-                        ? existing + qty
-                        : qty;
-                }
-            }
-
-            // Obtener unidad base del producto final
-            var baseUnit = await db.ProductUnit
-                .FirstOrDefaultAsync(pu => pu.IdProduct == line.IdProduct && pu.IsBase, ct);
-            var idUnit = baseUnit?.IdProductUnit
-                      ?? (await db.ProductUnit.FirstOrDefaultAsync(pu => pu.IdProduct == line.IdProduct, ct))?.IdProductUnit
-                      ?? line.IdProductUnit;
-
-            // Crear OP con los insumos combinados
             opCount++;
             var opNumber = $"OP-{DateTime.UtcNow:yyyy}-{opCount:D4}";
             var po = new ProductionOrder
@@ -799,26 +827,20 @@ public sealed class SalesOrderService(AppDbContext db) : ISalesOrderService
                 CreatedAt             = DateTime.UtcNow
             };
 
-            // Líneas de insumos (MP)
-            foreach (var (idProduct, qty) in inputAgg)
+            // Una línea por PT a producir; los ingredientes se resuelven desde la receta al completar la OP
+            po.ProductionOrderLines.Add(new ProductionOrderLine
             {
-                var inpUnit = await db.ProductUnit
-                    .FirstOrDefaultAsync(pu => pu.IdProduct == idProduct && pu.IsBase, ct)
-                    ?? await db.ProductUnit.FirstOrDefaultAsync(pu => pu.IdProduct == idProduct, ct);
-
-                po.ProductionOrderLines.Add(new ProductionOrderLine
-                {
-                    IdProduct        = idProduct,
-                    IdProductUnit    = inpUnit?.IdProductUnit ?? 0,
-                    IdSalesOrderLine = line.IdSalesOrderLine,
-                    QuantityRequired = Math.Round(qty, 4),
-                    QuantityProduced = 0m
-                });
-            }
+                IdProduct        = line.IdProduct,
+                IdProductUnit    = ptUnit?.IdProductUnit ?? line.IdProductUnit,
+                IdSalesOrderLine = line.IdSalesOrderLine,
+                QuantityRequired = line.QuantityBase,
+                QuantityProduced = 0m,
+                DescriptionLine  = line.DescriptionLine
+            });
 
             db.ProductionOrder.Add(po);
 
-            // Crear Fulfillment entre línea del pedido y la OP
+            // Fulfillment: liga la línea del pedido con la OP; IdInventoryLot se asignará al completar la OP
             db.SalesOrderLineFulfillment.Add(new SalesOrderLineFulfillment
             {
                 IdSalesOrderLine  = line.IdSalesOrderLine,

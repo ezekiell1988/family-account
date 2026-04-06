@@ -9,7 +9,13 @@ public interface ISalesOrderService
     Task<SalesOrderResponse?> GetByIdAsync(int idSalesOrder, CancellationToken ct = default);
     Task<(SalesOrderResponse? Result, string? Error)> CreateAsync(CreateSalesOrderRequest request, CancellationToken ct = default);
     Task<(SalesOrderResponse? Result, string? Error)> UpdateAsync(int idSalesOrder, UpdateSalesOrderRequest request, CancellationToken ct = default);
-    Task<(bool Ok, string? Error)> ConfirmAsync(int idSalesOrder, CancellationToken ct = default);
+    /// <summary>
+    /// Confirma el pedido. Si se proporciona <see cref="ConfirmSalesOrderRequest.IdWarehouse"/>,
+    /// el sistema ejecuta automáticamente el ciclo completo de ensamble:
+    /// OP → producción → completar pedido → factura confirmada.
+    /// Retorna el IdSalesInvoice generado cuando se procesó en automático.
+    /// </summary>
+    Task<(bool Ok, string? Error, int? IdSalesInvoice)> ConfirmAsync(int idSalesOrder, ConfirmSalesOrderRequest? request = null, CancellationToken ct = default);
     Task<(bool Ok, string? Error)> CancelAsync(int idSalesOrder, CancellationToken ct = default);
     Task<bool> DeleteAsync(int idSalesOrder, CancellationToken ct = default);
 

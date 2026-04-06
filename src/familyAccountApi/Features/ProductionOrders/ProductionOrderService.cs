@@ -139,6 +139,7 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
         {
             ("Borrador",   "Pendiente")   => true,
             ("Pendiente",  "EnProceso")   => true,
+            ("Pendiente",  "Completado")  => true,   // flujo automático: saltar EnProceso
             ("EnProceso",  "Completado")  => true,
             ("Pendiente",  "Anulado")     => true,
             ("EnProceso",  "Anulado")     => true,
@@ -203,7 +204,8 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
             if (recipe is null)
             {
                 warnings.Add($"Producto '{line.IdProductNavigation.NameProduct}' (ID={line.IdProduct}) no tiene receta activa. Sin movimiento de MP.");
-                await CreateFinishedGoodsLotAsync(line.IdProduct, quantityProduced, 0m, warehouseId.Value, null, ct);
+                var ptLotNoRecipe = await CreateFinishedGoodsLotAsync(line.IdProduct, quantityProduced, 0m, warehouseId.Value, null, ct);
+                await UpdateFulfillmentLotAsync(entity.IdProductionOrder, ptLotNoRecipe.IdInventoryLot, 0m, ct);
                 line.QuantityProduced += quantityProduced;
                 await db.SaveChangesAsync(ct);
                 continue;
@@ -312,10 +314,11 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
             // Costo unitario del PT
             var unitCostPt = quantityProduced > 0 ? Math.Round(totalMpCost / quantityProduced, 6) : 0m;
 
-            // Crear lote del producto terminado
-            await CreateFinishedGoodsLotAsync(
+            // Crear lote del producto terminado y vincular al fulfillment del pedido
+            var ptLot = await CreateFinishedGoodsLotAsync(
                 line.IdProduct, quantityProduced, unitCostPt, warehouseId.Value,
                 adjustment.IdInventoryAdjustment, ct);
+            await UpdateFulfillmentLotAsync(entity.IdProductionOrder, ptLot.IdInventoryLot, unitCostPt, ct);
 
             // Recalcular WAC del producto terminado
             var ptProduct = await db.Product.FirstAsync(p => p.IdProduct == line.IdProduct, ct);
@@ -344,6 +347,19 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
         }
 
         return (true, null, warnings);
+    }
+
+    private async Task UpdateFulfillmentLotAsync(
+        int idProductionOrder, int idInventoryLot, decimal unitCost, CancellationToken ct)
+    {
+        var fulfillment = await db.SalesOrderLineFulfillment
+            .FirstOrDefaultAsync(f => f.IdProductionOrder == idProductionOrder
+                                   && f.FulfillmentType   == "Produccion", ct);
+        if (fulfillment is not null)
+        {
+            fulfillment.IdInventoryLot = idInventoryLot;
+            fulfillment.UnitCost       = unitCost;
+        }
     }
 
     private async Task<InventoryLot> CreateFinishedGoodsLotAsync(

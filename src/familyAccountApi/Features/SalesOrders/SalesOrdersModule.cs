@@ -1,3 +1,5 @@
+using FamilyAccountApi.Features.ProductionOrders;
+using FamilyAccountApi.Features.SalesInvoices;
 using FamilyAccountApi.Features.SalesOrders.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +9,11 @@ public static class SalesOrdersModule
 {
     public static IServiceCollection AddSalesOrdersModule(this IServiceCollection services)
     {
-        services.AddScoped<ISalesOrderService, SalesOrderService>();
+        services.AddScoped<ISalesOrderService>(sp =>
+            new SalesOrderService(
+                sp.GetRequiredService<FamilyAccountApi.Infrastructure.Data.AppDbContext>(),
+                sp.GetRequiredService<IProductionOrderService>(),
+                sp.GetRequiredService<ISalesInvoiceService>()));
         return services;
     }
 
@@ -58,10 +64,13 @@ public static class SalesOrdersModule
         }).WithTags("SalesOrders");
 
         group.MapPost("/{id:int}/confirm", async (
-            int id, ISalesOrderService svc, CancellationToken ct) =>
+            int id,
+            ISalesOrderService svc, CancellationToken ct) =>
         {
-            var (ok, error) = await svc.ConfirmAsync(id, ct);
-            return ok ? Results.Ok() : Results.ValidationProblem(new Dictionary<string, string[]> { ["order"] = [error!] });
+            var (ok, error, idInvoice) = await svc.ConfirmAsync(id, null, ct);
+            if (!ok)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["order"] = [error!] });
+            return Results.Ok(new { idSalesInvoice = idInvoice });
         }).WithTags("SalesOrders");
 
         group.MapPost("/{id:int}/cancel", async (
