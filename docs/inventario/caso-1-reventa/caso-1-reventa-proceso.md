@@ -26,6 +26,8 @@ El proveedor entrega **100 cajas de Coca-Cola**. Se registra la factura de compr
 
 > El costo se acredita a la cuenta de inventario por defecto (configurada en el tipo de factura). Si se quiere cargar a una cuenta de gasto en su lugar, se debe crear un `ProductAccount` explícito para ese producto (`POST /product-accounts`) antes de confirmar.
 
+> Config.: [§2 ProductUnit](./caso-1-reventa-configuraciones.md#2-unidad-de-medida-y-presentación-productunit) · [§3 PurchaseInvoiceType](./caso-1-reventa-configuraciones.md#3-tipo-de-factura-de-compra-purchaseinvoicetype) · [§5 ProductAccount](./caso-1-reventa-configuraciones.md#5-productaccount--vínculo-producto--cuenta-contable) · [§9 Período fiscal](./caso-1-reventa-configuraciones.md#9-período-fiscal) · [§10 Almacén](./caso-1-reventa-configuraciones.md#10-almacén-warehouse)
+
 ---
 
 ### 3. Registrar la venta
@@ -35,6 +37,8 @@ Un cliente pide **10 cajas**. Se consultan los lotes disponibles, se elige el lo
 1. `GET /inventory-lots/by-product/{idProduct}` — obtiene los lotes disponibles con su stock.
 2. `POST /sales-invoices` — crea la factura en borrador indicando el lote a descontar.
 3. `POST /sales-invoices/{id}/confirm` — confirma la factura; el sistema descuenta 10 cajas del lote (quedan 90) y genera el asiento de COGS automáticamente.
+
+> Config.: [§4 SalesInvoiceType](./caso-1-reventa-configuraciones.md#4-tipo-de-factura-de-venta-salesinvoicetype)
 
 ---
 
@@ -52,6 +56,8 @@ Un administrador regala **2 cajas** a un cliente VIP. Se registra un ajuste de i
 
 1. `POST /inventory-adjustments` — crea el ajuste en borrador.
 2. `POST /inventory-adjustments/{id}/confirm` — confirma el ajuste.
+
+> Config.: [§6 InventoryAdjustmentType](./caso-1-reventa-configuraciones.md#6-tipo-de-ajuste-de-inventario-inventoryadjustmenttype)
 
 ---
 

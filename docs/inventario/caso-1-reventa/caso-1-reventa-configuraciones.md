@@ -59,11 +59,11 @@ El `conversionFactor` determina cómo se convierte la unidad de compra/venta a l
 
 Seed en `PurchaseInvoiceTypeConfiguration`. Determina la cuenta CR del asiento de compra y si se auto-crea un movimiento bancario.
 
-| idPurchaseInvoiceType | Código | Nombre | CounterpartFromBankMovement | CR CRC | CR USD | Default expense |
-|---|---|---|---|---|---|---|
-| **1** | **EFECTIVO** | Pago en Efectivo | **false** | 106 (Caja CRC) | 107 (Caja USD) | 75 (5.12.01) |
-| 2 | DEBITO | Tarjeta Débito / Transferencia | true | — | — | 75 |
-| 3 | TC | Tarjeta de Crédito | true | — | — | 75 |
+| idPurchaseInvoiceType | Código | Nombre | CounterpartFromBankMovement | CR CRC | CR USD | Default inventario | Default gasto (fallback) |
+|---|---|---|---|---|---|---|---|
+| **1** | **EFECTIVO** | Pago en Efectivo | **false** | 106 (Caja CRC) | 107 (Caja USD) | 109 (Inventario) | 75 (5.12.01) |
+| 2 | DEBITO | Tarjeta Débito / Transferencia | true | — | — | 109 (Inventario) | 75 (5.12.01) |
+| 3 | TC | Tarjeta de Crédito | true | — | — | 109 (Inventario) | 75 (5.12.01) |
 
 **Para el Caso 1 se usa `idPurchaseInvoiceType = 1` (EFECTIVO).** La contraparte CR sale directo de caja sin pasar por movimiento bancario.
 
@@ -73,9 +73,10 @@ Seed en `PurchaseInvoiceTypeConfiguration`. Determina la cuenta CR del asiento d
 ConfirmAsync:
   1. Resuelve crAccountId = 106 (Caja CRC, porque moneda = CRC y CounterpartFromBankMovement = false)
   2. Por cada línea con idProduct:
-       a. Busca ProductAccount del producto
-       b. rawAmount = quantity × unitPrice (sin IVA)  ← monto neto
-       c. DR = pa.IdAccount (109) por rawAmount
+       a. rawAmount = quantity × unitPrice (sin IVA)  ← monto neto
+       b. Si el producto tiene ProductAccount → DR = pa.IdAccount por proporcional  (override explícito)
+       c. Si no → DR = IdDefaultInventoryAccount (109) por rawAmount              ← default del tipo de factura
+       d. Si no hay IdDefaultInventoryAccount → DR = IdDefaultExpenseAccount (75)  ← fallback para líneas sin producto
   3. Agrega línea DR IVA Acreditable:
        DR 124 (IVA Acreditable CRC) = invoice.TaxAmount
   4. Agrega línea CR:
@@ -88,12 +89,12 @@ ConfirmAsync:
 
 Seed en `SalesInvoiceTypeConfiguration`. Determina la cuenta DR del asiento de ingresos, la cuenta de fallback de ingresos y las cuentas COGS/Inventario.
 
-| id | Código | CounterpartFromBankMovement | DR CRC | Ingresos (CR fallback) | COGS (DR) | Inventario (CR) |
-|---|---|---|---|---|---|---|
-| **1** | **CONTADO_CRC** | **false** | **106** | **117** | **119** | **109** |
+| id | Código | CounterpartFromBankMovement | DR CRC | DR USD | Ingresos (CR fallback) | COGS (DR) | Inventario (CR) |
+|---|---|---|---|---|---|---|---|
+| **1** | **CONTADO_CRC** | **false** | **106** | — | **117** | **119** | **109** |
 | 2 | CONTADO_USD | false | — | 107 | 117 | 119 | 109 |
-| 3 | CREDITO_CRC | true | — | 117 | 119 | 109 |
-| 4 | CREDITO_USD | true | — | 117 | 119 | 109 |
+| 3 | CREDITO_CRC | true | — | — | 117 | 119 | 109 |
+| 4 | CREDITO_USD | true | — | — | 117 | 119 | 109 |
 
 **Para el Caso 1 se usa `idSalesInvoiceType = 1` (CONTADO_CRC).**
 
@@ -125,7 +126,7 @@ ConfirmAsync:
 
 ## 5. ProductAccount — vínculo producto ↔ cuenta contable
 
-Registro que indica a qué cuenta contable se carga el costo al confirmar la factura de compra. **Se crea antes de la compra y se elimina después de confirmarla.**
+Registro que indica a qué cuenta contable se carga el costo al confirmar la factura de compra.
 
 | Campo | Valor |
 |---|---|
@@ -133,17 +134,22 @@ Registro que indica a qué cuenta contable se carga el costo al confirmar la fac
 | idAccount | 109 (1.1.07.01 Inventario de Mercadería) |
 | percentageAccount | 100.00 |
 
-**Ciclo de vida en el Caso 1:**
+> **Nota:** Crear el ProductAccount apuntando a 109 es **opcional** en el Caso 1. El tipo de factura ya tiene `IdDefaultInventoryAccount = 109`, por lo que sin ProductAccount la compra igualmente genera DR 109. El paso es útil si se desea apuntar a una cuenta diferente de la predeterminada (override explícito).
+
+**Ciclo de vida en el Caso 1 (si se usa el override):**
 
 ```
-ANTES de crear FC  →  POST /product-accounts  (crea vínculo 1 → 109)
-                   →  POST /purchase-invoices  (crea borrador)
-                   →  POST /purchase-invoices/{id}/confirm  (usa ProductAccount → DR 109)
-DESPUÉS de confirmar FC  →  DELETE /product-accounts/{id}  (elimina vínculo)
-                         →  POST /sales-invoices  (sin ProductAccount → fallback a 117)
+[OPCIONAL] ANTES de crear FC  →  POST /product-accounts  (crea vínculo 1 → 109)
+                              →  POST /purchase-invoices  (crea borrador)
+                              →  POST /purchase-invoices/{id}/confirm
+                                   Si tiene ProductAccount  → DR pa.IdAccount (109)
+                                   Si no                   → DR IdDefaultInventoryAccount (109)  ← mismo resultado
+DESPUÉS de confirmar FC (si creaste el ProductAccount):
+                              →  DELETE /product-accounts/{id}  (elimina el vínculo)
+                              →  POST /sales-invoices  (sin ProductAccount → fallback a 117)
 ```
 
-> Si no se eliminara, la venta también intentaría **acreditar la cuenta 109** (inventario) como contrapartida de ingreso, generando un asiento incorrecto.
+> ⚠️ Si el ProductAccount **no se elimina antes de crear la venta**, el SalesInvoice usará `pa.IdAccount` (109) como cuenta CR de ingresos en lugar de `IdAccountSalesRevenue` (117), generando un asiento incorrecto.
 
 ---
 
@@ -151,13 +157,13 @@ DESPUÉS de confirmar FC  →  DELETE /product-accounts/{id}  (elimina vínculo)
 
 Seed en `InventoryAdjustmentTypeConfiguration`. Define las cuentas contables para cada tipo de ajuste.
 
-| id | Nombre | Inventario | Contrapartida Salida (DR) | Contrapartida Entrada (CR) |
-|---|---|---|---|---|
-| **1** | **Ajuste de Costo** | **109** | **113** (Merma) | **114** (Sobrantes) |
-| 2 | Ajuste de Producción | 111 (Prod. en Proceso) | 115 (Costos Producción) | 115 (Costos Producción) |
-| 3 | Ajuste de Materias Primas | 110 (Mat. Primas) | 113 (Merma) | 114 (Sobrantes) |
+| id | Código | Nombre | Inventario | Contrapartida Salida (DR) | Contrapartida Entrada (CR) |
+|---|---|---|---|---|---|
+| **1** | **CONTEO** | **Conteo Físico** | **109** | **113** (Merma) | **114** (Sobrantes) |
+| 2 | PRODUCCION | Producción | 111 (Prod. en Proceso) | 115 (Costos Producción) | 115 (Costos Producción) |
+| 3 | AJUSTE_COSTO | Ajuste de Costo | 109 | 113 (Merma) | 114 (Sobrantes) |
 
-**Para el Caso 1 se usa `idInventoryAdjustmentType = 1`.**
+**Para el Caso 1 se usa `idInventoryAdjustmentType = 1` (CONTEO — Conteo Físico).**
 
 El asiento de regalía (delta negativo) usa `IdAccountCounterpartExit`:
 ```
@@ -236,11 +242,12 @@ El Caso 1 usa `idWarehouse = 1`. Debe tener `isDefault = true` para que el fallb
 ProductType (id=4, TrackInventory=true)
     └── Product (id=1)
             ├── ProductUnit (product=1, unit=1, convFactor=1)   [crear antes de FC]
-            └── ProductAccount (product=1, account=109, 100%)   [crear antes de FC, eliminar después]
+            └── ProductAccount (product=1, account=109, 100%)   [OPCIONAL — ver sección 5]
 
 PurchaseInvoiceType (id=1, EFECTIVO)
-    ├── IdAccountCounterpartCRC = 106  (Caja CRC)
-    └── IdDefaultExpenseAccount = 75   (fallback si no hay ProductAccount)
+    ├── IdAccountCounterpartCRC     = 106  (Caja CRC)
+    ├── IdDefaultInventoryAccount   = 109  (Inventario — DR por defecto para líneas con producto)
+    └── IdDefaultExpenseAccount     = 75   (fallback para líneas sin producto)
 
 SalesInvoiceType (id=1, CONTADO_CRC)
     ├── IdAccountCounterpartCRC = 106  (Caja CRC)
@@ -248,7 +255,7 @@ SalesInvoiceType (id=1, CONTADO_CRC)
     ├── IdAccountCOGS           = 119  (Costo de Ventas)
     └── IdAccountInventory      = 109  (Inventario — CR del COGS)
 
-InventoryAdjustmentType (id=1, Ajuste de Costo)
+InventoryAdjustmentType (id=1, CONTEO — Conteo Físico)
     ├── IdAccountInventoryDefault   = 109  (Inventario)
     ├── IdAccountCounterpartExit    = 113  (Merma — para delta negativo)
     └── IdAccountCounterpartEntry   = 114  (Sobrantes — para delta positivo)
