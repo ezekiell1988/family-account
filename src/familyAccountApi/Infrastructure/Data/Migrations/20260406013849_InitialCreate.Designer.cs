@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260405012446_ProductionSnapshot")]
-    partial class ProductionSnapshot
+    [Migration("20260406013849_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1431,6 +1431,84 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AttributeValue", b =>
+                {
+                    b.Property<int>("IdAttributeValue")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idAttributeValue")
+                        .HasComment("Identificador único del valor de atributo");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdAttributeValue"));
+
+                    b.Property<int>("IdProductAttribute")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductAttribute")
+                        .HasComment("Atributo al que pertenece este valor");
+
+                    b.Property<string>("NameValue")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("nameValue")
+                        .HasComment("Nombre del valor (ej: S, M, L, Azul, Rojo)");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sortOrder")
+                        .HasComment("Orden de presentación del valor dentro del atributo");
+
+                    b.HasKey("IdAttributeValue");
+
+                    b.HasIndex("IdProductAttribute", "NameValue")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_attributeValue_idProductAttribute_nameValue");
+
+                    b.ToTable("attributeValue", t =>
+                        {
+                            t.HasComment("Valores posibles para cada atributo de producto padre (ej: S, M, L para el atributo Talla)");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdAttributeValue = 1,
+                            IdProductAttribute = 1,
+                            NameValue = "S",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdAttributeValue = 2,
+                            IdProductAttribute = 1,
+                            NameValue = "M",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdAttributeValue = 3,
+                            IdProductAttribute = 1,
+                            NameValue = "L",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            IdAttributeValue = 4,
+                            IdProductAttribute = 2,
+                            NameValue = "Azul",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdAttributeValue = 5,
+                            IdProductAttribute = 2,
+                            NameValue = "Rojo",
+                            SortOrder = 2
+                        });
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Bank", b =>
                 {
                     b.Property<int>("IdBank")
@@ -2637,6 +2715,14 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             t.HasComment("Catálogo de contactos del sistema: clientes, proveedores u otras entidades externas. Cada contacto puede tener uno o más tipos asignados a través de la tabla contactContactType.");
                         });
+
+                    b.HasData(
+                        new
+                        {
+                            IdContact = 1,
+                            CodeContact = "SIN_PRO_CLI",
+                            Name = "Sin proveedor / Cliente"
+                        });
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ContactContactType", b =>
@@ -2670,6 +2756,20 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("contactContactType", t =>
                         {
                             t.HasComment("Tabla de asociación muchos-a-muchos entre contactos y tipos de contacto. Permite que un mismo contacto sea clasificado como Cliente, Proveedor u otros tipos simultáneamente. No se permite la misma combinación contacto-tipo dos veces.");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdContactContactType = 1,
+                            IdContact = 1,
+                            IdContactType = 1
+                        },
+                        new
+                        {
+                            IdContactContactType = 2,
+                            IdContact = 1,
+                            IdContactType = 2
                         });
                 });
 
@@ -3125,6 +3225,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("idInventoryAdjustmentType")
                         .HasComment("FK al tipo de ajuste. Determina las cuentas contables del asiento generado al confirmar.");
 
+                    b.Property<int?>("IdProductionOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductionOrder")
+                        .HasComment("FK a la orden de produccion que originó este ajuste. NULL = modalidad A (producción para stock).");
+
                     b.Property<string>("NumberAdjustment")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -3151,6 +3256,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.HasIndex("IdInventoryAdjustmentType")
                         .HasDatabaseName("IX_inventoryAdjustment_idInventoryAdjustmentType");
+
+                    b.HasIndex("IdProductionOrder")
+                        .HasDatabaseName("IX_inventoryAdjustment_idProductionOrder")
+                        .HasFilter("[idProductionOrder] IS NOT NULL");
 
                     b.HasIndex("NumberAdjustment")
                         .IsUnique()
@@ -3220,22 +3329,27 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("idInventoryAdjustment")
                         .HasComment("FK al ajuste de inventario cabecera. Cascade delete.");
 
-                    b.Property<int>("IdInventoryLot")
+                    b.Property<int?>("IdInventoryLot")
                         .HasColumnType("int")
                         .HasColumnName("idInventoryLot")
-                        .HasComment("FK al lote de inventario a ajustar. Para líneas positivas que crean un lote nuevo, se crea el lote primero.");
+                        .HasComment("FK al lote de inventario a ajustar. Exclusivo con idProduct.");
+
+                    b.Property<int?>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("FK al producto para ajuste de costo promedio global. Exclusivo con idInventoryLot. Al confirmar: escala el unitCost de todos sus lotes proporcionalmente para que el costo promedio ponderado = unitCostNew.");
 
                     b.Property<decimal>("QuantityDelta")
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)")
                         .HasColumnName("quantityDelta")
-                        .HasComment("Delta en unidad base: positivo = entrada, negativo = salida, cero = ajuste de costo puro (no mueve stock).");
+                        .HasComment("Delta en unidad base: positivo = entrada, negativo = salida, cero = ajuste de costo puro. Siempre 0 para líneas por producto.");
 
                     b.Property<decimal?>("UnitCostNew")
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)")
                         .HasColumnName("unitCostNew")
-                        .HasComment("Nuevo costo unitario para el lote. Requerido si quantityDelta > 0. Si informado: reemplaza inventoryLot.unitCost.");
+                        .HasComment("Costo unitario nuevo (ajuste por lote) o costo promedio objetivo (ajuste por producto). Requerido si quantityDelta > 0 o si se usa idProduct.");
 
                     b.HasKey("IdInventoryAdjustmentLine");
 
@@ -3244,11 +3358,19 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.HasIndex("IdInventoryLot");
 
+                    b.HasIndex("IdProduct")
+                        .HasDatabaseName("IX_inventoryAdjustmentLine_idProduct")
+                        .HasFilter("[idProduct] IS NOT NULL");
+
                     b.ToTable("inventoryAdjustmentLine", t =>
                         {
-                            t.HasComment("Líneas del ajuste de inventario. Cada línea referencia un lote específico: quantityDelta positivo = entrada, negativo = salida, cero = ajuste de costo puro. Si quantityDelta > 0, unitCostNew es requerido.");
+                            t.HasComment("Líneas del ajuste de inventario. Cada línea referencia un lote (idInventoryLot) o un producto (idProduct), nunca ambos. quantityDelta positivo = entrada, negativo = salida, cero = ajuste de costo puro. Ajuste por lote: unitCostNew requerido si quantityDelta > 0. Ajuste por producto (idProduct): quantityDelta siempre 0 y unitCostNew = costo promedio objetivo; ajusta todos los lotes del producto proporcionalmente.");
 
-                            t.HasCheckConstraint("CK_inventoryAdjustmentLine_unitCostNew", "quantityDelta <= 0 OR unitCostNew IS NOT NULL");
+                            t.HasCheckConstraint("CK_inventoryAdjustmentLine_productLevel", "idProduct IS NULL OR (quantityDelta = 0 AND unitCostNew IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_inventoryAdjustmentLine_target", "(idInventoryLot IS NOT NULL AND idProduct IS NULL) OR (idInventoryLot IS NULL AND idProduct IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_inventoryAdjustmentLine_unitCostNew", "idInventoryLot IS NULL OR quantityDelta <= 0 OR unitCostNew IS NOT NULL");
                         });
                 });
 
@@ -3390,6 +3512,13 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("idPurchaseInvoice")
                         .HasComment("FK a la factura de compra que originó este lote. Poblado si sourceType = 'Compra'.");
 
+                    b.Property<int>("IdWarehouse")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("idWarehouse")
+                        .HasComment("FK al almacén donde se encuentra este lote. Por defecto el almacén Principal (id=1).");
+
                     b.Property<string>("LotNumber")
                         .HasMaxLength(50)
                         .IsUnicode(false)
@@ -3405,6 +3534,14 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("quantityAvailable")
                         .HasComment("Stock disponible en unidad base. Solo se modifica al confirmar documentos. Nunca editable directamente.");
 
+                    b.Property<decimal>("QuantityReserved")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("quantityReserved")
+                        .HasComment("Stock reservado por SalesOrderLineFulfillment de tipo Stock pendientes de confirmar. Se incrementa al asignar un fulfillment y se decrementa al confirmar o eliminar el fulfillment. QuantityAvailableNet = QuantityAvailable - QuantityReserved.");
+
                     b.Property<string>("SourceType")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -3412,6 +3549,16 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnType("varchar(20)")
                         .HasColumnName("sourceType")
                         .HasComment("Origen del lote: Compra | Producción | Ajuste.");
+
+                    b.Property<string>("StatusLot")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("Disponible")
+                        .HasColumnName("statusLot")
+                        .HasComment("Estado de calidad del lote: Disponible | Cuarentena | Bloqueado | Vencido. Solo los lotes Disponibles son seleccionables en FEFO.");
 
                     b.Property<decimal>("UnitCost")
                         .ValueGeneratedOnAdd()
@@ -3423,22 +3570,147 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.HasKey("IdInventoryLot");
 
-                    b.HasIndex("IdInventoryAdjustment");
+                    b.HasIndex("IdInventoryAdjustment")
+                        .HasDatabaseName("IX_inventoryLot_idInventoryAdjustment")
+                        .HasFilter("[idInventoryAdjustment] IS NOT NULL");
 
                     b.HasIndex("IdPurchaseInvoice")
                         .HasDatabaseName("IX_inventoryLot_idPurchaseInvoice")
                         .HasFilter("[idPurchaseInvoice] IS NOT NULL");
+
+                    b.HasIndex("IdWarehouse")
+                        .HasDatabaseName("IX_inventoryLot_idWarehouse");
 
                     b.HasIndex("IdProduct", "ExpirationDate")
                         .HasDatabaseName("IX_inventoryLot_idProduct_expirationDate");
 
                     b.ToTable("inventoryLot", t =>
                         {
-                            t.HasComment("Registro de stock de inventario por producto y lote. Es la unidad mínima de trazabilidad. quantityAvailable nunca se edita directamente: solo se modifica al confirmar purchaseInvoice, salesInvoice o inventoryAdjustment.");
+                            t.HasComment("Registro de stock de inventario por producto y lote. Es la unidad mínima de trazabilidad. quantityAvailable nunca se edita directamente: solo se modifica al confirmar purchaseInvoice, salesInvoice o inventoryAdjustment. quantityReserved se incrementa al asignar un SalesOrderLineFulfillment tipo Stock y se decrementa al confirmar o eliminar el fulfillment.");
 
                             t.HasCheckConstraint("CK_inventoryLot_quantityAvailable", "quantityAvailable >= 0");
 
+                            t.HasCheckConstraint("CK_inventoryLot_quantityReserved", "quantityReserved >= 0");
+
                             t.HasCheckConstraint("CK_inventoryLot_sourceType", "sourceType IN ('Compra', 'Producción', 'Ajuste')");
+
+                            t.HasCheckConstraint("CK_inventoryLot_statusLot", "statusLot IN ('Disponible', 'Cuarentena', 'Bloqueado', 'Vencido')");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PriceList", b =>
+                {
+                    b.Property<int>("IdPriceList")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idPriceList")
+                        .HasComment("Identificador único autoincremental de la lista de precios.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdPriceList"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación del registro.");
+
+                    b.Property<DateOnly>("DateFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("dateFrom")
+                        .HasComment("Fecha de inicio de vigencia.");
+
+                    b.Property<DateOnly?>("DateTo")
+                        .HasColumnType("date")
+                        .HasColumnName("dateTo")
+                        .HasComment("Fecha de fin de vigencia. NULL = vigente indefinidamente.");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("description")
+                        .HasComment("Descripción opcional de la lista.");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("isActive")
+                        .HasComment("Indica si la lista está activa para su uso.");
+
+                    b.Property<string>("NamePriceList")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("namePriceList")
+                        .HasComment("Nombre descriptivo de la lista (ej: Lista Mayorista Abril 2026).");
+
+                    b.HasKey("IdPriceList");
+
+                    b.ToTable("priceList", t =>
+                        {
+                            t.HasComment("Lista de precios con vigencia por fechas. Al crear un pedido se hace snapshot del precio vigente en SalesOrderLine.UnitPrice.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PriceListItem", b =>
+                {
+                    b.Property<int>("IdPriceListItem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idPriceListItem")
+                        .HasComment("Identificador único autoincremental del ítem.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdPriceListItem"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación del registro.");
+
+                    b.Property<int>("IdPriceList")
+                        .HasColumnType("int")
+                        .HasColumnName("idPriceList")
+                        .HasComment("FK a la lista de precios a la que pertenece este ítem.");
+
+                    b.Property<int>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("FK al producto.");
+
+                    b.Property<int>("IdProductUnit")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductUnit")
+                        .HasComment("FK a la presentación (unidad de venta) del producto.");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("isActive")
+                        .HasComment("Indica si el ítem está activo.");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("unitPrice")
+                        .HasComment("Precio unitario del producto en esta presentación y lista.");
+
+                    b.HasKey("IdPriceListItem");
+
+                    b.HasIndex("IdProduct");
+
+                    b.HasIndex("IdProductUnit");
+
+                    b.HasIndex("IdPriceList", "IdProduct", "IdProductUnit")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_priceListItem_idPriceList_idProduct_idProductUnit");
+
+                    b.ToTable("priceListItem", t =>
+                        {
+                            t.HasComment("Ítem de lista de precios: precio unitario por producto y presentación (ProductUnit) dentro de una lista.");
                         });
                 });
 
@@ -3459,6 +3731,13 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasDefaultValue(0m)
                         .HasColumnName("averageCost")
                         .HasComment("Costo promedio ponderado en unidad base. Se recalcula automáticamente al confirmar compras y ajustes con stock positivo.");
+
+                    b.Property<string>("ClassificationAbc")
+                        .HasMaxLength(1)
+                        .IsUnicode(false)
+                        .HasColumnType("CHAR(1)")
+                        .HasColumnName("classificationAbc")
+                        .HasComment("Clasificación ABC calculada por Hangfire según valor de ventas de los últimos 90 días. A=top 80%, B=siguiente 15%, C=último 5%. NULL si sin ventas en el período.");
 
                     b.Property<string>("CodeProduct")
                         .IsRequired()
@@ -3497,12 +3776,45 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("isCombo")
                         .HasComment("Indica que el producto es un combo compuesto de slots con productos elegibles.");
 
+                    b.Property<bool>("IsVariantParent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("isVariantParent")
+                        .HasComment("Indica que el producto es un padre que agrupa variantes por atributos (talla, color, etc.). Los padres no tienen stock propio.");
+
                     b.Property<string>("NameProduct")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("nameProduct")
                         .HasComment("Nombre interno del producto usado en el sistema.");
+
+                    b.Property<decimal?>("ReorderPoint")
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasColumnName("reorderPoint")
+                        .HasComment("Punto de reorden: stock mínimo que dispara una alerta de reabastecimiento. NULL si no aplica.");
+
+                    b.Property<decimal?>("ReorderQuantity")
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasColumnName("reorderQuantity")
+                        .HasComment("Cantidad sugerida a pedir cuando el stock cae por debajo del punto de reorden. NULL si no aplica.");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion")
+                        .HasColumnName("rowVersion")
+                        .HasComment("Token de concurrencia optimista. Previene race conditions al recalcular AverageCost en confirmaciones paralelas.");
+
+                    b.Property<decimal?>("SafetyStock")
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasColumnName("safetyStock")
+                        .HasComment("Stock de seguridad reservado que no debe consumirse en operación normal. NULL si no aplica.");
 
                     b.HasKey("IdProduct");
 
@@ -3519,6 +3831,375 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("product", t =>
                         {
                             t.HasComment("Catálogo interno de productos. Cada producto tiene un tipo (Materia Prima, Producto en Proceso, Producto Terminado, Reventa), una unidad base de inventario y opcionalmente un producto padre para agrupar variantes.");
+
+                            t.HasCheckConstraint("CK_product_classificationAbc", "[classificationAbc] IS NULL OR [classificationAbc] IN ('A', 'B', 'C')");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProduct = 1,
+                            AverageCost = 0m,
+                            CodeProduct = "REV-COCA-001",
+                            HasOptions = false,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Coca-Cola 355ml"
+                        },
+                        new
+                        {
+                            IdProduct = 2,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-CHILE-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 3,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Chile Seco"
+                        },
+                        new
+                        {
+                            IdProduct = 3,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-VINAGRE-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 7,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Vinagre Blanco"
+                        },
+                        new
+                        {
+                            IdProduct = 4,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-SAL-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 3,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Sal"
+                        },
+                        new
+                        {
+                            IdProduct = 5,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-FRASCO-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Frasco 250ml"
+                        },
+                        new
+                        {
+                            IdProduct = 6,
+                            AverageCost = 0m,
+                            CodeProduct = "PT-CHILE-EMB-001",
+                            HasOptions = false,
+                            IdProductType = 3,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Chile Embotellado Marca X"
+                        },
+                        new
+                        {
+                            IdProduct = 7,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-PAN-HD-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Pan de Hot Dog"
+                        },
+                        new
+                        {
+                            IdProduct = 8,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-SALCHICHA-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Salchicha"
+                        },
+                        new
+                        {
+                            IdProduct = 9,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-MOSTAZA-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 6,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Mostaza"
+                        },
+                        new
+                        {
+                            IdProduct = 10,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-CATSUP-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 6,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Catsup"
+                        },
+                        new
+                        {
+                            IdProduct = 11,
+                            AverageCost = 0m,
+                            CodeProduct = "PT-HOT-DOG-001",
+                            HasOptions = false,
+                            IdProductType = 3,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Hot Dog"
+                        },
+                        new
+                        {
+                            IdProduct = 12,
+                            AverageCost = 0m,
+                            CodeProduct = "CAMISA-OXF-000",
+                            HasOptions = false,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = true,
+                            NameProduct = "Camisa Oxford"
+                        },
+                        new
+                        {
+                            IdProduct = 13,
+                            AverageCost = 0m,
+                            CodeProduct = "CAMISA-OXF-S-AZ",
+                            HasOptions = false,
+                            IdProductParent = 12,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Camisa Oxford Talla S Azul"
+                        },
+                        new
+                        {
+                            IdProduct = 14,
+                            AverageCost = 0m,
+                            CodeProduct = "CAMISA-OXF-M-AZ",
+                            HasOptions = false,
+                            IdProductParent = 12,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Camisa Oxford Talla M Azul"
+                        },
+                        new
+                        {
+                            IdProduct = 15,
+                            AverageCost = 0m,
+                            CodeProduct = "CAMISA-OXF-L-AZ",
+                            HasOptions = false,
+                            IdProductParent = 12,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Camisa Oxford Talla L Azul"
+                        },
+                        new
+                        {
+                            IdProduct = 16,
+                            AverageCost = 0m,
+                            CodeProduct = "CAMISA-OXF-S-RJ",
+                            HasOptions = false,
+                            IdProductParent = 12,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Camisa Oxford Talla S Rojo"
+                        },
+                        new
+                        {
+                            IdProduct = 17,
+                            AverageCost = 0m,
+                            CodeProduct = "CAMISA-OXF-M-RJ",
+                            HasOptions = false,
+                            IdProductParent = 12,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Camisa Oxford Talla M Rojo"
+                        },
+                        new
+                        {
+                            IdProduct = 18,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-HARINA-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 3,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Harina de Trigo"
+                        },
+                        new
+                        {
+                            IdProduct = 19,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-AGUA-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 7,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Agua"
+                        },
+                        new
+                        {
+                            IdProduct = 20,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-LEVADURA-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 5,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Levadura"
+                        },
+                        new
+                        {
+                            IdProduct = 21,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-ACEITE-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 6,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Aceite de Oliva"
+                        },
+                        new
+                        {
+                            IdProduct = 22,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-SALSA-TOM-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 6,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Salsa de Tomate"
+                        },
+                        new
+                        {
+                            IdProduct = 23,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-MOZZ-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 3,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Queso Mozzarella"
+                        },
+                        new
+                        {
+                            IdProduct = 24,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-PEPPERONI-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 3,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Pepperoni"
+                        },
+                        new
+                        {
+                            IdProduct = 25,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-PINA-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 3,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Piña en Rodajas"
+                        },
+                        new
+                        {
+                            IdProduct = 26,
+                            AverageCost = 0m,
+                            CodeProduct = "MP-JAMON-001",
+                            HasOptions = false,
+                            IdProductType = 1,
+                            IdUnit = 3,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Jamón"
+                        },
+                        new
+                        {
+                            IdProduct = 27,
+                            AverageCost = 0m,
+                            CodeProduct = "PT-PIZZA-001",
+                            HasOptions = true,
+                            IdProductType = 3,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Pizza"
+                        },
+                        new
+                        {
+                            IdProduct = 28,
+                            AverageCost = 0m,
+                            CodeProduct = "REV-SPRITE-001",
+                            HasOptions = false,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Sprite 355ml"
+                        },
+                        new
+                        {
+                            IdProduct = 29,
+                            AverageCost = 0m,
+                            CodeProduct = "REV-AGUA-BOT-001",
+                            HasOptions = false,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = false,
+                            IsVariantParent = false,
+                            NameProduct = "Agua Pura Botella 500ml"
+                        },
+                        new
+                        {
+                            IdProduct = 30,
+                            AverageCost = 0m,
+                            CodeProduct = "COMBO-2PIZ-BEB",
+                            HasOptions = false,
+                            IdProductType = 4,
+                            IdUnit = 1,
+                            IsCombo = true,
+                            IsVariantParent = false,
+                            NameProduct = "Combo 2 Pizzas + Bebida"
                         });
                 });
 
@@ -3576,6 +4257,63 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("productAccount", t =>
                         {
                             t.HasComment("Distribución contable por producto: define la cuenta de gasto y el centro de costo para cada porcentaje del total de la línea de factura. La suma de PercentageAccount por IdProduct debe ser exactamente 100.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductAttribute", b =>
+                {
+                    b.Property<int>("IdProductAttribute")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idProductAttribute")
+                        .HasComment("Identificador único del atributo del producto");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductAttribute"));
+
+                    b.Property<int>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("Producto padre al que pertenece este atributo");
+
+                    b.Property<string>("NameAttribute")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("nameAttribute")
+                        .HasComment("Nombre del atributo (ej: Talla, Color, Material)");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("sortOrder")
+                        .HasComment("Orden de presentación del atributo dentro del producto padre");
+
+                    b.HasKey("IdProductAttribute");
+
+                    b.HasIndex("IdProduct", "NameAttribute")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_productAttribute_idProduct_nameAttribute");
+
+                    b.ToTable("productAttribute", t =>
+                        {
+                            t.HasComment("Atributos definibles por producto padre que describen dimensiones de variación (ej: Talla, Color)");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductAttribute = 1,
+                            IdProduct = 12,
+                            NameAttribute = "Talla",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductAttribute = 2,
+                            IdProduct = 12,
+                            NameAttribute = "Color",
+                            SortOrder = 2
                         });
                 });
 
@@ -3656,6 +4394,83 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             t.HasComment("Slots de un combo (ej: Pizza #1, Pizza #2, Bebida). Un producto con IsCombo=true tiene N slots.");
                         });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductComboSlot = 1,
+                            IdProductCombo = 30,
+                            IsRequired = true,
+                            NameSlot = "Pizza #1",
+                            Quantity = 1m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductComboSlot = 2,
+                            IdProductCombo = 30,
+                            IsRequired = true,
+                            NameSlot = "Pizza #2",
+                            Quantity = 1m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductComboSlot = 3,
+                            IdProductCombo = 30,
+                            IsRequired = true,
+                            NameSlot = "Bebida",
+                            Quantity = 1m,
+                            SortOrder = 3
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductComboSlotPresetOption", b =>
+                {
+                    b.Property<int>("IdProductComboSlotPresetOption")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idProductComboSlotPresetOption")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductComboSlotPresetOption"));
+
+                    b.Property<int>("IdProductComboSlot")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductComboSlot")
+                        .HasComment("FK al slot del combo al que pertenece esta opción preset.");
+
+                    b.Property<int>("IdProductOptionItem")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductOptionItem")
+                        .HasComment("FK al ítem de opción preseleccionado (debe pertenecer al producto del slot).");
+
+                    b.HasKey("IdProductComboSlotPresetOption");
+
+                    b.HasIndex("IdProductOptionItem");
+
+                    b.HasIndex("IdProductComboSlot", "IdProductOptionItem")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_productComboSlotPresetOption_slot_item");
+
+                    b.ToTable("productComboSlotPresetOption", t =>
+                        {
+                            t.HasComment("Opciones preseleccionadas en el catálogo para un slot de combo. El cliente las ve bloqueadas (no editables).");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductComboSlotPresetOption = 1,
+                            IdProductComboSlot = 1,
+                            IdProductOptionItem = 2
+                        },
+                        new
+                        {
+                            IdProductComboSlotPresetOption = 2,
+                            IdProductComboSlot = 2,
+                            IdProductOptionItem = 2
+                        });
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductComboSlotProduct", b =>
@@ -3704,6 +4519,48 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("productComboSlotProduct", t =>
                         {
                             t.HasComment("Productos permitidos en cada slot de un combo. El cliente elige uno de esta lista al armar el pedido.");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductComboSlotProduct = 1,
+                            IdProduct = 27,
+                            IdProductComboSlot = 1,
+                            PriceAdjustment = 0m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductComboSlotProduct = 2,
+                            IdProduct = 27,
+                            IdProductComboSlot = 2,
+                            PriceAdjustment = 0m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductComboSlotProduct = 3,
+                            IdProduct = 1,
+                            IdProductComboSlot = 3,
+                            PriceAdjustment = 0m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductComboSlotProduct = 4,
+                            IdProduct = 28,
+                            IdProductComboSlot = 3,
+                            PriceAdjustment = 0m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductComboSlotProduct = 5,
+                            IdProduct = 29,
+                            IdProductComboSlot = 3,
+                            PriceAdjustment = 0m,
+                            SortOrder = 3
                         });
                 });
 
@@ -3772,6 +4629,52 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             t.HasComment("Grupos de opciones configurables de un producto (ej: Tamaño, Masa, Sabor). Un producto con HasOptions=true puede tener N grupos.");
                         });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductOptionGroup = 1,
+                            AllowSplit = false,
+                            IdProduct = 27,
+                            IsRequired = true,
+                            MaxSelections = 1,
+                            MinSelections = 1,
+                            NameGroup = "Elige tu tamaño",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductOptionGroup = 2,
+                            AllowSplit = false,
+                            IdProduct = 27,
+                            IsRequired = true,
+                            MaxSelections = 1,
+                            MinSelections = 1,
+                            NameGroup = "Elige tu masa",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductOptionGroup = 3,
+                            AllowSplit = false,
+                            IdProduct = 27,
+                            IsRequired = true,
+                            MaxSelections = 1,
+                            MinSelections = 1,
+                            NameGroup = "Elige tu sabor",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            IdProductOptionGroup = 4,
+                            AllowSplit = false,
+                            IdProduct = 27,
+                            IsRequired = false,
+                            MaxSelections = 3,
+                            MinSelections = 0,
+                            NameGroup = "Extras",
+                            SortOrder = 4
+                        });
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductOptionItem", b =>
@@ -3788,6 +4691,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("idProductOptionGroup")
                         .HasComment("FK al grupo de opciones al que pertenece este item.");
+
+                    b.Property<int?>("IdProductRecipe")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductRecipe")
+                        .HasComment("FK opcional a la receta que se usa para producir este option item (ej: receta de masa delgada).");
 
                     b.Property<bool>("IsDefault")
                         .ValueGeneratedOnAdd()
@@ -3822,9 +4730,114 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.HasIndex("IdProductOptionGroup");
 
+                    b.HasIndex("IdProductRecipe");
+
                     b.ToTable("productOptionItem", t =>
                         {
                             t.HasComment("Cada opción dentro de un grupo configurable (ej: Delgada, Gruesa, Rellena dentro del grupo Masa).");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductOptionItem = 1,
+                            IdProductOptionGroup = 1,
+                            IsDefault = true,
+                            NameItem = "Mediana",
+                            PriceDelta = 0.00m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductOptionItem = 2,
+                            IdProductOptionGroup = 1,
+                            IdProductRecipe = 6,
+                            IsDefault = false,
+                            NameItem = "Grande",
+                            PriceDelta = 2.00m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductOptionItem = 3,
+                            IdProductOptionGroup = 2,
+                            IsDefault = true,
+                            NameItem = "Clásica",
+                            PriceDelta = 0.00m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductOptionItem = 4,
+                            IdProductOptionGroup = 2,
+                            IsDefault = false,
+                            NameItem = "Delgada",
+                            PriceDelta = 0.00m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductOptionItem = 5,
+                            IdProductOptionGroup = 3,
+                            IdProductRecipe = 4,
+                            IsDefault = true,
+                            NameItem = "Pepperoni",
+                            PriceDelta = 0.00m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductOptionItem = 6,
+                            IdProductOptionGroup = 3,
+                            IdProductRecipe = 5,
+                            IsDefault = false,
+                            NameItem = "Hawaiian",
+                            PriceDelta = 0.00m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductOptionItem = 7,
+                            IdProductOptionGroup = 4,
+                            IdProductRecipe = 7,
+                            IsDefault = false,
+                            NameItem = "Doble Queso",
+                            PriceDelta = 0.75m,
+                            SortOrder = 1
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductOptionItemAvailability", b =>
+                {
+                    b.Property<int>("IdProductOptionItemAvailability")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idProductOptionItemAvailability")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductOptionItemAvailability"));
+
+                    b.Property<int>("IdEnablingItem")
+                        .HasColumnType("int")
+                        .HasColumnName("idEnablingItem")
+                        .HasComment("FK al ítem que habilita al restringido.");
+
+                    b.Property<int>("IdRestrictedItem")
+                        .HasColumnType("int")
+                        .HasColumnName("idRestrictedItem")
+                        .HasComment("FK al ítem restringido.");
+
+                    b.HasKey("IdProductOptionItemAvailability");
+
+                    b.HasIndex("IdEnablingItem");
+
+                    b.HasIndex("IdRestrictedItem", "IdEnablingItem")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_productOptionItemAvailability_idRestrictedItem_idEnablingItem");
+
+                    b.ToTable("productOptionItemAvailability", t =>
+                        {
+                            t.HasComment("Reglas de disponibilidad condicional entre items de opción. El item restringido (idRestrictedItem) solo está disponible cuando al menos uno de sus ítems habilitadores (idEnablingItem) está seleccionado en el pedido.");
                         });
                 });
 
@@ -3877,7 +4890,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("createdAt")
                         .HasDefaultValueSql("GETUTCDATE()")
-                        .HasComment("Fecha y hora UTC de creación del registro.");
+                        .HasComment("Fecha y hora UTC de creación de esta versión.");
 
                     b.Property<string>("DescriptionRecipe")
                         .HasMaxLength(500)
@@ -3895,7 +4908,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true)
                         .HasColumnName("isActive")
-                        .HasComment("Solo recetas activas se usan en producción.");
+                        .HasComment("Solo recetas activas se usan en producción. Al actualizar una receta la versión anterior queda IsActive=false.");
 
                     b.Property<string>("NameRecipe")
                         .IsRequired()
@@ -3910,13 +4923,94 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("quantityOutput")
                         .HasComment("Cantidad producida por corrida, expresada en la unidad base del producto output.");
 
+                    b.Property<int>("VersionNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1)
+                        .HasColumnName("versionNumber")
+                        .HasComment("Número de versión de la receta. Se incrementa al actualizar. Cada modificación crea una nueva fila; la anterior queda IsActive=false.");
+
                     b.HasKey("IdProductRecipe");
 
-                    b.HasIndex("IdProductOutput");
+                    b.HasIndex("IdProductOutput", "VersionNumber")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_productRecipe_idProductOutput_versionNumber");
 
                     b.ToTable("productRecipe", t =>
                         {
                             t.HasComment("Recetas (BOM - Bill of Materials) para la producción de un producto. Define qué insumos se consumen y en qué cantidades para producir una corrida del output. Solo puede ser output un producto de tipo Producto en Proceso o Producto Terminado.");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductRecipe = 1,
+                            CreatedAt = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IdProductOutput = 6,
+                            IsActive = true,
+                            NameRecipe = "Receta Chile Embotellado",
+                            QuantityOutput = 1m,
+                            VersionNumber = 1
+                        },
+                        new
+                        {
+                            IdProductRecipe = 2,
+                            CreatedAt = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IdProductOutput = 11,
+                            IsActive = true,
+                            NameRecipe = "Receta Hot Dog",
+                            QuantityOutput = 1m,
+                            VersionNumber = 1
+                        },
+                        new
+                        {
+                            IdProductRecipe = 3,
+                            CreatedAt = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IdProductOutput = 27,
+                            IsActive = true,
+                            NameRecipe = "Base Pizza",
+                            QuantityOutput = 1m,
+                            VersionNumber = 1
+                        },
+                        new
+                        {
+                            IdProductRecipe = 4,
+                            CreatedAt = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IdProductOutput = 27,
+                            IsActive = false,
+                            NameRecipe = "Opción Sabor: Pepperoni",
+                            QuantityOutput = 1m,
+                            VersionNumber = 2
+                        },
+                        new
+                        {
+                            IdProductRecipe = 5,
+                            CreatedAt = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IdProductOutput = 27,
+                            IsActive = false,
+                            NameRecipe = "Opción Sabor: Hawaiian",
+                            QuantityOutput = 1m,
+                            VersionNumber = 3
+                        },
+                        new
+                        {
+                            IdProductRecipe = 6,
+                            CreatedAt = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IdProductOutput = 27,
+                            IsActive = false,
+                            NameRecipe = "Opción Tamaño: Grande",
+                            QuantityOutput = 1m,
+                            VersionNumber = 4
+                        },
+                        new
+                        {
+                            IdProductRecipe = 7,
+                            CreatedAt = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            IdProductOutput = 27,
+                            IsActive = false,
+                            NameRecipe = "Opción Extra: Doble Queso",
+                            QuantityOutput = 1m,
+                            VersionNumber = 5
                         });
                 });
 
@@ -3964,6 +5058,168 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             t.HasComment("Ingredientes de una receta de producción. Cada línea es un insumo con su cantidad en unidad base. idProductInput no puede ser igual al idProductOutput de la receta padre.");
                         });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductRecipeLine = 1,
+                            IdProductInput = 2,
+                            IdProductRecipe = 1,
+                            QuantityInput = 0.2000m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 2,
+                            IdProductInput = 3,
+                            IdProductRecipe = 1,
+                            QuantityInput = 0.0500m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 3,
+                            IdProductInput = 4,
+                            IdProductRecipe = 1,
+                            QuantityInput = 0.0050m,
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 4,
+                            IdProductInput = 5,
+                            IdProductRecipe = 1,
+                            QuantityInput = 1.0000m,
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 5,
+                            IdProductInput = 7,
+                            IdProductRecipe = 2,
+                            QuantityInput = 1.0000m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 6,
+                            IdProductInput = 8,
+                            IdProductRecipe = 2,
+                            QuantityInput = 1.0000m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 7,
+                            IdProductInput = 9,
+                            IdProductRecipe = 2,
+                            QuantityInput = 15.0000m,
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 8,
+                            IdProductInput = 10,
+                            IdProductRecipe = 2,
+                            QuantityInput = 20.0000m,
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 9,
+                            IdProductInput = 18,
+                            IdProductRecipe = 3,
+                            QuantityInput = 0.4000m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 10,
+                            IdProductInput = 19,
+                            IdProductRecipe = 3,
+                            QuantityInput = 0.2500m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 11,
+                            IdProductInput = 20,
+                            IdProductRecipe = 3,
+                            QuantityInput = 5.0000m,
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 12,
+                            IdProductInput = 21,
+                            IdProductRecipe = 3,
+                            QuantityInput = 30.0000m,
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 13,
+                            IdProductInput = 22,
+                            IdProductRecipe = 3,
+                            QuantityInput = 100.000m,
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 14,
+                            IdProductInput = 23,
+                            IdProductRecipe = 3,
+                            QuantityInput = 0.1500m,
+                            SortOrder = 6
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 15,
+                            IdProductInput = 24,
+                            IdProductRecipe = 4,
+                            QuantityInput = 0.1000m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 16,
+                            IdProductInput = 25,
+                            IdProductRecipe = 5,
+                            QuantityInput = 0.0800m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 17,
+                            IdProductInput = 26,
+                            IdProductRecipe = 5,
+                            QuantityInput = 0.0800m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 18,
+                            IdProductInput = 18,
+                            IdProductRecipe = 6,
+                            QuantityInput = 0.1500m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 19,
+                            IdProductInput = 19,
+                            IdProductRecipe = 6,
+                            QuantityInput = 0.0800m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            IdProductRecipeLine = 20,
+                            IdProductInput = 23,
+                            IdProductRecipe = 7,
+                            QuantityInput = 0.0500m,
+                            SortOrder = 1
+                        });
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductType", b =>
@@ -3987,7 +5243,14 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)")
                         .HasColumnName("nameProductType")
-                        .HasComment("Nombre del tipo: Materia Prima | Producto en Proceso | Producto Terminado | Reventa.");
+                        .HasComment("Nombre del tipo: Materia Prima | Producto en Proceso | Producto Terminado | Reventa | Servicios.");
+
+                    b.Property<bool>("TrackInventory")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("trackInventory")
+                        .HasComment("Indica si los productos de este tipo llevan control de stock (inventariables). false = Servicios y productos sin inventario.");
 
                     b.HasKey("IdProductType");
 
@@ -3997,7 +5260,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.ToTable("productType", t =>
                         {
-                            t.HasComment("Tipo de producto según la fase productiva: Materia Prima, Producto en Proceso, Producto Terminado o Reventa. Catálogo de sistema, sin CRUD expuesto al usuario.");
+                            t.HasComment("Tipo de producto según la fase productiva: Materia Prima, Producto en Proceso, Producto Terminado, Reventa o Servicios. Catálogo de sistema, sin CRUD expuesto al usuario.");
                         });
 
                     b.HasData(
@@ -4005,25 +5268,36 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             IdProductType = 1,
                             DescriptionProductType = "Insumos o materiales adquiridos para ser utilizados en el proceso productivo. No se venden directamente.",
-                            NameProductType = "Materia Prima"
+                            NameProductType = "Materia Prima",
+                            TrackInventory = true
                         },
                         new
                         {
                             IdProductType = 2,
                             DescriptionProductType = "Productos que han iniciado su proceso de fabricación pero aún no están terminados.",
-                            NameProductType = "Producto en Proceso"
+                            NameProductType = "Producto en Proceso",
+                            TrackInventory = true
                         },
                         new
                         {
                             IdProductType = 3,
                             DescriptionProductType = "Productos que han completado el proceso productivo y están listos para la venta.",
-                            NameProductType = "Producto Terminado"
+                            NameProductType = "Producto Terminado",
+                            TrackInventory = true
                         },
                         new
                         {
                             IdProductType = 4,
                             DescriptionProductType = "Productos adquiridos listos para la venta sin transformación productiva.",
-                            NameProductType = "Reventa"
+                            NameProductType = "Reventa",
+                            TrackInventory = true
+                        },
+                        new
+                        {
+                            IdProductType = 5,
+                            DescriptionProductType = "Servicios, mano de obra o conceptos sin stock físico. No generan movimientos de inventario.",
+                            NameProductType = "Servicios",
+                            TrackInventory = false
                         });
                 });
 
@@ -4122,6 +5396,262 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("productUnit", t =>
                         {
                             t.HasComment("Presentaciones de compra/venta de un producto con su factor de conversión a la unidad base. Reemplaza productSKU + productProductSKU. El campo codeBarcode permite escanear EAN para pre-llenar líneas de factura.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductVariantAttribute", b =>
+                {
+                    b.Property<int>("IdProductVariantAttribute")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idProductVariantAttribute")
+                        .HasComment("Identificador único del vínculo variante-atributo");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductVariantAttribute"));
+
+                    b.Property<int>("IdAttributeValue")
+                        .HasColumnType("int")
+                        .HasColumnName("idAttributeValue")
+                        .HasComment("Valor de atributo que forma parte de la combinación de esta variante");
+
+                    b.Property<int>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("Producto variante hijo al que pertenece este vínculo");
+
+                    b.HasKey("IdProductVariantAttribute");
+
+                    b.HasIndex("IdAttributeValue");
+
+                    b.HasIndex("IdProduct", "IdAttributeValue")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_productVariantAttribute_idProduct_idAttributeValue");
+
+                    b.ToTable("productVariantAttribute", t =>
+                        {
+                            t.HasComment("Vincula una variante hija con los valores de atributo que la definen (ej: Camisa Oxford M + Azul)");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdProductVariantAttribute = 1,
+                            IdAttributeValue = 1,
+                            IdProduct = 13
+                        },
+                        new
+                        {
+                            IdProductVariantAttribute = 2,
+                            IdAttributeValue = 4,
+                            IdProduct = 13
+                        },
+                        new
+                        {
+                            IdProductVariantAttribute = 3,
+                            IdAttributeValue = 2,
+                            IdProduct = 14
+                        },
+                        new
+                        {
+                            IdProductVariantAttribute = 4,
+                            IdAttributeValue = 4,
+                            IdProduct = 14
+                        },
+                        new
+                        {
+                            IdProductVariantAttribute = 5,
+                            IdAttributeValue = 3,
+                            IdProduct = 15
+                        },
+                        new
+                        {
+                            IdProductVariantAttribute = 6,
+                            IdAttributeValue = 4,
+                            IdProduct = 15
+                        },
+                        new
+                        {
+                            IdProductVariantAttribute = 7,
+                            IdAttributeValue = 1,
+                            IdProduct = 16
+                        },
+                        new
+                        {
+                            IdProductVariantAttribute = 8,
+                            IdAttributeValue = 5,
+                            IdProduct = 16
+                        },
+                        new
+                        {
+                            IdProductVariantAttribute = 9,
+                            IdAttributeValue = 2,
+                            IdProduct = 17
+                        },
+                        new
+                        {
+                            IdProductVariantAttribute = 10,
+                            IdAttributeValue = 5,
+                            IdProduct = 17
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionOrder", b =>
+                {
+                    b.Property<int>("IdProductionOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idProductionOrder")
+                        .HasComment("Identificador único autoincremental de la orden de producción.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductionOrder"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación del registro.");
+
+                    b.Property<DateOnly>("DateOrder")
+                        .HasColumnType("date")
+                        .HasColumnName("dateOrder")
+                        .HasComment("Fecha de creación de la orden de producción.");
+
+                    b.Property<DateOnly?>("DateRequired")
+                        .HasColumnType("date")
+                        .HasColumnName("dateRequired")
+                        .HasComment("Fecha en que se necesita tener disponible lo producido. Nullable.");
+
+                    b.Property<string>("DescriptionOrder")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("descriptionOrder")
+                        .HasComment("Observaciones opcionales.");
+
+                    b.Property<int>("IdFiscalPeriod")
+                        .HasColumnType("int")
+                        .HasColumnName("idFiscalPeriod")
+                        .HasComment("FK al período fiscal al que corresponde la orden.");
+
+                    b.Property<int?>("IdSalesOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrder")
+                        .HasComment("FK al pedido de venta que origina esta orden. NULL = producción para stock (Modalidad A).");
+
+                    b.Property<int?>("IdWarehouse")
+                        .HasColumnType("int")
+                        .HasColumnName("idWarehouse")
+                        .HasComment("Bodega de producción: consumo de materias primas y entrada del producto terminado.");
+
+                    b.Property<string>("NumberProductionOrder")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("numberProductionOrder")
+                        .HasComment("Número correlativo de la orden (ej: OP-2026-0001).");
+
+                    b.Property<string>("StatusProductionOrder")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("Borrador")
+                        .HasColumnName("statusProductionOrder")
+                        .HasComment("Estado: Borrador | Pendiente | EnProceso | Completado | Anulado.");
+
+                    b.HasKey("IdProductionOrder");
+
+                    b.HasIndex("IdFiscalPeriod")
+                        .HasDatabaseName("IX_productionOrder_idFiscalPeriod");
+
+                    b.HasIndex("IdSalesOrder")
+                        .HasDatabaseName("IX_productionOrder_idSalesOrder")
+                        .HasFilter("[idSalesOrder] IS NOT NULL");
+
+                    b.HasIndex("IdWarehouse")
+                        .HasDatabaseName("IX_productionOrder_idWarehouse")
+                        .HasFilter("[idWarehouse] IS NOT NULL");
+
+                    b.HasIndex("NumberProductionOrder")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_productionOrder_numberProductionOrder");
+
+                    b.ToTable("productionOrder", t =>
+                        {
+                            t.HasComment("Orden de producción. IdSalesOrder = NULL → Modalidad A (producción para stock); IdSalesOrder NOT NULL → Modalidad B (contra pedido). Permite múltiples corridas de InventoryAdjustment tipo PRODUCCION bajo la misma orden.");
+
+                            t.HasCheckConstraint("CK_productionOrder_statusProductionOrder", "statusProductionOrder IN ('Borrador', 'Pendiente', 'EnProceso', 'Completado', 'Anulado')");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionOrderLine", b =>
+                {
+                    b.Property<int>("IdProductionOrderLine")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idProductionOrderLine")
+                        .HasComment("Identificador único autoincremental de la línea.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdProductionOrderLine"));
+
+                    b.Property<string>("DescriptionLine")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("descriptionLine")
+                        .HasComment("Nota adicional opcional de la línea.");
+
+                    b.Property<int>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("FK al producto final a producir en esta línea.");
+
+                    b.Property<int>("IdProductUnit")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductUnit")
+                        .HasComment("FK a la unidad de producción del producto.");
+
+                    b.Property<int>("IdProductionOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductionOrder")
+                        .HasComment("FK a la orden de producción cabecera.");
+
+                    b.Property<int?>("IdSalesOrderLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLine")
+                        .HasComment("FK opcional a la línea del pedido de venta que originó esta línea de producción.");
+
+                    b.Property<decimal>("QuantityProduced")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("quantityProduced")
+                        .HasComment("Acumulado producido. Se incrementa cada vez que se confirma un InventoryAdjustment vinculado a esta orden.");
+
+                    b.Property<decimal>("QuantityRequired")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("quantityRequired")
+                        .HasComment("Cantidad total comprometida en unidad base que se debe producir para cubrir el pedido.");
+
+                    b.HasKey("IdProductionOrderLine");
+
+                    b.HasIndex("IdProduct");
+
+                    b.HasIndex("IdProductUnit");
+
+                    b.HasIndex("IdProductionOrder")
+                        .HasDatabaseName("IX_productionOrderLine_idProductionOrder");
+
+                    b.HasIndex("IdSalesOrderLine")
+                        .HasDatabaseName("IX_productionOrderLine_idSalesOrderLine")
+                        .HasFilter("[idSalesOrderLine] IS NOT NULL");
+
+                    b.ToTable("productionOrderLine", t =>
+                        {
+                            t.HasComment("Línea de orden de producción. Registra qué producto producir, cuánto se requiere (QuantityRequired) y cuánto se ha producido acumulado (QuantityProduced). Vinculada opcionalmente a la línea del pedido de origen para calcular margen por pedido.");
                         });
                 });
 
@@ -4276,6 +5806,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("idBankAccount");
 
+                    b.Property<int?>("IdContact")
+                        .HasColumnType("int")
+                        .HasColumnName("idContact")
+                        .HasComment("FK al contacto proveedor. Si es nulo, el proveedor no está en el catálogo.");
+
                     b.Property<int>("IdCurrency")
                         .HasColumnType("int")
                         .HasColumnName("idCurrency")
@@ -4291,6 +5826,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("idPurchaseInvoiceType")
                         .HasComment("FK al tipo de factura de compra (EFECTIVO, DEBITO, TC).");
 
+                    b.Property<int?>("IdWarehouse")
+                        .HasColumnType("int")
+                        .HasColumnName("idWarehouse")
+                        .HasComment("FK al almacén destino de la mercadería. Opcional; si es nulo al confirmar se usa el almacén predeterminado.");
+
                     b.Property<string>("NumberInvoice")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -4304,7 +5844,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("providerName")
-                        .HasComment("Nombre del proveedor (ingreso libre, sin catálogo en esta fase).");
+                        .HasComment("Snapshot del nombre del proveedor en el momento de la factura. Se autocompleta desde el contacto si se envía IdContact.");
 
                     b.Property<string>("StatusInvoice")
                         .IsRequired()
@@ -4339,6 +5879,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.HasIndex("IdBankAccount")
                         .HasDatabaseName("IX_purchaseInvoice_idBankAccount");
 
+                    b.HasIndex("IdContact")
+                        .HasDatabaseName("IX_purchaseInvoice_idContact");
+
                     b.HasIndex("IdCurrency")
                         .HasDatabaseName("IX_purchaseInvoice_idCurrency");
 
@@ -4347,6 +5890,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.HasIndex("IdPurchaseInvoiceType")
                         .HasDatabaseName("IX_purchaseInvoice_idPurchaseInvoiceType");
+
+                    b.HasIndex("IdWarehouse")
+                        .HasDatabaseName("IX_purchaseInvoice_idWarehouse")
+                        .HasFilter("[idWarehouse] IS NOT NULL");
 
                     b.HasIndex("NumberInvoice")
                         .IsUnique()
@@ -4758,6 +6305,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("idSalesInvoiceType");
 
+                    b.Property<int?>("IdSalesOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrder")
+                        .HasComment("FK al pedido de venta que origina esta factura. NULL = venta directa de tienda.");
+
                     b.Property<string>("NumberInvoice")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -4808,6 +6360,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasDatabaseName("IX_salesInvoice_idFiscalPeriod");
 
                     b.HasIndex("IdSalesInvoiceType");
+
+                    b.HasIndex("IdSalesOrder")
+                        .HasDatabaseName("IX_salesInvoice_idSalesOrder")
+                        .HasFilter("[idSalesOrder] IS NOT NULL");
 
                     b.HasIndex("NumberInvoice")
                         .IsUnique()
@@ -4878,6 +6434,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("idProduct");
 
+                    b.Property<int?>("IdProductRecipe")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductRecipe")
+                        .HasComment("Snapshot FK de la receta usada al confirmar (explosión BOM). NULL si el producto no tiene receta activa o es combo.");
+
                     b.Property<int>("IdSalesInvoice")
                         .HasColumnType("int")
                         .HasColumnName("idSalesInvoice");
@@ -4885,6 +6446,13 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Property<int?>("IdUnit")
                         .HasColumnType("int")
                         .HasColumnName("idUnit");
+
+                    b.Property<bool>("IsNonProductLine")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("isNonProductLine")
+                        .HasComment("true = flete/servicio/gasto sin stock; false = producto. Cuando false y sin receta activa ni combo, idInventoryLot es obligatorio.");
 
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 4)
@@ -4928,13 +6496,136 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.HasIndex("IdProduct");
 
+                    b.HasIndex("IdProductRecipe");
+
                     b.HasIndex("IdSalesInvoice");
 
                     b.HasIndex("IdUnit");
 
                     b.ToTable("salesInvoiceLine", t =>
                         {
-                            t.HasComment("Línea de la factura de venta. IdInventoryLot es obligatorio para productos con stock; se descuenta al confirmar.");
+                            t.HasComment("Línea de la factura de venta. IsNonProductLine=false + producto sin receta ni combo: IdInventoryLot obligatorio (lote directo). IsNonProductLine=false + producto con receta activa: BOM explosion en ConfirmAsync (BomDetails). IsNonProductLine=false + combo: explosión de slots en ConfirmAsync (BomDetails). IsNonProductLine=true: flete/servicio/gasto, sin movimiento de inventario.");
+
+                            t.HasCheckConstraint("CK_salesInvoiceLine_lot_required", "isNonProductLine = 1 OR idInventoryLot IS NOT NULL OR idProductRecipe IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineBomDetail", b =>
+                {
+                    b.Property<int>("IdSalesInvoiceLineBomDetail")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLineBomDetail")
+                        .HasComment("Identificador único autoincremental del detalle BOM.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoiceLineBomDetail"));
+
+                    b.Property<int>("IdInventoryLot")
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryLot")
+                        .HasComment("Lote específico del que se descontó el stock (FEFO auto-asignado).");
+
+                    b.Property<int>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("Snapshot del insumo o producto de slot descontado al confirmar.");
+
+                    b.Property<int?>("IdProductComboSlot")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductComboSlot")
+                        .HasComment("FK nullable al slot del combo. NULL si la línea no es un combo.");
+
+                    b.Property<int?>("IdProductRecipeLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductRecipeLine")
+                        .HasComment("FK nullable a la línea de receta. NULL si es reventa directa de slot o insumo extra.");
+
+                    b.Property<int>("IdSalesInvoiceLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLine")
+                        .HasComment("FK a la línea de factura de venta que originó este movimiento.");
+
+                    b.Property<decimal>("QuantityConsumed")
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasColumnName("quantityConsumed")
+                        .HasComment("Cantidad descontada en unidad base del insumo/producto.");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("unitCost")
+                        .HasComment("Snapshot del costo unitario del lote al momento de confirmar la factura.");
+
+                    b.HasKey("IdSalesInvoiceLineBomDetail");
+
+                    b.HasIndex("IdInventoryLot")
+                        .HasDatabaseName("IX_salesInvoiceLineBomDetail_idInventoryLot");
+
+                    b.HasIndex("IdProduct");
+
+                    b.HasIndex("IdProductComboSlot")
+                        .HasDatabaseName("IX_salesInvoiceLineBomDetail_idProductComboSlot")
+                        .HasFilter("[idProductComboSlot] IS NOT NULL");
+
+                    b.HasIndex("IdProductRecipeLine")
+                        .HasDatabaseName("IX_salesInvoiceLineBomDetail_idProductRecipeLine")
+                        .HasFilter("[idProductRecipeLine] IS NOT NULL");
+
+                    b.HasIndex("IdSalesInvoiceLine")
+                        .HasDatabaseName("IX_salesInvoiceLineBomDetail_idSalesInvoiceLine");
+
+                    b.ToTable("salesInvoiceLineBomDetail", t =>
+                        {
+                            t.HasComment("Detalle de movimiento de inventario generado al confirmar una SalesInvoiceLine mediante explosión BOM (receta activa — Opción 2B) o por slot de combo (Opción 3A). Una línea puede originar N registros: uno por insumo de receta o por producto de slot. IdProductRecipeLine = NULL indica reventa directa de slot o insumo extra no previsto en receta.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineComboSlotSelection", b =>
+                {
+                    b.Property<int>("IdSalesInvoiceLineComboSlotSelection")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLineComboSlotSelection")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoiceLineComboSlotSelection"));
+
+                    b.Property<int?>("IdInventoryLot")
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryLot")
+                        .HasComment("Lote de producto terminado pre-asignado desde producción (nullable — slot sin receta lo omite).");
+
+                    b.Property<int>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("Producto elegido en el slot (snapshot al momento de facturar).");
+
+                    b.Property<int>("IdProductComboSlot")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductComboSlot")
+                        .HasComment("FK al slot del combo.");
+
+                    b.Property<int>("IdSalesInvoiceLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLine")
+                        .HasComment("FK a la línea de la factura (combo).");
+
+                    b.HasKey("IdSalesInvoiceLineComboSlotSelection");
+
+                    b.HasIndex("IdInventoryLot");
+
+                    b.HasIndex("IdProduct");
+
+                    b.HasIndex("IdProductComboSlot");
+
+                    b.HasIndex("IdSalesInvoiceLine", "IdProductComboSlot")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_salesInvoiceLineComboSlotSelection_line_slot");
+
+                    b.ToTable("salesInvoiceLineComboSlotSelection", t =>
+                        {
+                            t.HasComment("Snapshot inmutable de la selección por slot al generar la factura de venta.");
                         });
                 });
 
@@ -4967,6 +6658,95 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("salesInvoiceLineEntry", t =>
                         {
                             t.HasComment("Tabla pivot N:M salesInvoiceLine ↔ accountingEntryLine.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineOption", b =>
+                {
+                    b.Property<int>("IdSalesInvoiceLineOption")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLineOption")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoiceLineOption"));
+
+                    b.Property<int>("IdProductOptionItem")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductOptionItem")
+                        .HasComment("FK al ítem de opción.");
+
+                    b.Property<int>("IdSalesInvoiceLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLine")
+                        .HasComment("FK a la línea de la factura.");
+
+                    b.Property<decimal>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasDefaultValue(1m)
+                        .HasColumnName("quantity")
+                        .HasComment("Cantidad de este option item aplicado a la línea.");
+
+                    b.HasKey("IdSalesInvoiceLineOption");
+
+                    b.HasIndex("IdProductOptionItem");
+
+                    b.HasIndex("IdSalesInvoiceLine");
+
+                    b.ToTable("salesInvoiceLineOption", t =>
+                        {
+                            t.HasComment("Opciones configurables copiadas desde el pedido a la factura de venta.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineSlotOption", b =>
+                {
+                    b.Property<int>("IdSalesInvoiceLineSlotOption")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLineSlotOption")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesInvoiceLineSlotOption"));
+
+                    b.Property<int>("IdProductOptionItem")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductOptionItem")
+                        .HasComment("FK al ítem de opción del slot.");
+
+                    b.Property<int>("IdSalesInvoiceLineComboSlotSelection")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesInvoiceLineComboSlotSelection")
+                        .HasComment("FK a la selección de slot de la línea de factura.");
+
+                    b.Property<bool>("IsPreset")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("isPreset")
+                        .HasComment("true = opción copiada automáticamente del preset del slot; false = elegida libremente por el cliente.");
+
+                    b.Property<decimal>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasDefaultValue(1m)
+                        .HasColumnName("quantity")
+                        .HasComment("Cantidad de este option item aplicado al slot.");
+
+                    b.HasKey("IdSalesInvoiceLineSlotOption");
+
+                    b.HasIndex("IdProductOptionItem");
+
+                    b.HasIndex("IdSalesInvoiceLineComboSlotSelection", "IdProductOptionItem")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_salesInvoiceLineSlotOption_selection_item");
+
+                    b.ToTable("salesInvoiceLineSlotOption", t =>
+                        {
+                            t.HasComment("Opciones del slot incluidas en la factura (snapshot al copiar desde el pedido).");
                         });
                 });
 
@@ -5115,6 +6895,483 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrder", b =>
+                {
+                    b.Property<int>("IdSalesOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrder")
+                        .HasComment("Identificador único autoincremental del pedido.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesOrder"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación del registro.");
+
+                    b.Property<DateOnly?>("DateDelivery")
+                        .HasColumnType("date")
+                        .HasColumnName("dateDelivery")
+                        .HasComment("Fecha compromiso de entrega al cliente. Nullable.");
+
+                    b.Property<DateOnly>("DateOrder")
+                        .HasColumnType("date")
+                        .HasColumnName("dateOrder")
+                        .HasComment("Fecha en que se ingresó el pedido.");
+
+                    b.Property<string>("DescriptionOrder")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("descriptionOrder")
+                        .HasComment("Observaciones opcionales del pedido.");
+
+                    b.Property<decimal>("ExchangeRateValue")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)")
+                        .HasColumnName("exchangeRateValue")
+                        .HasComment("Tipo de cambio al momento de crear el pedido.");
+
+                    b.Property<int>("IdContact")
+                        .HasColumnType("int")
+                        .HasColumnName("idContact")
+                        .HasComment("FK al cliente que realiza el pedido.");
+
+                    b.Property<int>("IdCurrency")
+                        .HasColumnType("int")
+                        .HasColumnName("idCurrency")
+                        .HasComment("FK a la moneda del pedido.");
+
+                    b.Property<int>("IdFiscalPeriod")
+                        .HasColumnType("int")
+                        .HasColumnName("idFiscalPeriod")
+                        .HasComment("FK al período fiscal.");
+
+                    b.Property<int?>("IdPriceList")
+                        .HasColumnType("int")
+                        .HasColumnName("idPriceList")
+                        .HasComment("FK a la lista de precios vigente al crear el pedido. Sirve como referencia; el precio real queda en SalesOrderLine.UnitPrice.");
+
+                    b.Property<string>("NumberOrder")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("numberOrder")
+                        .HasComment("Número correlativo del pedido (ej: PED-2026-0001).");
+
+                    b.Property<string>("StatusOrder")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("Borrador")
+                        .HasColumnName("statusOrder")
+                        .HasComment("Estado del pedido: Borrador | Confirmado | EnProduccion | Completado | Anulado.");
+
+                    b.Property<decimal>("SubTotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("subTotalAmount")
+                        .HasComment("Subtotal sin impuesto.");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("taxAmount")
+                        .HasComment("Monto total de impuesto.");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("totalAmount")
+                        .HasComment("Total del pedido (subtotal + impuesto).");
+
+                    b.HasKey("IdSalesOrder");
+
+                    b.HasIndex("IdContact")
+                        .HasDatabaseName("IX_salesOrder_idContact");
+
+                    b.HasIndex("IdCurrency");
+
+                    b.HasIndex("IdFiscalPeriod")
+                        .HasDatabaseName("IX_salesOrder_idFiscalPeriod");
+
+                    b.HasIndex("IdPriceList")
+                        .HasDatabaseName("IX_salesOrder_idPriceList")
+                        .HasFilter("[idPriceList] IS NOT NULL");
+
+                    b.HasIndex("NumberOrder")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_salesOrder_numberOrder");
+
+                    b.ToTable("salesOrder", t =>
+                        {
+                            t.HasComment("Pedido de un cliente externo. Modalidad B de producción: permite mezclar stock existente y órdenes de producción para cumplir el pedido. Flujo: Borrador → Confirmado → EnProduccion → Completado → Anulado.");
+
+                            t.HasCheckConstraint("CK_salesOrder_statusOrder", "statusOrder IN ('Borrador', 'Confirmado', 'EnProduccion', 'Completado', 'Anulado')");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderAdvance", b =>
+                {
+                    b.Property<int>("IdSalesOrderAdvance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderAdvance")
+                        .HasComment("Identificador único autoincremental del anticipo.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesOrderAdvance"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amount")
+                        .HasComment("Monto del anticipo en la moneda del pedido.");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación del registro.");
+
+                    b.Property<DateOnly>("DateAdvance")
+                        .HasColumnType("date")
+                        .HasColumnName("dateAdvance")
+                        .HasComment("Fecha en que se recibió el anticipo.");
+
+                    b.Property<string>("DescriptionAdvance")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("descriptionAdvance")
+                        .HasComment("Nota opcional sobre el anticipo.");
+
+                    b.Property<int>("IdAccountingEntry")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountingEntry")
+                        .HasComment("FK al asiento contable que registra la recepción del anticipo.");
+
+                    b.Property<int?>("IdProductionOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductionOrder")
+                        .HasComment("FK informativa a la orden de producción en cuyo contexto se recibió el anticipo. No afecta la lógica financiera.");
+
+                    b.Property<int>("IdSalesOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrder")
+                        .HasComment("FK al pedido de venta al que corresponde este anticipo.");
+
+                    b.HasKey("IdSalesOrderAdvance");
+
+                    b.HasIndex("IdAccountingEntry");
+
+                    b.HasIndex("IdProductionOrder")
+                        .HasDatabaseName("IX_salesOrderAdvance_idProductionOrder")
+                        .HasFilter("[idProductionOrder] IS NOT NULL");
+
+                    b.HasIndex("IdSalesOrder")
+                        .HasDatabaseName("IX_salesOrderAdvance_idSalesOrder");
+
+                    b.ToTable("salesOrderAdvance", t =>
+                        {
+                            t.HasComment("Anticipo o depósito recibido de un cliente contra un pedido de venta. Se aplica como crédito al emitir la SalesInvoice final. IdProductionOrder es contexto informativo sobre cuándo/por qué se recibió el anticipo.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLine", b =>
+                {
+                    b.Property<int>("IdSalesOrderLine")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLine")
+                        .HasComment("Identificador único autoincremental de la línea.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesOrderLine"));
+
+                    b.Property<string>("DescriptionLine")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("descriptionLine")
+                        .HasComment("Descripción o nota adicional de la línea.");
+
+                    b.Property<int?>("IdPriceListItem")
+                        .HasColumnType("int")
+                        .HasColumnName("idPriceListItem")
+                        .HasComment("FK al ítem de lista de precios del que se tomó el precio. NULL si se ingresó manualmente.");
+
+                    b.Property<int>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("FK al producto solicitado.");
+
+                    b.Property<int>("IdProductUnit")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductUnit")
+                        .HasComment("FK a la presentación (unidad de venta) en que se pide el producto.");
+
+                    b.Property<int>("IdSalesOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrder")
+                        .HasComment("FK al pedido de venta cabecera.");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("quantity")
+                        .HasComment("Cantidad en la unidad de venta solicitada.");
+
+                    b.Property<decimal>("QuantityBase")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("quantityBase")
+                        .HasComment("Cantidad en unidad base, calculada × ConversionFactor al confirmar.");
+
+                    b.Property<decimal>("TaxPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)")
+                        .HasColumnName("taxPercent")
+                        .HasComment("Porcentaje de impuesto al momento del pedido (ej: 13.00).");
+
+                    b.Property<decimal>("TotalLineAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("totalLineAmount")
+                        .HasComment("Total de la línea (Quantity × UnitPrice × (1 + TaxPercent / 100)).");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("unitPrice")
+                        .HasComment("Snapshot del precio unitario al crear el pedido. No cambia aunque la lista de precios se actualice.");
+
+                    b.HasKey("IdSalesOrderLine");
+
+                    b.HasIndex("IdPriceListItem")
+                        .HasDatabaseName("IX_salesOrderLine_idPriceListItem")
+                        .HasFilter("[idPriceListItem] IS NOT NULL");
+
+                    b.HasIndex("IdProduct");
+
+                    b.HasIndex("IdProductUnit");
+
+                    b.HasIndex("IdSalesOrder")
+                        .HasDatabaseName("IX_salesOrderLine_idSalesOrder");
+
+                    b.ToTable("salesOrderLine", t =>
+                        {
+                            t.HasComment("Línea del pedido de venta. UnitPrice es snapshot del precio de la lista vigente al crear el pedido.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLineComboSlotSelection", b =>
+                {
+                    b.Property<int>("IdSalesOrderLineComboSlotSelection")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLineComboSlotSelection")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesOrderLineComboSlotSelection"));
+
+                    b.Property<int>("IdProduct")
+                        .HasColumnType("int")
+                        .HasColumnName("idProduct")
+                        .HasComment("Producto elegido por el cliente en este slot.");
+
+                    b.Property<int>("IdProductComboSlot")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductComboSlot")
+                        .HasComment("FK al slot del combo configurado.");
+
+                    b.Property<int>("IdSalesOrderLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLine")
+                        .HasComment("FK a la línea del pedido (combo).");
+
+                    b.HasKey("IdSalesOrderLineComboSlotSelection");
+
+                    b.HasIndex("IdProduct");
+
+                    b.HasIndex("IdProductComboSlot");
+
+                    b.HasIndex("IdSalesOrderLine", "IdProductComboSlot")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_salesOrderLineComboSlotSelection_line_slot");
+
+                    b.ToTable("salesOrderLineComboSlotSelection", t =>
+                        {
+                            t.HasComment("Selección del cliente para cada slot del combo en una línea de pedido.");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLineFulfillment", b =>
+                {
+                    b.Property<int>("IdSalesOrderLineFulfillment")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLineFulfillment")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesOrderLineFulfillment"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("GETUTCDATE()")
+                        .HasComment("Fecha y hora UTC de creación.");
+
+                    b.Property<string>("FulfillmentType")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(15)")
+                        .HasColumnName("fulfillmentType")
+                        .HasComment("Tipo: 'Stock' = se toma de un lote existente; 'Produccion' = se producirá contra esta línea.");
+
+                    b.Property<int?>("IdInventoryLot")
+                        .HasColumnType("int")
+                        .HasColumnName("idInventoryLot")
+                        .HasComment("FK al lote de inventario asignado cuando FulfillmentType = 'Stock'.");
+
+                    b.Property<int?>("IdProductionOrder")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductionOrder")
+                        .HasComment("FK a la orden de producción cuando FulfillmentType = 'Produccion'.");
+
+                    b.Property<int>("IdSalesOrderLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLine")
+                        .HasComment("FK a la línea del pedido que se está cumpliendo.");
+
+                    b.Property<decimal>("QuantityBase")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("quantityBase")
+                        .HasComment("Cantidad en unidad base asignada a este fulfillment.");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasColumnName("unitCost")
+                        .HasComment("Snapshot del costo unitario al confirmar la factura final.");
+
+                    b.HasKey("IdSalesOrderLineFulfillment");
+
+                    b.HasIndex("IdInventoryLot")
+                        .HasDatabaseName("IX_salesOrderLineFulfillment_idInventoryLot")
+                        .HasFilter("[idInventoryLot] IS NOT NULL");
+
+                    b.HasIndex("IdProductionOrder")
+                        .HasDatabaseName("IX_salesOrderLineFulfillment_idProductionOrder")
+                        .HasFilter("[idProductionOrder] IS NOT NULL");
+
+                    b.HasIndex("IdSalesOrderLine")
+                        .HasDatabaseName("IX_salesOrderLineFulfillment_idSalesOrderLine");
+
+                    b.ToTable("salesOrderLineFulfillment", t =>
+                        {
+                            t.HasComment("Detalle de cómo se cumple cada línea del pedido: con stock existente (FulfillmentType='Stock' → IdInventoryLot) o con producción planificada (FulfillmentType='Produccion' → IdProductionOrder). Una línea puede tener múltiples registros para mezclar stock y producción.");
+
+                            t.HasCheckConstraint("CK_salesOrderLineFulfillment_lot_or_order", "(fulfillmentType = 'Stock' AND idInventoryLot IS NOT NULL AND idProductionOrder IS NULL) OR (fulfillmentType = 'Produccion' AND idProductionOrder IS NOT NULL AND idInventoryLot IS NULL)");
+
+                            t.HasCheckConstraint("CK_salesOrderLineFulfillment_type", "fulfillmentType IN ('Stock', 'Produccion')");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLineOption", b =>
+                {
+                    b.Property<int>("IdSalesOrderLineOption")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLineOption")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesOrderLineOption"));
+
+                    b.Property<int>("IdProductOptionItem")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductOptionItem")
+                        .HasComment("FK al ítem de opción seleccionado.");
+
+                    b.Property<int>("IdSalesOrderLine")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLine")
+                        .HasComment("FK a la línea del pedido.");
+
+                    b.Property<decimal>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasDefaultValue(1m)
+                        .HasColumnName("quantity")
+                        .HasComment("Cantidad de este option item aplicado a la línea (por defecto 1).");
+
+                    b.HasKey("IdSalesOrderLineOption");
+
+                    b.HasIndex("IdProductOptionItem");
+
+                    b.HasIndex("IdSalesOrderLine");
+
+                    b.ToTable("salesOrderLineOption", t =>
+                        {
+                            t.HasComment("Opciones configurables seleccionadas en una línea de pedido (ej: masa delgada, extra queso).");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLineSlotOption", b =>
+                {
+                    b.Property<int>("IdSalesOrderLineSlotOption")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLineSlotOption")
+                        .HasComment("Identificador único autoincremental.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdSalesOrderLineSlotOption"));
+
+                    b.Property<int>("IdProductOptionItem")
+                        .HasColumnType("int")
+                        .HasColumnName("idProductOptionItem")
+                        .HasComment("FK al ítem de opción elegido dentro del slot.");
+
+                    b.Property<int>("IdSalesOrderLineComboSlotSelection")
+                        .HasColumnType("int")
+                        .HasColumnName("idSalesOrderLineComboSlotSelection")
+                        .HasComment("FK a la selección de slot de la línea del pedido.");
+
+                    b.Property<bool>("IsPreset")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("isPreset")
+                        .HasComment("true = opción copiada automáticamente del preset del slot; false = elegida libremente por el cliente.");
+
+                    b.Property<decimal>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(12, 4)
+                        .HasColumnType("decimal(12,4)")
+                        .HasDefaultValue(1m)
+                        .HasColumnName("quantity")
+                        .HasComment("Cantidad de este option item aplicado al slot (por defecto 1).");
+
+                    b.HasKey("IdSalesOrderLineSlotOption");
+
+                    b.HasIndex("IdProductOptionItem");
+
+                    b.HasIndex("IdSalesOrderLineComboSlotSelection", "IdProductOptionItem")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_salesOrderLineSlotOption_selection_item");
+
+                    b.ToTable("salesOrderLineSlotOption", t =>
+                        {
+                            t.HasComment("Opciones elegidas dentro de cada selección de slot (incluye presets copiados y opciones libres del cliente).");
+                        });
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UnitOfMeasure", b =>
                 {
                     b.Property<int>("IdUnit")
@@ -5133,6 +7390,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("codeUnit")
                         .HasComment("Código corto de la unidad: ML, GR, KG, LTR, BOT160, LATA400, UNI, etc.");
 
+                    b.Property<int>("IdUnitType")
+                        .HasColumnType("int")
+                        .HasColumnName("idUnitType");
+
                     b.Property<string>("NameUnit")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -5140,25 +7401,17 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("nameUnit")
                         .HasComment("Nombre legible de la unidad: Mililitro, Gramo, Botella 160ml, etc.");
 
-                    b.Property<string>("TypeUnit")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(20)")
-                        .HasColumnName("typeUnit")
-                        .HasComment("Clasificación dimensional: Volumen | Masa | Unidad | Longitud.");
-
                     b.HasKey("IdUnit");
 
                     b.HasIndex("CodeUnit")
                         .IsUnique()
                         .HasDatabaseName("UQ_unitOfMeasure_codeUnit");
 
+                    b.HasIndex("IdUnitType");
+
                     b.ToTable("unitOfMeasure", t =>
                         {
                             t.HasComment("Catálogo global de unidades de medida utilizadas en productos, recetas e inventario.");
-
-                            t.HasCheckConstraint("CK_unitOfMeasure_typeUnit", "typeUnit IN ('Volumen', 'Masa', 'Unidad', 'Longitud')");
                         });
 
                     b.HasData(
@@ -5166,29 +7419,101 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             IdUnit = 1,
                             CodeUnit = "U",
-                            NameUnit = "Unidad",
-                            TypeUnit = "Unidad"
+                            IdUnitType = 1,
+                            NameUnit = "Unidad"
                         },
                         new
                         {
                             IdUnit = 2,
                             CodeUnit = "M3",
-                            NameUnit = "Metro Cúbico",
-                            TypeUnit = "Volumen"
+                            IdUnitType = 2,
+                            NameUnit = "Metro Cúbico"
                         },
                         new
                         {
                             IdUnit = 3,
                             CodeUnit = "KG",
-                            NameUnit = "Kilogramo",
-                            TypeUnit = "Masa"
+                            IdUnitType = 3,
+                            NameUnit = "Kilogramo"
                         },
                         new
                         {
                             IdUnit = 4,
                             CodeUnit = "M",
-                            NameUnit = "Metro",
-                            TypeUnit = "Longitud"
+                            IdUnitType = 4,
+                            NameUnit = "Metro"
+                        },
+                        new
+                        {
+                            IdUnit = 5,
+                            CodeUnit = "GR",
+                            IdUnitType = 3,
+                            NameUnit = "Gramo"
+                        },
+                        new
+                        {
+                            IdUnit = 6,
+                            CodeUnit = "ML",
+                            IdUnitType = 2,
+                            NameUnit = "Mililitro"
+                        },
+                        new
+                        {
+                            IdUnit = 7,
+                            CodeUnit = "LTR",
+                            IdUnitType = 2,
+                            NameUnit = "Litro"
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UnitType", b =>
+                {
+                    b.Property<int>("IdUnitType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idUnitType")
+                        .HasComment("Identificador único autoincremental del tipo de unidad.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdUnitType"));
+
+                    b.Property<string>("NameUnitType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("nameUnitType")
+                        .HasComment("Nombre del tipo dimensional: Unidad | Volumen | Masa | Longitud.");
+
+                    b.HasKey("IdUnitType");
+
+                    b.HasIndex("NameUnitType")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_unitType_nameUnitType");
+
+                    b.ToTable("unitType", t =>
+                        {
+                            t.HasComment("Clasificación dimensional de unidades de medida. Catálogo de sistema, sin CRUD expuesto al usuario.");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdUnitType = 1,
+                            NameUnitType = "Unidad"
+                        },
+                        new
+                        {
+                            IdUnitType = 2,
+                            NameUnitType = "Volumen"
+                        },
+                        new
+                        {
+                            IdUnitType = 3,
+                            NameUnitType = "Masa"
+                        },
+                        new
+                        {
+                            IdUnitType = 4,
+                            NameUnitType = "Longitud"
                         });
                 });
 
@@ -5369,6 +7694,59 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Warehouse", b =>
+                {
+                    b.Property<int>("IdWarehouse")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idWarehouse")
+                        .HasComment("Identificador único autoincremental del almacén.");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdWarehouse"));
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("isActive")
+                        .HasComment("Almacén activo. Los almacenes inactivos no aceptan nuevas entradas de stock.");
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("isDefault")
+                        .HasComment("Indica si este es el almacén predeterminado. Solo uno puede ser predeterminado a la vez. Se usa cuando no se especifica almacén al ingresar mercadería.");
+
+                    b.Property<string>("NameWarehouse")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("nameWarehouse")
+                        .HasComment("Nombre descriptivo del almacén. Debe ser único.");
+
+                    b.HasKey("IdWarehouse");
+
+                    b.HasIndex("NameWarehouse")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_warehouse_nameWarehouse");
+
+                    b.ToTable("warehouse", t =>
+                        {
+                            t.HasComment("Almacenes o bodegas de la empresa. El stock de inventario se segmenta por almacén a través de InventoryLot.idWarehouse.");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            IdWarehouse = 1,
+                            IsActive = true,
+                            IsDefault = true,
+                            NameWarehouse = "Principal"
+                        });
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Account", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.Account", "Parent")
@@ -5422,6 +7800,17 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdAccountingEntryNavigation");
 
                     b.Navigation("IdCostCenterNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AttributeValue", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductAttribute", "IdProductAttributeNavigation")
+                        .WithMany("AttributeValues")
+                        .HasForeignKey("IdProductAttribute")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdProductAttributeNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.BankAccount", b =>
@@ -5671,11 +8060,18 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductionOrder", "IdProductionOrderNavigation")
+                        .WithMany("InventoryAdjustments")
+                        .HasForeignKey("IdProductionOrder")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("IdCurrencyNavigation");
 
                     b.Navigation("IdFiscalPeriodNavigation");
 
                     b.Navigation("IdInventoryAdjustmentTypeNavigation");
+
+                    b.Navigation("IdProductionOrderNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentEntry", b =>
@@ -5708,12 +8104,18 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.HasOne("FamilyAccountApi.Domain.Entities.InventoryLot", "IdInventoryLotNavigation")
                         .WithMany("AdjustmentLines")
                         .HasForeignKey("IdInventoryLot")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("IdInventoryAdjustmentNavigation");
 
                     b.Navigation("IdInventoryLotNavigation");
+
+                    b.Navigation("IdProductNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustmentType", b =>
@@ -5758,11 +8160,46 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasForeignKey("IdPurchaseInvoice")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Warehouse", "Warehouse")
+                        .WithMany("InventoryLots")
+                        .HasForeignKey("IdWarehouse")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("IdInventoryAdjustmentNavigation");
 
                     b.Navigation("IdPurchaseInvoiceNavigation");
 
                     b.Navigation("Product");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PriceListItem", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.PriceList", "IdPriceListNavigation")
+                        .WithMany("PriceListItems")
+                        .HasForeignKey("IdPriceList")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductUnit", "IdProductUnitNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductUnit")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdPriceListNavigation");
+
+                    b.Navigation("IdProductNavigation");
+
+                    b.Navigation("IdProductUnitNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Product", b =>
@@ -5821,6 +8258,17 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdProductNavigation");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductAttribute", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany("ProductAttributes")
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdProductNavigation");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductComboSlot", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductComboNavigation")
@@ -5830,6 +8278,25 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("IdProductComboNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductComboSlotPresetOption", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductComboSlot", "IdProductComboSlotNavigation")
+                        .WithMany("PresetOptions")
+                        .HasForeignKey("IdProductComboSlot")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductOptionItem", "IdProductOptionItemNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductOptionItem")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdProductComboSlotNavigation");
+
+                    b.Navigation("IdProductOptionItemNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductComboSlotProduct", b =>
@@ -5870,7 +8337,33 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductRecipe", "IdProductRecipeNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductRecipe")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("IdProductOptionGroupNavigation");
+
+                    b.Navigation("IdProductRecipeNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductOptionItemAvailability", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductOptionItem", "IdEnablingItemNavigation")
+                        .WithMany("EnablesRules")
+                        .HasForeignKey("IdEnablingItem")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductOptionItem", "IdRestrictedItemNavigation")
+                        .WithMany("RestrictedByRules")
+                        .HasForeignKey("IdRestrictedItem")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdEnablingItemNavigation");
+
+                    b.Navigation("IdRestrictedItemNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductProductCategory", b =>
@@ -5941,6 +8434,84 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("UnitOfMeasure");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductVariantAttribute", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.AttributeValue", "IdAttributeValueNavigation")
+                        .WithMany("ProductVariantAttributes")
+                        .HasForeignKey("IdAttributeValue")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany("ProductVariantAttributes")
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdAttributeValueNavigation");
+
+                    b.Navigation("IdProductNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionOrder", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.FiscalPeriod", "IdFiscalPeriodNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdFiscalPeriod")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesOrder", "IdSalesOrderNavigation")
+                        .WithMany("ProductionOrders")
+                        .HasForeignKey("IdSalesOrder")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Warehouse", "IdWarehouseNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdWarehouse")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IdFiscalPeriodNavigation");
+
+                    b.Navigation("IdSalesOrderNavigation");
+
+                    b.Navigation("IdWarehouseNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionOrderLine", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductUnit", "IdProductUnitNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductUnit")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductionOrder", "IdProductionOrderNavigation")
+                        .WithMany("ProductionOrderLines")
+                        .HasForeignKey("IdProductionOrder")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesOrderLine", "IdSalesOrderLineNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdSalesOrderLine")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IdProductNavigation");
+
+                    b.Navigation("IdProductUnitNavigation");
+
+                    b.Navigation("IdProductionOrderNavigation");
+
+                    b.Navigation("IdSalesOrderLineNavigation");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionSnapshot", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.InventoryAdjustment", "IdInventoryAdjustmentNavigation")
@@ -5993,6 +8564,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasForeignKey("IdBankAccount")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Contact", "IdContactNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdContact")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("FamilyAccountApi.Domain.Entities.Currency", "IdCurrencyNavigation")
                         .WithMany()
                         .HasForeignKey("IdCurrency")
@@ -6011,13 +8587,22 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Warehouse", "IdWarehouseNavigation")
+                        .WithMany("PurchaseInvoices")
+                        .HasForeignKey("IdWarehouse")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("IdBankAccountNavigation");
+
+                    b.Navigation("IdContactNavigation");
 
                     b.Navigation("IdCurrencyNavigation");
 
                     b.Navigation("IdFiscalPeriodNavigation");
 
                     b.Navigation("IdPurchaseInvoiceTypeNavigation");
+
+                    b.Navigation("IdWarehouseNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PurchaseInvoiceEntry", b =>
@@ -6144,6 +8729,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesOrder", "IdSalesOrderNavigation")
+                        .WithMany("SalesInvoices")
+                        .HasForeignKey("IdSalesOrder")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("IdBankAccountNavigation");
 
                     b.Navigation("IdContactNavigation");
@@ -6153,6 +8743,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdFiscalPeriodNavigation");
 
                     b.Navigation("IdSalesInvoiceTypeNavigation");
+
+                    b.Navigation("IdSalesOrderNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceEntry", b =>
@@ -6186,6 +8778,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasForeignKey("IdProduct")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductRecipe", "IdProductRecipeNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductRecipe")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoice", "IdSalesInvoiceNavigation")
                         .WithMany("SalesInvoiceLines")
                         .HasForeignKey("IdSalesInvoice")
@@ -6201,9 +8798,86 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.Navigation("IdProductNavigation");
 
+                    b.Navigation("IdProductRecipeNavigation");
+
                     b.Navigation("IdSalesInvoiceNavigation");
 
                     b.Navigation("IdUnitNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineBomDetail", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryLot", "IdInventoryLotNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdInventoryLot")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductComboSlot", "IdProductComboSlotNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductComboSlot")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductRecipeLine", "IdProductRecipeLineNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductRecipeLine")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", "IdSalesInvoiceLineNavigation")
+                        .WithMany("BomDetails")
+                        .HasForeignKey("IdSalesInvoiceLine")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdInventoryLotNavigation");
+
+                    b.Navigation("IdProductComboSlotNavigation");
+
+                    b.Navigation("IdProductNavigation");
+
+                    b.Navigation("IdProductRecipeLineNavigation");
+
+                    b.Navigation("IdSalesInvoiceLineNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineComboSlotSelection", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryLot", "IdInventoryLotNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdInventoryLot")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductComboSlot", "IdProductComboSlotNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductComboSlot")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", "IdSalesInvoiceLineNavigation")
+                        .WithMany("ComboSlotSelections")
+                        .HasForeignKey("IdSalesInvoiceLine")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdInventoryLotNavigation");
+
+                    b.Navigation("IdProductComboSlotNavigation");
+
+                    b.Navigation("IdProductNavigation");
+
+                    b.Navigation("IdSalesInvoiceLineNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineEntry", b =>
@@ -6223,6 +8897,44 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdAccountingEntryLineNavigation");
 
                     b.Navigation("IdSalesInvoiceLineNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineOption", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductOptionItem", "IdProductOptionItemNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductOptionItem")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", "IdSalesInvoiceLineNavigation")
+                        .WithMany("SalesInvoiceLineOptions")
+                        .HasForeignKey("IdSalesInvoiceLine")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdProductOptionItemNavigation");
+
+                    b.Navigation("IdSalesInvoiceLineNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineSlotOption", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductOptionItem", "IdProductOptionItemNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductOptionItem")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesInvoiceLineComboSlotSelection", "IdSalesInvoiceLineComboSlotSelectionNavigation")
+                        .WithMany("SalesInvoiceLineSlotOptions")
+                        .HasForeignKey("IdSalesInvoiceLineComboSlotSelection")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdProductOptionItemNavigation");
+
+                    b.Navigation("IdSalesInvoiceLineComboSlotSelectionNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceType", b =>
@@ -6270,6 +8982,202 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdBankMovementTypeNavigation");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrder", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Contact", "IdContactNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdContact")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Currency", "IdCurrencyNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdCurrency")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.FiscalPeriod", "IdFiscalPeriodNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdFiscalPeriod")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.PriceList", "IdPriceListNavigation")
+                        .WithMany("SalesOrders")
+                        .HasForeignKey("IdPriceList")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IdContactNavigation");
+
+                    b.Navigation("IdCurrencyNavigation");
+
+                    b.Navigation("IdFiscalPeriodNavigation");
+
+                    b.Navigation("IdPriceListNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderAdvance", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.AccountingEntry", "IdAccountingEntryNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountingEntry")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductionOrder", "IdProductionOrderNavigation")
+                        .WithMany("SalesOrderAdvances")
+                        .HasForeignKey("IdProductionOrder")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesOrder", "IdSalesOrderNavigation")
+                        .WithMany("SalesOrderAdvances")
+                        .HasForeignKey("IdSalesOrder")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdAccountingEntryNavigation");
+
+                    b.Navigation("IdProductionOrderNavigation");
+
+                    b.Navigation("IdSalesOrderNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLine", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.PriceListItem", "IdPriceListItemNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdPriceListItem")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductUnit", "IdProductUnitNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductUnit")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesOrder", "IdSalesOrderNavigation")
+                        .WithMany("SalesOrderLines")
+                        .HasForeignKey("IdSalesOrder")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdPriceListItemNavigation");
+
+                    b.Navigation("IdProductNavigation");
+
+                    b.Navigation("IdProductUnitNavigation");
+
+                    b.Navigation("IdSalesOrderNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLineComboSlotSelection", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Product", "IdProductNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProduct")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductComboSlot", "IdProductComboSlotNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductComboSlot")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesOrderLine", "IdSalesOrderLineNavigation")
+                        .WithMany("ComboSlotSelections")
+                        .HasForeignKey("IdSalesOrderLine")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdProductComboSlotNavigation");
+
+                    b.Navigation("IdProductNavigation");
+
+                    b.Navigation("IdSalesOrderLineNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLineFulfillment", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.InventoryLot", "IdInventoryLotNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdInventoryLot")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductionOrder", "IdProductionOrderNavigation")
+                        .WithMany("SalesOrderLineFulfillments")
+                        .HasForeignKey("IdProductionOrder")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesOrderLine", "IdSalesOrderLineNavigation")
+                        .WithMany("SalesOrderLineFulfillments")
+                        .HasForeignKey("IdSalesOrderLine")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdInventoryLotNavigation");
+
+                    b.Navigation("IdProductionOrderNavigation");
+
+                    b.Navigation("IdSalesOrderLineNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLineOption", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductOptionItem", "IdProductOptionItemNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductOptionItem")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesOrderLine", "IdSalesOrderLineNavigation")
+                        .WithMany("SalesOrderLineOptions")
+                        .HasForeignKey("IdSalesOrderLine")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdProductOptionItemNavigation");
+
+                    b.Navigation("IdSalesOrderLineNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLineSlotOption", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.ProductOptionItem", "IdProductOptionItemNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdProductOptionItem")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.SalesOrderLineComboSlotSelection", "IdSalesOrderLineComboSlotSelectionNavigation")
+                        .WithMany("SalesOrderLineSlotOptions")
+                        .HasForeignKey("IdSalesOrderLineComboSlotSelection")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdProductOptionItemNavigation");
+
+                    b.Navigation("IdSalesOrderLineComboSlotSelectionNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UnitOfMeasure", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.UnitType", "UnitType")
+                        .WithMany("UnitsOfMeasure")
+                        .HasForeignKey("IdUnitType")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_unitOfMeasure_unitType");
+
+                    b.Navigation("UnitType");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UserPin", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.User", "User")
@@ -6314,6 +9222,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AccountingEntry", b =>
                 {
                     b.Navigation("AccountingEntryLines");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.AttributeValue", b =>
+                {
+                    b.Navigation("ProductVariantAttributes");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Bank", b =>
@@ -6396,9 +9309,18 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("AdjustmentLines");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.PriceList", b =>
+                {
+                    b.Navigation("PriceListItems");
+
+                    b.Navigation("SalesOrders");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Product", b =>
                 {
                     b.Navigation("ProductAccounts");
+
+                    b.Navigation("ProductAttributes");
 
                     b.Navigation("ProductComboSlots");
 
@@ -6408,7 +9330,14 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.Navigation("ProductUnits");
 
+                    b.Navigation("ProductVariantAttributes");
+
                     b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductAttribute", b =>
+                {
+                    b.Navigation("AttributeValues");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductCategory", b =>
@@ -6418,12 +9347,21 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductComboSlot", b =>
                 {
+                    b.Navigation("PresetOptions");
+
                     b.Navigation("ProductComboSlotProducts");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductOptionGroup", b =>
                 {
                     b.Navigation("ProductOptionItems");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductOptionItem", b =>
+                {
+                    b.Navigation("EnablesRules");
+
+                    b.Navigation("RestrictedByRules");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductRecipe", b =>
@@ -6434,6 +9372,17 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductType", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionOrder", b =>
+                {
+                    b.Navigation("InventoryAdjustments");
+
+                    b.Navigation("ProductionOrderLines");
+
+                    b.Navigation("SalesOrderAdvances");
+
+                    b.Navigation("SalesOrderLineFulfillments");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.ProductionSnapshot", b =>
@@ -6476,12 +9425,48 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLine", b =>
                 {
+                    b.Navigation("BomDetails");
+
+                    b.Navigation("ComboSlotSelections");
+
                     b.Navigation("SalesInvoiceLineEntries");
+
+                    b.Navigation("SalesInvoiceLineOptions");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceLineComboSlotSelection", b =>
+                {
+                    b.Navigation("SalesInvoiceLineSlotOptions");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesInvoiceType", b =>
                 {
                     b.Navigation("SalesInvoices");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrder", b =>
+                {
+                    b.Navigation("ProductionOrders");
+
+                    b.Navigation("SalesInvoices");
+
+                    b.Navigation("SalesOrderAdvances");
+
+                    b.Navigation("SalesOrderLines");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLine", b =>
+                {
+                    b.Navigation("ComboSlotSelections");
+
+                    b.Navigation("SalesOrderLineFulfillments");
+
+                    b.Navigation("SalesOrderLineOptions");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.SalesOrderLineComboSlotSelection", b =>
+                {
+                    b.Navigation("SalesOrderLineSlotOptions");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UnitOfMeasure", b =>
@@ -6491,11 +9476,23 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("Products");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.UnitType", b =>
+                {
+                    b.Navigation("UnitsOfMeasure");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.User", b =>
                 {
                     b.Navigation("UserPins");
 
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Warehouse", b =>
+                {
+                    b.Navigation("InventoryLots");
+
+                    b.Navigation("PurchaseInvoices");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,0 +1,406 @@
+### ========================================================================
+###  CASO 1 — REVENTA (Coca-Cola 355ml)
+###  ARCHIVO: proceso.http  — EJECUCIÓN SECUENCIAL
+###
+###  Propósito: Ejecutar todos los documentos del flujo en orden.
+###             Copiar cada ID en la variable correspondiente antes
+###             de continuar con el siguiente paso.
+###
+###  Producto :  IdProduct=1   "Coca-Cola 355ml"   (IdProductType=4 · Reventa)
+###  Período  :  IdFiscalPeriod=4  → Abril 2026
+###  Moneda   :  IdCurrency=1   CRC
+###  Bodega   :  IdWarehouse=1  "Principal"  (default)
+###  Tipo compra: IdPurchaseInvoiceType=1  EFECTIVO
+###                CounterpartFromBankMovement=false → CR fija a IdAccount=106 (Caja CRC)
+###  Tipo venta : IdSalesInvoiceType=1     CONTADO_CRC
+###                CounterpartFromBankMovement=false → DR fija a IdAccount=106 (Caja CRC)
+###
+###  ⚠ NOTA sobre Órdenes de Producción:
+###  Caso 1 es REVENTA pura. El producto llega del proveedor y se almacena.
+###  NO se crean órdenes de producción — la sección de producción aplica
+###  a los Casos 2 (Manufactura) y 3 (Ensamble).
+###
+###  Asientos contables generados automáticamente:
+###  ┌──────────── ETAPA ──────────────┬──── DR ─────────┬──── CR ─────────┐
+###  │ PC-  Compra (confirm)          │ 109 Inventario  │ 106 Caja CRC    │
+###  │ FV-  Venta ingreso (confirm)   │ 106 Caja CRC    │ 117 Ingresos    │
+###  │ COGS-FV-  Venta costo (confirm)│ 119 COGS        │ 109 Inventario  │
+###  │ DEV-COGS-FV-  Dev. parcial     │ 109 Inventario  │ 119 COGS        │
+###  │ REINTEGRO-FV-  Reintegro banco │ 117 Ingresos    │ 106 Caja CRC    │
+###  │ ADJ-CONT-  Regalía (adjust.)   │ 113 Merma       │ 109 Inventario  │
+###  └────────────────────────────────┴─────────────────┴─────────────────┘
+###
+###  Fórmulas de referencia (UnitCost del lote = ₡1,130 incl. IVA):
+###   · Venta 10 u. × ₡1,500 + 13% IVA = ₡16,950 (total)
+###   · COGS  10 u. × ₡1,130             = ₡11,300
+###   · Dev.parcial 3 u. × ₡1,695/u.     = ₡5,085  (precio venta incl. IVA)
+###   · COGS reversión 3 u. × ₡1,130     = ₡3,390
+###   · Regalía 2 u. × ₡1,130            = ₡2,260
+###
+###  Saldo final de inventario: 100 - 10 + 3 - 2 = 91 unidades
+###  Costo inventario en libros: 91 × ₡1,130      = ₡102,830
+### ========================================================================
+
+@host = https://localhost:8000/api/v1
+
+### ── Tokens (rellenar después del login) ───────────────────────────────────
+@token        = PASTE_ACCESS_TOKEN_HERE
+@refreshToken = PASTE_REFRESH_TOKEN_HERE
+
+### ── IDs que se rellenan conforme avanza el flujo ──────────────────────────
+# [Paso 2] ProductAccount de la compra (se elimina antes de la venta)
+@idProductAccount   = 0
+
+# [Paso 3] Factura de compra
+@idPurchaseInvoice  = 0
+
+# [Paso 5] Factura de venta
+@idSalesInvoice     = 0
+
+# [Paso 5a] Lote creado al confirmar la compra
+@idLot              = 0
+
+# [Paso 6] Asiento de devolución parcial (devuelto en body del /partial-return)
+@idEntryDevCogs     = 0
+
+# [Paso 7] Asiento manual de reintegro
+@idEntryReintegro   = 0
+
+# [Paso 8] Ajuste de inventario (regalía)
+@idAdjustment       = 0
+
+
+### ════════════════════════════════════════════════════════════════════════════
+### PASO 1 — AUTENTICACIÓN
+### ════════════════════════════════════════════════════════════════════════════
+
+### 1-a  Solicitar PIN al correo
+# @name requestPin
+POST {{host}}/auth/request-pin
+Content-Type: application/json
+
+{
+  "emailUser": "ezekiell1988@hotmail.com"
+}
+
+###
+
+### 1-b  Login con el PIN recibido
+###      → copia accessToken  en @token
+###      → copia refreshToken en @refreshToken
+# @name login
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "emailUser": "ezekiell1988@hotmail.com",
+  "pin": "REEMPLAZAR_PIN"
+}
+
+###
+
+
+### ════════════════════════════════════════════════════════════════════════════
+### PASO 2 — PRE-COMPRA: Configurar distribución contable del producto
+###
+###  Se vincula Coca-Cola (IdProduct=1) a la cuenta
+###  1.1.07.01 Inventario de Mercadería (IdAccount=109, 100%)
+###  para que el asiento PC- debite Inventario y no la cuenta de gastos fallback.
+###
+###  → copia idProductAccount en @idProductAccount
+### ════════════════════════════════════════════════════════════════════════════
+
+# @name createProductAccount
+POST {{host}}/product-accounts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "idProduct": 1,
+  "idAccount": 109,
+  "percentageAccount": 100.00
+}
+
+###
+
+
+### ════════════════════════════════════════════════════════════════════════════
+### PASO 3 — FACTURA DE COMPRA (proveedor entrega 100 cajas)
+### ════════════════════════════════════════════════════════════════════════════
+
+### 3-a  Crear factura de compra en borrador
+###      → copia idPurchaseInvoice en @idPurchaseInvoice
+# @name createPurchaseInvoice
+POST {{host}}/purchase-invoices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "idFiscalPeriod": 4,
+  "idCurrency": 1,
+  "idPurchaseInvoiceType": 1,
+  "idContact": 1,
+  "numberInvoice": "FAC-PROVEEDOR-C1-001",
+  "dateInvoice": "2026-04-05",
+  "subTotalAmount": 100000.00,
+  "taxAmount": 13000.00,
+  "totalAmount": 113000.00,
+  "descriptionInvoice": "Compra inicial 100 cajas Coca-Cola 355ml — Caso 1 Reventa",
+  "idWarehouse": 1,
+  "exchangeRateValue": 1.0,
+  "lines": [
+    {
+      "idProduct": 1,
+      "lotNumber": "LOT-COCA-C1-001",
+      "expirationDate": "2027-12-31",
+      "descriptionLine": "Coca-Cola 355ml × 100 un.",
+      "quantity": 100,
+      "unitPrice": 1000.00,
+      "taxPercent": 13.00,
+      "totalLineAmount": 113000.00
+    }
+  ]
+}
+
+###
+
+### 3-b  Confirmar factura de compra
+###
+###  Resultado esperado:
+###  ✔ StatusInvoice = "Confirmado"
+###  ✔ NumberInvoice asignado (FC-{fecha}-001)
+###  ✔ Lote LOT-COCA-C1-001 creado:
+###      IdProduct=1 · QuantityAvailable=100 · UnitCost=₡1,130 · IdWarehouse=1
+###  ✔ Asiento PC-xxxxxxx: DR 109 Inventario ₡113,000 / CR 106 Caja CRC ₡113,000
+###
+###  → copia idInventoryLot del lote en @idLot
+###    (obtenerlo luego en consultas.http: GET /inventory-lots/by-product/1.json)
+# @name confirmPurchaseInvoice
+POST {{host}}/purchase-invoices/{{idPurchaseInvoice}}/confirm
+Authorization: Bearer {{token}}
+
+###
+
+
+### ════════════════════════════════════════════════════════════════════════════
+### PASO 4 — POST-COMPRA: Eliminar distribución contable del producto
+###
+###  Se elimina el ProductAccount para que la factura de venta use el
+###  fallback IdAccountSalesRevenue=117 (4.5.01 Ingresos por Ventas),
+###  que es la cuenta correcta para las líneas CR del asiento FV-.
+###
+###  Si se dejara el IdAccount=109 configurado, la venta haría
+###  CR 109 Inventario como revenue, duplicando la reducción del inventario.
+### ════════════════════════════════════════════════════════════════════════════
+
+DELETE {{host}}/product-accounts/{{idProductAccount}}
+Authorization: Bearer {{token}}
+
+###
+
+
+### ════════════════════════════════════════════════════════════════════════════
+### PASO 5 — FACTURA DE VENTA (cliente pide 10 cajas, venta de contado)
+### ════════════════════════════════════════════════════════════════════════════
+
+### 5-a  Obtener el idInventoryLot del lote (si aún no lo tienes)
+###      → copia idInventoryLot en @idLot
+GET {{host}}/inventory-lots/by-product/1.json
+Authorization: Bearer {{token}}
+
+###
+
+### 5-b  Crear factura de venta en borrador
+###      Precio de venta: ₡1,500 + 13% IVA = ₡1,695/u → 10 u. = ₡16,950
+###      → copia idSalesInvoice en @idSalesInvoice
+# @name createSalesInvoice
+POST {{host}}/sales-invoices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "idFiscalPeriod": 4,
+  "idCurrency": 1,
+  "idSalesInvoiceType": 1,
+  "idContact": 1,
+  "dateInvoice": "2026-04-05",
+  "subTotalAmount": 15000.00,
+  "taxAmount": 1950.00,
+  "totalAmount": 16950.00,
+  "descriptionInvoice": "Venta 10 cajas Coca-Cola 355ml — Caso 1 Reventa",
+  "exchangeRateValue": 1.0,
+  "lines": [
+    {
+      "isNonProductLine": false,
+      "idProduct": 1,
+      "idInventoryLot": {{idLot}},
+      "descriptionLine": "Coca-Cola 355ml × 10 un.",
+      "quantity": 10,
+      "unitPrice": 1500.00,
+      "taxPercent": 13.00,
+      "totalLineAmount": 16950.00
+    }
+  ]
+}
+
+###
+
+### 5-c  Confirmar factura de venta
+###
+###  Resultado esperado:
+###  ✔ StatusInvoice = "Confirmado"
+###  ✔ NumberInvoice = "FV-2026MMDD-001"
+###  ✔ Lote LOT-COCA-C1-001: QuantityAvailable = 90  (100 – 10)
+###  ✔ Asiento FV-:      DR 106 Caja CRC ₡16,950 / CR 117 Ingresos ₡16,950
+###  ✔ Asiento COGS-FV-: DR 119 Costo Ventas ₡11,300 / CR 109 Inventario ₡11,300
+###     (10 u. × UnitCost ₡1,130)
+# @name confirmSalesInvoice
+POST {{host}}/sales-invoices/{{idSalesInvoice}}/confirm
+Authorization: Bearer {{token}}
+
+###
+
+
+### ════════════════════════════════════════════════════════════════════════════
+### PASO 6 — DEVOLUCIÓN PARCIAL (cliente devuelve 3 de las 10 cajas)
+###
+###  El operador registra la devolución indicando cantidad y lote de origen.
+###  El sistema:
+###   ✔ Suma 3 unidades de vuelta al lote → QuantityAvailable = 93
+###   ✔ Genera asiento DEV-COGS-FV-: DR 109 Inventario ₡3,390 / CR 119 COGS ₡3,390
+###      (3 u. × UnitCost ₡1,130)
+###   ✔ NO genera nota de crédito automática (se registra en Paso 7 manualmente)
+###
+###  → El idAccountingEntry devuelto en la respuesta es @idEntryDevCogs
+### ════════════════════════════════════════════════════════════════════════════
+
+# @name partialReturn
+POST {{host}}/sales-invoices/{{idSalesInvoice}}/partial-return
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "dateReturn": "2026-04-05",
+  "descriptionReturn": "Devolución parcial — cliente devuelve 3 cajas Coca-Cola dañadas en tránsito",
+  "lines": [
+    {
+      "idInventoryLot": {{idLot}},
+      "quantity": 3,
+      "totalLineAmount": 5085.00,
+      "descriptionLine": "Coca-Cola 355ml × 3 un. — devolución parcial"
+    }
+  ]
+}
+
+###
+
+
+### ════════════════════════════════════════════════════════════════════════════
+### PASO 7 — REINTEGRO BANCARIO (nota de crédito / devolución en efectivo)
+###
+###  La devolución parcial revirtió el COGS pero NO el ingreso ni el cobro.
+###  Este asiento manual documenta el reintegro del efectivo al cliente:
+###
+###    DR 117  4.5.01 Ingresos por Ventas ₡5,085  (reversa parcial del ingreso)
+###    CR 106  1.1.06.01 Caja CRC         ₡5,085  (dinero devuelto al cliente)
+###
+###  Monto del reintegro: 3 u. × ₡1,695/u. (precio venta incl. 13% IVA) = ₡5,085
+###
+###  → copia idAccountingEntry devuelto en @idEntryReintegro
+### ════════════════════════════════════════════════════════════════════════════
+
+# @name createReintegroEntry
+POST {{host}}/accounting-entries
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "idFiscalPeriod": 4,
+  "idCurrency": 1,
+  "numberEntry": "REINTEGRO-FV-001",
+  "dateEntry": "2026-04-05",
+  "descriptionEntry": "Reintegro en efectivo — devolución parcial 3 cajas Coca-Cola",
+  "statusEntry": "Publicado",
+  "referenceEntry": "Devolución parcial venta contado CRC",
+  "exchangeRateValue": 1.0,
+  "lines": [
+    {
+      "idAccount": 117,
+      "debitAmount": 5085.00,
+      "creditAmount": 0,
+      "descriptionLine": "Reversa ingreso venta — 3 cajas devueltas × ₡1,695"
+    },
+    {
+      "idAccount": 106,
+      "debitAmount": 0,
+      "creditAmount": 5085.00,
+      "descriptionLine": "Salida de caja — reintegro al cliente 3 cajas"
+    }
+  ]
+}
+
+###
+
+
+### ════════════════════════════════════════════════════════════════════════════
+### PASO 8 — DOCUMENTO DE REGALÍA (admin regala 2 cajas a cliente VIP)
+###
+###  Solo un administrador puede emitir regalías.
+###  NO genera factura de venta ni documento de cobro.
+###  Descuenta el inventario con motivo y responsable para auditoría.
+###
+###  Se usa tipo de ajuste:
+###    IdInventoryAdjustmentType=1  CONTEO  →
+###    IdAccountCounterpartExit=113 (5.14.01 Faltantes/Merma)
+###
+###  Resultado esperado:
+###  ✔ Lote LOT-COCA-C1-001: QuantityAvailable = 91  (93 – 2)
+###  ✔ Asiento ADJ-CONT-001: DR 113 Merma ₡2,260 / CR 109 Inventario ₡2,260
+###     (2 u. × UnitCost ₡1,130)
+###
+###  → copia idInventoryAdjustment en @idAdjustment
+### ════════════════════════════════════════════════════════════════════════════
+
+### 8-a  Crear ajuste de inventario (regalía) en borrador
+# @name createRegaliaAdjustment
+POST {{host}}/inventory-adjustments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "idFiscalPeriod": 4,
+  "idInventoryAdjustmentType": 1,
+  "idCurrency": 1,
+  "exchangeRateValue": 1.0,
+  "dateAdjustment": "2026-04-05",
+  "descriptionAdjustment": "Regalía cliente VIP — 2 cajas Coca-Cola 355ml — Responsable: Administrador",
+  "lines": [
+    {
+      "idInventoryLot": {{idLot}},
+      "quantityDelta": -2,
+      "descriptionLine": "Salida por regalía — Coca-Cola 355ml × 2 un."
+    }
+  ]
+}
+
+###
+
+### 8-b  Confirmar ajuste (aplica el delta y genera el asiento contable)
+# @name confirmRegaliaAdjustment
+POST {{host}}/inventory-adjustments/{{idAdjustment}}/confirm
+Authorization: Bearer {{token}}
+
+###
+
+
+### ════════════════════════════════════════════════════════════════════════════
+### VERIFICACIÓN RÁPIDA DE STOCK FINAL
+###
+###  Esperado: 100 (compra) − 10 (venta) + 3 (devolución) − 2 (regalía) = 91 u.
+###  Costo en libros: 91 × ₡1,130 = ₡102,830
+### ════════════════════════════════════════════════════════════════════════════
+
+GET {{host}}/inventory-lots/stock/1.json
+Authorization: Bearer {{token}}
+
+###

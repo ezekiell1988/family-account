@@ -920,4 +920,110 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
 
         return (result, null);
     }
+
+    // ── DEVOLUCIÓN PARCIAL ────────────────────────────────────────────────────
+    public async Task<(bool Success, string? Error, PartialReturnResponse? Result)> PartialReturnAsync(
+        int idSalesInvoice, PartialReturnRequest request, CancellationToken ct = default)
+    {
+        var invoice = await db.SalesInvoice
+            .Include(si => si.IdSalesInvoiceTypeNavigation)
+            .FirstOrDefaultAsync(si => si.IdSalesInvoice == idSalesInvoice, ct);
+
+        if (invoice is null)
+            return (false, "Factura de venta no encontrada.", null);
+
+        if (invoice.StatusInvoice != "Confirmado")
+            return (false,
+                $"Solo se pueden registrar devoluciones en facturas 'Confirmado'. Estado actual: '{invoice.StatusInvoice}'.",
+                null);
+
+        var invoiceType = invoice.IdSalesInvoiceTypeNavigation;
+
+        decimal totalReturnAmount = 0m;
+        decimal totalCogsReversed = 0m;
+        var cogsEntryLines = new List<AccountingEntryLine>();
+
+        // ── 1. Restaurar inventario por lote ─────────────────────────────────
+        foreach (var line in request.Lines)
+        {
+            var lot = await db.InventoryLot.FindAsync([line.IdInventoryLot], CancellationToken.None);
+            if (lot is null)
+                return (false, $"Lote de inventario {line.IdInventoryLot} no encontrado.", null);
+
+            lot.QuantityAvailable += line.Quantity;
+            await db.SaveChangesAsync(CancellationToken.None);
+            await RecalcAverageCostAsync(lot.IdProduct, CancellationToken.None);
+
+            decimal lineCogs = Math.Round(line.Quantity * lot.UnitCost, 2);
+            totalCogsReversed += lineCogs;
+            totalReturnAmount += line.TotalLineAmount;
+
+            if (invoiceType.IdAccountCOGS is not null && invoiceType.IdAccountInventory is not null)
+            {
+                cogsEntryLines.Add(new AccountingEntryLine
+                {
+                    IdAccount       = invoiceType.IdAccountInventory.Value,
+                    DebitAmount     = lineCogs,
+                    CreditAmount    = 0,
+                    DescriptionLine = line.DescriptionLine
+                                      ?? $"Devolución — lote {lot.LotNumber ?? lot.IdInventoryLot.ToString()}"
+                });
+            }
+        }
+
+        // ── 2. Asiento de reversión COGS (DR Inventario / CR COGS) ───────────
+        int? idAccountingEntry = null;
+
+        if (cogsEntryLines.Count > 0
+            && invoiceType.IdAccountCOGS is not null
+            && invoiceType.IdAccountInventory is not null)
+        {
+            // CR COGS: reduce el gasto de costo de ventas
+            cogsEntryLines.Add(new AccountingEntryLine
+            {
+                IdAccount       = invoiceType.IdAccountCOGS.Value,
+                DebitAmount     = 0,
+                CreditAmount    = totalCogsReversed,
+                DescriptionLine = $"Reversión COGS — devolución parcial FV-{idSalesInvoice:D6}"
+            });
+
+            var entry = new AccountingEntry
+            {
+                IdFiscalPeriod    = invoice.IdFiscalPeriod,
+                IdCurrency        = invoice.IdCurrency,
+                NumberEntry       = $"DEV-COGS-FV-{idSalesInvoice:D6}",
+                DateEntry         = request.DateReturn,
+                DescriptionEntry  = request.DescriptionReturn
+                                    ?? $"Devolución parcial — {invoice.NumberInvoice}",
+                StatusEntry       = "Publicado",
+                ExchangeRateValue = invoice.ExchangeRateValue,
+                OriginModule      = "SalesReturnPartial",
+                IdOriginRecord    = idSalesInvoice,
+                CreatedAt         = DateTime.UtcNow
+            };
+
+            foreach (var line in cogsEntryLines)
+                entry.AccountingEntryLines.Add(line);
+
+            db.AccountingEntry.Add(entry);
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            db.SalesInvoiceEntry.Add(new SalesInvoiceEntry
+            {
+                IdSalesInvoice    = idSalesInvoice,
+                IdAccountingEntry = entry.IdAccountingEntry
+            });
+            await db.SaveChangesAsync(CancellationToken.None);
+
+            idAccountingEntry = entry.IdAccountingEntry;
+        }
+
+        return (true, null, new PartialReturnResponse(
+            idSalesInvoice,
+            invoice.NumberInvoice,
+            request.DateReturn,
+            request.DescriptionReturn,
+            totalReturnAmount,
+            idAccountingEntry));
+    }
 }

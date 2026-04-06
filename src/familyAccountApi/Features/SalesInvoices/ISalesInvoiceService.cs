@@ -12,4 +12,5 @@ public interface ISalesInvoiceService
     Task<bool> DeleteAsync(int idSalesInvoice, CancellationToken ct = default);
     Task<(bool Success, string? Error, SalesInvoiceResponse? Invoice)> ConfirmAsync(int idSalesInvoice, CancellationToken ct = default);
     Task<(SalesInvoiceResponse? Result, string? ConflictMessage)> CancelAsync(int idSalesInvoice, CancellationToken ct = default);
+    Task<(bool Success, string? Error, PartialReturnResponse? Result)> PartialReturnAsync(int idSalesInvoice, PartialReturnRequest request, CancellationToken ct = default);
 }

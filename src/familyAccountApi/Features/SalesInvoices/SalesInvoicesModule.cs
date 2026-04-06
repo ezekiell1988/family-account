@@ -116,6 +116,17 @@ public static class SalesInvoicesModule
             return result is null ? Results.NotFound() : Results.Ok(result);
         }).WithTags("SalesInvoices").RequireAuthorization("Admin");
 
+        group.MapPost("/{id:int}/partial-return", async (
+            int id,
+            [FromBody] PartialReturnRequest request,
+            ISalesInvoiceService svc,
+            CancellationToken ct) =>
+        {
+            var (success, error, result) = await svc.PartialReturnAsync(id, request, ct);
+            if (!success) return Results.UnprocessableEntity(new { error });
+            return Results.Ok(result);
+        }).WithTags("SalesInvoices").RequireAuthorization("Admin");
+
         return endpoints;
     }
 }
