@@ -9,12 +9,14 @@ public sealed class PurchaseInvoiceType
     public int?    IdAccountCounterpartCRC      { get; set; }
     public int?    IdAccountCounterpartUSD      { get; set; }
     public int?    IdBankMovementType           { get; set; }  // Solo aplica cuando CounterpartFromBankMovement = true
-    public int?    IdDefaultExpenseAccount      { get; set; }  // Cuenta de gasto fallback cuando el SKU no tiene ProductAccount configurado
+    public int?    IdDefaultInventoryAccount    { get; set; }  // Cuenta de inventario (DR) por defecto al confirmar líneas con producto sin ProductAccount
+    public int?    IdDefaultExpenseAccount      { get; set; }  // Cuenta de gasto alternativa: solo se usa si el producto tiene un ProductAccount configurado
     public bool    IsActive                     { get; set; }
 
     public Account?         IdAccountCounterpartCRCNavigation     { get; set; }
     public Account?         IdAccountCounterpartUSDNavigation     { get; set; }
     public BankMovementType? IdBankMovementTypeNavigation         { get; set; }
+    public Account?         IdDefaultInventoryAccountNavigation   { get; set; }
     public Account?         IdDefaultExpenseAccountNavigation     { get; set; }
     public ICollection<PurchaseInvoice> PurchaseInvoices { get; set; } = [];
 }

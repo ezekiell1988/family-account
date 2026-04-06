@@ -74,8 +74,20 @@ public sealed class PurchaseInvoiceTypeConfiguration : IEntityTypeConfiguration<
             .HasForeignKey(pit => pit.IdBankMovementType)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Property(pit => pit.IdDefaultInventoryAccount)
+            .HasComment("FK a la cuenta contable de inventario (DR) usada por defecto al confirmar líneas con producto. Si el producto tiene ProductAccount configurado, esa cuenta de gasto tendrá prioridad.");
+
+        builder.HasIndex(pit => pit.IdDefaultInventoryAccount)
+            .HasDatabaseName("IX_purchaseInvoiceType_idDefaultInventoryAccount")
+            .HasFilter("[idDefaultInventoryAccount] IS NOT NULL");
+
+        builder.HasOne(pit => pit.IdDefaultInventoryAccountNavigation)
+            .WithMany()
+            .HasForeignKey(pit => pit.IdDefaultInventoryAccount)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(pit => pit.IdDefaultExpenseAccount)
-            .HasComment("FK a la cuenta contable de gasto usada como fallback cuando el SKU de la línea no tiene ProductAccount configurado. Permite confirmar facturas aunque los productos no tengan distribución contable.");
+            .HasComment("FK a la cuenta contable de gasto alternativa. Solo se usa cuando el producto tiene un ProductAccount explícito que apunta a ella (override de cuenta de gasto en lugar de inventario).");
 
         builder.HasIndex(pit => pit.IdDefaultExpenseAccount)
             .HasDatabaseName("IX_purchaseInvoiceType_idDefaultExpenseAccount")
@@ -89,7 +101,8 @@ public sealed class PurchaseInvoiceTypeConfiguration : IEntityTypeConfiguration<
         // Seed inicial
         // EFECTIVO: CR fija → Caja CRC (IdAccount=106) o Caja USD (IdAccount=107) según moneda
         // DEBITO/TC: CR dinámica → BankAccount.IdAccount del BankMovement vinculado (FK nula por diseño)
-        // IdDefaultExpenseAccount = 75 (5.12.01 Gastos en Pareja) → fallback cuando la línea no tiene ProductAccount
+        // IdDefaultInventoryAccount = 109 (1.1.07.01 Inventario de Mercadería) → cuenta DR por defecto para líneas con producto
+        // IdDefaultExpenseAccount   = 75  (5.12.01 Gastos en Pareja) → alternativa solo cuando el producto tiene ProductAccount apuntando a ella
         builder.HasData(
             new PurchaseInvoiceType
             {
@@ -99,7 +112,8 @@ public sealed class PurchaseInvoiceTypeConfiguration : IEntityTypeConfiguration<
                 CounterpartFromBankMovement = false,
                 IdAccountCounterpartCRC     = 106,  // Caja CRC (₡) — 1.1.06.01
                 IdAccountCounterpartUSD     = 107,  // Caja USD ($) — 1.1.06.02
-                IdDefaultExpenseAccount     = 75,   // 5.12.01 Gastos en Pareja (Gasto, allowsMovements=true)
+                IdDefaultInventoryAccount   = 109,  // 1.1.07.01 Inventario de Mercadería (default DR)
+                IdDefaultExpenseAccount     = 75,   // 5.12.01 Gastos en Pareja (override vía ProductAccount)
                 IsActive                    = true
             },
             new PurchaseInvoiceType
@@ -111,7 +125,8 @@ public sealed class PurchaseInvoiceTypeConfiguration : IEntityTypeConfiguration<
                 IdAccountCounterpartCRC     = null,
                 IdAccountCounterpartUSD     = null,
                 IdBankMovementType          = 4,    // GASTO — Gasto General (Cargo)
-                IdDefaultExpenseAccount     = 75,   // 5.12.01 Gastos en Pareja (Gasto, allowsMovements=true)
+                IdDefaultInventoryAccount   = 109,  // 1.1.07.01 Inventario de Mercadería (default DR)
+                IdDefaultExpenseAccount     = 75,   // 5.12.01 Gastos en Pareja (override vía ProductAccount)
                 IsActive                    = true
             },
             new PurchaseInvoiceType
@@ -123,7 +138,8 @@ public sealed class PurchaseInvoiceTypeConfiguration : IEntityTypeConfiguration<
                 IdAccountCounterpartCRC     = null,
                 IdAccountCounterpartUSD     = null,
                 IdBankMovementType          = 6,    // PAGO-TC — Pago Tarjeta de Crédito (Cargo)
-                IdDefaultExpenseAccount     = 75,   // 5.12.01 Gastos en Pareja (Gasto, allowsMovements=true)
+                IdDefaultInventoryAccount   = 109,  // 1.1.07.01 Inventario de Mercadería (default DR)
+                IdDefaultExpenseAccount     = 75,   // 5.12.01 Gastos en Pareja (override vía ProductAccount)
                 IsActive                    = true
             });
     }

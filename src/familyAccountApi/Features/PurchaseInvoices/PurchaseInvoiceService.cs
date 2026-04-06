@@ -348,7 +348,7 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
 
                 if (productAccounts.Count > 0)
                 {
-                    // Usar monto neto (sin IVA) para la cuenta de inventario/gasto
+                    // Override explícito: el producto tiene ProductAccount → usar esas cuentas (ej. cuenta de gasto)
                     var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
                     foreach (var pa in productAccounts)
                     {
@@ -365,9 +365,23 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
                     }
                     continue;
                 }
+
+                // Default: sin ProductAccount → usar IdDefaultInventoryAccount del tipo de factura
+                if (invoiceType.IdDefaultInventoryAccount is not null)
+                {
+                    var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
+                    drLines.Add((new AccountingEntryLine
+                    {
+                        IdAccount       = invoiceType.IdDefaultInventoryAccount.Value,
+                        DebitAmount     = lineNetAmount,
+                        CreditAmount    = 0,
+                        DescriptionLine = invoiceLine.DescriptionLine,
+                    }, invoiceLine));
+                    continue;
+                }
             }
 
-            // Fallback: sin ProductAccount → usar IdDefaultExpenseAccount del tipo de factura
+            // Línea sin producto o sin cuenta de inventario configurada → fallback a cuenta de gasto
             if (invoiceType.IdDefaultExpenseAccount is not null)
             {
                 var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
@@ -393,10 +407,10 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
             }, null));
         }
 
-        // Si no hay líneas, ni ProductAccount ni cuenta de gasto fallback configurada
+        // Si no hay líneas, falta configurar la cuenta de inventario en el tipo de factura
         if (drLines.Count == 0)
             return (false,
-                "No se pudo generar el asiento contable. Configure una cuenta de gasto fallback en el tipo de factura (IdDefaultExpenseAccount), o asigne distribución contable (ProductAccount) a los productos de las líneas.",
+                "No se pudo generar el asiento contable. Configure la cuenta de inventario por defecto en el tipo de factura (IdDefaultInventoryAccount), o asigne una cuenta de gasto alternativa (ProductAccount) a los productos de las líneas.",
                 null);
 
         // Calcular neto: DR positivos menos CR negativos (porcentajes negativos = contrapartidas internas)
