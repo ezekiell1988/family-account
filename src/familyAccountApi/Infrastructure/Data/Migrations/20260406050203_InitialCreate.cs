@@ -688,7 +688,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     idAccountCounterpartCRC = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta Caja CRC. Solo aplica cuando CounterpartFromBankMovement = false (tipo EFECTIVO). La selección entre CRC o USD se hace automáticamente según la moneda de la factura."),
                     idAccountCounterpartUSD = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta Caja USD. Solo aplica cuando CounterpartFromBankMovement = false (tipo EFECTIVO)."),
                     idBankMovementType = table.Column<int>(type: "int", nullable: true, comment: "FK al tipo de movimiento bancario usado para auto-crear el BankMovement al confirmar. Solo aplica cuando CounterpartFromBankMovement = true (DEBITO, TC)."),
-                    idDefaultExpenseAccount = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta contable de gasto usada como fallback cuando el SKU de la línea no tiene ProductAccount configurado. Permite confirmar facturas aunque los productos no tengan distribución contable."),
+                    idDefaultInventoryAccount = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta contable de inventario (DR) usada por defecto al confirmar líneas con producto. Si el producto tiene ProductAccount configurado, esa cuenta de gasto tendrá prioridad."),
+                    idDefaultExpenseAccount = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta contable de gasto alternativa. Solo se usa cuando el producto tiene un ProductAccount explícito que apunta a ella (override de cuenta de gasto en lugar de inventario)."),
                     isActive = table.Column<bool>(type: "bit", nullable: false, comment: "Indica si el tipo de factura está activo y disponible para registrar nuevas facturas.")
                 },
                 constraints: table =>
@@ -709,6 +710,12 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     table.ForeignKey(
                         name: "FK_purchaseInvoiceType_account_idDefaultExpenseAccount",
                         column: x => x.idDefaultExpenseAccount,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_purchaseInvoiceType_account_idDefaultInventoryAccount",
+                        column: x => x.idDefaultInventoryAccount,
                         principalTable: "account",
                         principalColumn: "idAccount",
                         onDelete: ReferentialAction.Restrict);
@@ -2957,11 +2964,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.InsertData(
-                table: "purchaseInvoiceType",
-                columns: new[] { "idPurchaseInvoiceType", "codePurchaseInvoiceType", "counterpartFromBankMovement", "idAccountCounterpartCRC", "idAccountCounterpartUSD", "idBankMovementType", "idDefaultExpenseAccount", "isActive", "namePurchaseInvoiceType" },
-                values: new object[] { 2, "DEBITO", true, null, null, 4, 75, true, "Tarjeta de Débito / Transferencia" });
-
-            migrationBuilder.InsertData(
                 table: "attributeValue",
                 columns: new[] { "idAttributeValue", "idProductAttribute", "nameValue", "sortOrder" },
                 values: new object[,]
@@ -3089,11 +3091,12 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             migrationBuilder.InsertData(
                 table: "purchaseInvoiceType",
-                columns: new[] { "idPurchaseInvoiceType", "codePurchaseInvoiceType", "counterpartFromBankMovement", "idAccountCounterpartCRC", "idAccountCounterpartUSD", "idBankMovementType", "idDefaultExpenseAccount", "isActive", "namePurchaseInvoiceType" },
+                columns: new[] { "idPurchaseInvoiceType", "codePurchaseInvoiceType", "counterpartFromBankMovement", "idAccountCounterpartCRC", "idAccountCounterpartUSD", "idBankMovementType", "idDefaultExpenseAccount", "idDefaultInventoryAccount", "isActive", "namePurchaseInvoiceType" },
                 values: new object[,]
                 {
-                    { 1, "EFECTIVO", false, 106, 107, null, 75, true, "Pago en Efectivo" },
-                    { 3, "TC", true, null, null, 6, 75, true, "Tarjeta de Crédito" }
+                    { 1, "EFECTIVO", false, 106, 107, null, 75, 109, true, "Pago en Efectivo" },
+                    { 2, "DEBITO", true, null, null, 4, 75, 109, true, "Tarjeta de Débito / Transferencia" },
+                    { 3, "TC", true, null, null, 6, 75, 109, true, "Tarjeta de Crédito" }
                 });
 
             migrationBuilder.InsertData(
@@ -3882,6 +3885,12 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 table: "purchaseInvoiceType",
                 column: "idDefaultExpenseAccount",
                 filter: "[idDefaultExpenseAccount] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_purchaseInvoiceType_idDefaultInventoryAccount",
+                table: "purchaseInvoiceType",
+                column: "idDefaultInventoryAccount",
+                filter: "[idDefaultInventoryAccount] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "UQ_purchaseInvoiceType_codePurchaseInvoiceType",

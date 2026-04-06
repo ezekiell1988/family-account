@@ -232,6 +232,30 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             new Account { IdAccount = 104, CodeAccount = "5.13.01", NameAccount = "Diferencial Cambiario Desfavorable", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 103, AllowsMovements = true,  IsActive = true },
 
             // ── 1.1.07 Inventario ─────────────────────────────────────────────
+            //
+            //  Modelo de inventario híbrido (por diseño):
+            //
+            //  • 109 Inventario de Mercadería — Cuenta de descarga COGS.
+            //    Se acredita al vender (DR 119 COGS / CR 109) y se debita en
+            //    reversiones de devolución (DR 109 / CR 119).
+            //    El saldo neto de 109 es NEGATIVO en el libro mayor (CR) porque
+            //    los lotes de producto terminado (PT) NO generan un asiento DR 109
+            //    al ingresar al almacén; su valor vive solo en la tabla InventoryLot
+            //    con el costo WAC calculado en CompleteProductionAsync.
+            //    Esto es intencional: la fuente de verdad del stock valuado es
+            //    InventoryLot, no el libro mayor.
+            //
+            //  • 110 Materias Primas — Se debita al comprar MP (FC-XXXXXX)
+            //    y NO se acredita al consumirlas en producción.
+            //    El consumo se registra en 115 Costos de Producción (DR 115 / CR 111).
+            //    Por tanto 110 acumula saldo DR igual al total comprado, independiente
+            //    del consumo. Es también intencional: el costo de MP queda en 110
+            //    como referencia histórica de compras.
+            //
+            //  • 111 Productos en Proceso — Cuenta clearing de producción.
+            //    Se acredita al consumir MP (DR 115 / CR 111) y su saldo CR
+            //    refleja el costo acumulado de producción, no un pasivo real.
+            //
             new Account { IdAccount = 108, CodeAccount = "1.1.07",    NameAccount = "Inventario",                TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,   AllowsMovements = false, IsActive = true },
             new Account { IdAccount = 109, CodeAccount = "1.1.07.01", NameAccount = "Inventario de Mercadería", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 108, AllowsMovements = true,  IsActive = true },
             new Account { IdAccount = 110, CodeAccount = "1.1.07.02", NameAccount = "Materias Primas",          TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 108, AllowsMovements = true,  IsActive = true },

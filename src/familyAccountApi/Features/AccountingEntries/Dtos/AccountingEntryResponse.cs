@@ -15,4 +15,6 @@ public sealed record AccountingEntryResponse(
     decimal  ExchangeRateValue,
     DateTime CreatedAt,
     IReadOnlyList<AccountingEntryLineResponse> Lines,
-    bool     IsLinkedToBankMovement);
+    bool     IsLinkedToBankMovement,
+    string?  OriginModule,
+    int?     IdOriginRecord);

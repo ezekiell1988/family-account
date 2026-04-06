@@ -186,19 +186,23 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
     public async Task<(bool Success, string? Error, SalesInvoiceResponse? Invoice)> ConfirmAsync(
         int idSalesInvoice, CancellationToken ct = default)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        try
+        var strategy = db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            var result = await ConfirmInternalAsync(idSalesInvoice, ct);
-            if (result.Success) await tx.CommitAsync(ct);
-            else await tx.RollbackAsync(ct);
-            return result;
-        }
-        catch
-        {
-            await tx.RollbackAsync(ct);
-            throw;
-        }
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            try
+            {
+                var result = await ConfirmInternalAsync(idSalesInvoice, ct);
+                if (result.Success) await tx.CommitAsync(ct);
+                else await tx.RollbackAsync(ct);
+                return result;
+            }
+            catch
+            {
+                await tx.RollbackAsync(ct);
+                throw;
+            }
+        });
     }
 
     private async Task<(bool Success, string? Error, SalesInvoiceResponse? Invoice)> ConfirmInternalAsync(

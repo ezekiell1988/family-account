@@ -196,19 +196,23 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
     public async Task<(bool Success, string? Error, PurchaseInvoiceResponse? Invoice)> ConfirmAsync(
         int idPurchaseInvoice, CancellationToken ct = default)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        try
+        var strategy = db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            var result = await ConfirmInternalAsync(idPurchaseInvoice, ct);
-            if (result.Success) await tx.CommitAsync(ct);
-            else await tx.RollbackAsync(ct);
-            return result;
-        }
-        catch
-        {
-            await tx.RollbackAsync(ct);
-            throw;
-        }
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            try
+            {
+                var result = await ConfirmInternalAsync(idPurchaseInvoice, ct);
+                if (result.Success) await tx.CommitAsync(ct);
+                else await tx.RollbackAsync(ct);
+                return result;
+            }
+            catch
+            {
+                await tx.RollbackAsync(ct);
+                throw;
+            }
+        });
     }
 
     private async Task<(bool Success, string? Error, PurchaseInvoiceResponse? Invoice)> ConfirmInternalAsync(
