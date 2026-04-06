@@ -332,7 +332,10 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
         }
 
         // Generar líneas DR desde ProductAccount para líneas con SKU
-        var drLines = new List<(AccountingEntryLine Line, PurchaseInvoiceLine SourceLine)>();
+        // SourceLine es nullable: la línea de IVA Acreditable no corresponde a ninguna línea de factura específica.
+        var drLines = new List<(AccountingEntryLine Line, PurchaseInvoiceLine? SourceLine)>();
+        bool isUsdPurchase = invoice.IdCurrencyNavigation.CodeCurrency.Equals("USD", StringComparison.OrdinalIgnoreCase);
+        int ivaAcreditableId = isUsdPurchase ? 125 : 124;
 
         foreach (var invoiceLine in invoice.PurchaseInvoiceLines)
         {
@@ -345,9 +348,11 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
 
                 if (productAccounts.Count > 0)
                 {
+                    // Usar monto neto (sin IVA) para la cuenta de inventario/gasto
+                    var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
                     foreach (var pa in productAccounts)
                     {
-                        var rawAmount = Math.Round(invoiceLine.TotalLineAmount * pa.PercentageAccount / 100m, 2);
+                        var rawAmount = Math.Round(lineNetAmount * pa.PercentageAccount / 100m, 2);
                         var absAmount = Math.Abs(rawAmount);
                         drLines.Add((new AccountingEntryLine
                         {
@@ -365,14 +370,27 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
             // Fallback: sin ProductAccount → usar IdDefaultExpenseAccount del tipo de factura
             if (invoiceType.IdDefaultExpenseAccount is not null)
             {
+                var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
                 drLines.Add((new AccountingEntryLine
                 {
                     IdAccount       = invoiceType.IdDefaultExpenseAccount.Value,
-                    DebitAmount     = Math.Round(invoiceLine.TotalLineAmount, 2),
+                    DebitAmount     = lineNetAmount,
                     CreditAmount    = 0,
                     DescriptionLine = invoiceLine.DescriptionLine,
                 }, invoiceLine));
             }
+        }
+
+        // Línea IVA Acreditable: el IVA de compra es un activo recuperable (crédito fiscal), no un costo
+        if (invoice.TaxAmount > 0m)
+        {
+            drLines.Add((new AccountingEntryLine
+            {
+                IdAccount       = ivaAcreditableId,
+                DebitAmount     = invoice.TaxAmount,
+                CreditAmount    = 0,
+                DescriptionLine = $"IVA Acreditable — Factura {invoice.NumberInvoice}"
+            }, null));
         }
 
         // Si no hay líneas, ni ProductAccount ni cuenta de gasto fallback configurada
@@ -428,8 +446,10 @@ public sealed class PurchaseInvoiceService(AppDbContext db, IContactService cont
         });
 
         // Vincular líneas contables a líneas de factura (PurchaseInvoiceLineEntry)
+        // Se omite la línea de IVA Acreditable porque no corresponde a una línea de factura específica.
         foreach (var (line, sourceLine) in drLines)
         {
+            if (sourceLine is null) continue;
             db.PurchaseInvoiceLineEntry.Add(new PurchaseInvoiceLineEntry
             {
                 IdPurchaseInvoiceLine = sourceLine.IdPurchaseInvoiceLine,

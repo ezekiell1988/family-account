@@ -315,7 +315,10 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
         }
 
         // ── 2. Construir líneas CR de ingresos (por ProductAccount o fallback) ──
-        var crLines = new List<(AccountingEntryLine Line, SalesInvoiceLine SourceLine)>();
+        // SourceLine es nullable: la línea de IVA por Pagar no corresponde a ninguna línea de factura específica.
+        var crLines = new List<(AccountingEntryLine Line, SalesInvoiceLine? SourceLine)>();
+        bool isUsdSale = invoice.IdCurrencyNavigation.CodeCurrency.Equals("USD", StringComparison.OrdinalIgnoreCase);
+        int ivaPorPagarId = isUsdSale ? 128 : 127;
 
         foreach (var invoiceLine in invoice.SalesInvoiceLines)
         {
@@ -334,9 +337,11 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
                             $"La distribución contable del producto {invoiceLine.IdProduct} suma {totalPct:N2}% en lugar de 100%. Corrija los porcentajes antes de confirmar.",
                             null);
 
+                    // Usar monto neto (sin IVA) para la cuenta de ingresos
+                    var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
                     foreach (var pa in productAccounts)
                     {
-                        var rawAmount = Math.Round(invoiceLine.TotalLineAmount * pa.PercentageAccount / 100m, 2);
+                        var rawAmount = Math.Round(lineNetAmount * pa.PercentageAccount / 100m, 2);
                         var absAmount = Math.Abs(rawAmount);
                         crLines.Add((new AccountingEntryLine
                         {
@@ -353,14 +358,27 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
 
             if (invoiceType.IdAccountSalesRevenue is not null)
             {
+                var lineNetAmount = Math.Round(invoiceLine.Quantity * invoiceLine.UnitPrice, 2);
                 crLines.Add((new AccountingEntryLine
                 {
                     IdAccount       = invoiceType.IdAccountSalesRevenue.Value,
                     DebitAmount     = 0,
-                    CreditAmount    = Math.Round(invoiceLine.TotalLineAmount, 2),
+                    CreditAmount    = lineNetAmount,
                     DescriptionLine = invoiceLine.DescriptionLine,
                 }, invoiceLine));
             }
+        }
+
+        // Línea IVA por Pagar: el IVA cobrado al cliente es un pasivo a declarar al gobierno
+        if (invoice.TaxAmount > 0m)
+        {
+            crLines.Add((new AccountingEntryLine
+            {
+                IdAccount       = ivaPorPagarId,
+                DebitAmount     = 0,
+                CreditAmount    = invoice.TaxAmount,
+                DescriptionLine = $"IVA por Pagar — Venta {invoice.IdSalesInvoice:D6}"
+            }, null));
         }
 
         if (crLines.Count == 0)
@@ -418,8 +436,10 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
         });
 
         // Vincular líneas contables a líneas de factura
+        // Se omite la línea de IVA por Pagar porque no corresponde a una línea de factura específica.
         foreach (var (line, sourceLine) in crLines)
         {
+            if (sourceLine is null) continue;
             db.SalesInvoiceLineEntry.Add(new SalesInvoiceLineEntry
             {
                 IdSalesInvoiceLine    = sourceLine.IdSalesInvoiceLine,

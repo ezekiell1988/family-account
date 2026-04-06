@@ -54,3 +54,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+## ─── Resultados de pruebas de inventario ──────────────────────────────────
+docs/inventario/**/*.txt

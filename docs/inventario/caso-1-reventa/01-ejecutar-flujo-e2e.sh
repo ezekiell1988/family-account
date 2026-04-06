@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================================
 #  CASO 1 — REVENTA (Coca-Cola 355ml)
-#  Test de Integración E2E
+#  01-ejecutar-flujo-e2e.sh — Test de Integración E2E
 #
 #  ¿Qué es un "test de integración E2E"?
 #  ─────────────────────────────────────
@@ -13,6 +13,12 @@
 #   2. Lee la respuesta y extrae los IDs generados.
 #   3. Si algo devuelve error, se detiene e imprime el problema.
 #   4. Al final muestra un resumen con todos los IDs y el stock final.
+#   5. Genera resultado_caso1_*.txt con todos los IDs para los scripts de verificación.
+#
+#  Flujo completo (scripts en orden):
+#   bash docs/inventario/caso-1-reventa/01-ejecutar-flujo-e2e.sh
+#   bash docs/inventario/caso-1-reventa/02-verificar-documentos.sh
+#   bash docs/inventario/caso-1-reventa/03-analizar-cuentas-contables.sh
 #
 #  Requisitos previos:
 #   - curl, jq y sqlcmd instalados.

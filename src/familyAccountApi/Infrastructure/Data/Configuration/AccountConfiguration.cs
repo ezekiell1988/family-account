@@ -254,7 +254,17 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             // ── 1.1.08 Cuentas por Cobrar (módulo de ventas a crédito) ───────────
             new Account { IdAccount = 120, CodeAccount = "1.1.08",    NameAccount = "Cuentas por Cobrar",              TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,   AllowsMovements = false, IsActive = true },
             new Account { IdAccount = 121, CodeAccount = "1.1.08.01", NameAccount = "Cuentas por Cobrar — Clientes CRC (₡)", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 120, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 122, CodeAccount = "1.1.08.02", NameAccount = "Cuentas por Cobrar — Clientes USD ($)", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 120, AllowsMovements = true,  IsActive = true }
+            new Account { IdAccount = 122, CodeAccount = "1.1.08.02", NameAccount = "Cuentas por Cobrar — Clientes USD ($)", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 120, AllowsMovements = true,  IsActive = true },
+
+            // ── 1.1.09 IVA Acreditable (crédito fiscal de compras) ────────────
+            new Account { IdAccount = 123, CodeAccount = "1.1.09",    NameAccount = "IVA Acreditable",         TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 124, CodeAccount = "1.1.09.01", NameAccount = "IVA Acreditable CRC (₡)", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 123, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 125, CodeAccount = "1.1.09.02", NameAccount = "IVA Acreditable USD ($)", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 123, AllowsMovements = true,  IsActive = true },
+
+            // ── 2.1.04 IVA por Pagar (débito fiscal de ventas) ────────────────
+            new Account { IdAccount = 126, CodeAccount = "2.1.04",    NameAccount = "IVA por Pagar",         TypeAccount = "Pasivo", LevelAccount = 3, IdAccountParent = 9,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 127, CodeAccount = "2.1.04.01", NameAccount = "IVA por Pagar CRC (₡)", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 126, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 128, CodeAccount = "2.1.04.02", NameAccount = "IVA por Pagar USD ($)", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 126, AllowsMovements = true,  IsActive = true }
         );
     }
 }

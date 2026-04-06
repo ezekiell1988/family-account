@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # ============================================================================
 #  CASO 1 — REVENTA (Coca-Cola 355ml)
-#  consultas.sh — Verificación de documentos y saldos contables
+#  02-verificar-documentos.sh — Verificación de Documentos e Inventario
 #
 #  Propósito:
 #   Lee automáticamente el archivo resultado_caso1_*.txt más reciente,
-#   consulta cada documento generado por proceso.sh y verifica que los
-#   valores (stock, montos, cuentas, estados) sean los esperados.
+#   consulta cada documento generado por 01-ejecutar-flujo-e2e.sh y verifica
+#   que los documentos se generaron correctamente y el inventario es correcto.
+#   Genera verificacion_docs_caso1_*.txt con el reporte completo.
+#   El análisis de cuentas contables (T-accounts, saldos DR/CR) se hace en
+#   03-analizar-cuentas-contables.sh.
 #
 #  Requisitos previos:
 #   - curl y jq instalados.
@@ -14,8 +17,8 @@
 #   - Al menos un resultado_caso1_*.txt en el mismo directorio.
 #
 #  Uso:
-#   bash docs/inventario/caso-1-reventa/consultas.sh
-#   bash docs/inventario/caso-1-reventa/consultas.sh resultado_caso1_XXXX.txt
+#   bash docs/inventario/caso-1-reventa/02-verificar-documentos.sh
+#   bash docs/inventario/caso-1-reventa/02-verificar-documentos.sh resultado_caso1_XXXX.txt
 # ============================================================================
 
 set -uo pipefail
@@ -38,19 +41,24 @@ NC='\033[0m'
 CHECKS_OK=0
 CHECKS_FAIL=0
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Archivo de reporte ─────────────────────────────────────────────────────
+RUN_TS="$(date '+%Y-%m-%d_%H-%M-%S')"
+OUTPUT_FILE="$SCRIPT_DIR/verificacion_docs_caso1_${RUN_TS}.txt"
+
+# ── Helpers ────────────────────────────────────────────────────────────────
 
 section() {
   echo ""
   printf "${CYAN}${BOLD}══════════════════════════════════════════════════════${NC}\n"
   printf "${CYAN}${BOLD}▶  %s${NC}\n" "$1"
   printf "${CYAN}${BOLD}══════════════════════════════════════════════════════${NC}\n"
+  { echo ""; echo "══ $1 ══"; } >> "$OUTPUT_FILE"
 }
 
-log_ok()   { printf "  ${GREEN}✅  %s${NC}\n" "$1"; CHECKS_OK=$((CHECKS_OK + 1)); }
-log_fail() { printf "  ${RED}❌  %s${NC}\n" "$1"; CHECKS_FAIL=$((CHECKS_FAIL + 1)); }
-log_info() { printf "  ${DIM}%s${NC}\n" "$1"; }
-log_warn() { printf "  ${YELLOW}⚠   %s${NC}\n" "$1"; }
+log_ok()   { printf "  ${GREEN}✅  %s${NC}\n" "$1"; CHECKS_OK=$((CHECKS_OK + 1)); echo "  [OK]   $1" >> "$OUTPUT_FILE"; }
+log_fail() { printf "  ${RED}❌  %s${NC}\n" "$1"; CHECKS_FAIL=$((CHECKS_FAIL + 1)); echo "  [FAIL] $1" >> "$OUTPUT_FILE"; }
+log_info() { printf "  ${DIM}%s${NC}\n" "$1"; echo "         $1" >> "$OUTPUT_FILE"; }
+log_warn() { printf "  ${YELLOW}⚠   %s${NC}\n" "$1"; echo "  [WARN] $1" >> "$OUTPUT_FILE"; }
 
 # GET al API con token. Guarda body en $TEMP_RESPONSE, status en $HTTP_STATUS.
 HTTP_STATUS=""
@@ -122,14 +130,23 @@ fi
 
 if [[ -z "$RESULTADO_FILE" || ! -f "$RESULTADO_FILE" ]]; then
   printf "${RED}❌  No se encontró ningún archivo resultado_caso1_*.txt${NC}\n"
-  printf "    Ejecuta proceso.sh primero.\n"
+  printf "    Ejecuta 01-ejecutar-flujo-e2e.sh primero.\n"
   exit 1
 fi
 
 printf "${BOLD}╔══════════════════════════════════════════════════════╗${NC}\n"
-printf "${BOLD}║   CASO 1 — REVENTA · Verificación de Consultas      ║${NC}\n"
+printf "${BOLD}║   CASO 1 — REVENTA · Verificación de Documentos     ║${NC}\n"
 printf "${BOLD}╚══════════════════════════════════════════════════════╝${NC}\n"
 printf "  Resultado leído: %s\n" "$(basename "$RESULTADO_FILE")"
+
+# Escribir encabezado del reporte
+{
+  echo "# =================================================================="
+  echo "#  CASO 1 — REVENTA · Verificación de Documentos e Inventario"
+  echo "#  Generado: $(date '+%Y-%m-%d %H:%M:%S')"
+  echo "#  Resultado leído: $(basename "$RESULTADO_FILE")"
+  echo "# =================================================================="
+} > "$OUTPUT_FILE"
 
 # Parsear variables del .txt (formato: CLAVE = VALOR  # comentario opcional)
 read_var() {
@@ -140,41 +157,20 @@ read_var() {
 ID_PURCHASE_INVOICE=$(read_var "idPurchaseInvoice")
 ID_LOT=$(read_var "idInventoryLot")
 ID_SALES_INVOICE=$(read_var "idSalesInvoice")
-ID_ENTRY_DEV_COGS=$(read_var "idEntryDevCogs")
-ID_ENTRY_REINTEGRO=$(read_var "idEntryReintegro")
 ID_ADJUSTMENT=$(read_var "idInventoryAdjustment")
-ID_ADJ_ENTRY=$(read_var "idAdjEntry")
 ID_FISCAL_PERIOD=$(read_var "idFiscalPeriod" 2>/dev/null | grep -oE '^[0-9]+' || echo "4")
 [[ -z "$ID_FISCAL_PERIOD" ]] && ID_FISCAL_PERIOD="4"
 
-# Valores esperados
+# Valores esperados de inventario
 #  unitCost en la BD = precio de compra sin IVA (1000), no el costo con IVA (1130).
 #  El campo unitCost del lote refleja el valor neto almacenado por EF.
 EXP_UNIT_COST="1000"
 EXP_STOCK_FINAL="91"
-EXP_QTY_COMPRA="100"
-EXP_QTY_VENTA="10"
-EXP_QTY_DEV="3"
-EXP_QTY_REGALIA="2"
-EXP_COMPRA_TOTAL="113000"
-EXP_VENTA_TOTAL="16950"
-EXP_COGS="10000"          # 10 u × ₡1,000 (unitCost sin IVA)
-EXP_COGS_REVERSA="3000"   # 3 u × ₡1,000
-EXP_REINTEGRO="5085"
-EXP_REGALIA_COSTO="2000"  # 2 u × ₡1,000
-
-# IDs de cuentas clave
-ACC_CAJA="106"
-ACC_INVENTARIO="109"
-ACC_INGRESOS="117"
-ACC_COGS="119"
-ACC_MERMA="113"
 
 printf "\n"
 printf "  ${DIM}IDs cargados:${NC}\n"
-printf "  ${DIM}  PC=%s  LOT=%s  FV=%s  DEV_COGS=%s  REINT=%s  ADJ=%s  ADJ_ENTRY=%s${NC}\n" \
-  "$ID_PURCHASE_INVOICE" "$ID_LOT" "$ID_SALES_INVOICE" \
-  "$ID_ENTRY_DEV_COGS" "$ID_ENTRY_REINTEGRO" "$ID_ADJUSTMENT" "$ID_ADJ_ENTRY"
+printf "  ${DIM}  PC=%s  LOT=%s  FV=%s  ADJ=%s${NC}\n" \
+  "$ID_PURCHASE_INVOICE" "$ID_LOT" "$ID_SALES_INVOICE" "$ID_ADJUSTMENT"
 
 # ── Autenticación ─────────────────────────────────────────────────────────────
 
@@ -362,147 +358,10 @@ assert_float_eq "ajuste línea delta = -2"             "-2"         "${ADJ_DELTA
 assert_gte     "ajuste tiene idAccountingEntry"       "1"          "${ADJ_ENTRY:-0}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SECCIÓN 7 — ASIENTOS CONTABLES
+# SECCIÓN 7 — CONCILIACIÓN DE INVENTARIO
 # ═══════════════════════════════════════════════════════════════════════════════
 
-section "SECCIÓN 7 — Asientos Contables"
-
-# Helper para verificar un asiento: DR y CR en cuentas y montos esperados
-check_entry() {
-  local label="$1"
-  local entry_id="$2"
-  local exp_dr_account="$3"
-  local exp_cr_account="$4"
-  local exp_amount="$5"
-
-  api_get "/accounting-entries/${entry_id}.json"
-  if [[ "$HTTP_STATUS" != "200" ]]; then
-    log_fail "$label (id=$entry_id) — HTTP $HTTP_STATUS"
-    return
-  fi
-  log_ok "$label — HTTP 200"
-
-  # Buscar DR y CR en las líneas del asiento (campo real: .lines)
-  DR_ACCOUNT=$(jq_field \
-    '[(.lines // [])[] | select(.debitAmount > 0)] | .[0] | .idAccount // empty' \
-    | grep -v null | head -1)
-  CR_ACCOUNT=$(jq_field \
-    '[(.lines // [])[] | select(.creditAmount > 0)] | .[0] | .idAccount // empty' \
-    | grep -v null | head -1)
-  DR_AMOUNT=$(jq_field \
-    '[(.lines // [])[] | select(.debitAmount > 0)] | .[0] | .debitAmount // empty' \
-    | grep -v null | head -1)
-
-  assert_eq  "  $label · DR cuenta"   "$exp_dr_account" "${DR_ACCOUNT:-?}"
-  assert_eq  "  $label · CR cuenta"   "$exp_cr_account" "${CR_ACCOUNT:-?}"
-  assert_float_eq "  $label · monto"  "$exp_amount"     "${DR_AMOUNT:-0}"
-}
-
-# Asiento FC- (factura de compra): DR 109 Inventario / CR 106 Caja ₡113,000
-# idAccountingEntry lo leemos de la factura de compra (ya en TEMP_RESPONSE de sección 2)
-api_get "/purchase-invoices/${ID_PURCHASE_INVOICE}.json"
-PC_ENTRY_ID=$(jq_field '.idAccountingEntry // empty' | grep -v null | head -1)
-if [[ -n "$PC_ENTRY_ID" && "$PC_ENTRY_ID" != "null" ]]; then
-  check_entry "FC- (compra)" "$PC_ENTRY_ID" "$ACC_INVENTARIO" "$ACC_CAJA" "$EXP_COMPRA_TOTAL"
-else
-  log_warn "No se pudo obtener idAccountingEntry de la factura de compra"
-fi
-
-# Asientos de la FV: idAccountingEntry en la FV apunta al asiento FV- (ingreso)
-# El asiento COGS-FV- se busca en la lista global por prefijo
-api_get "/sales-invoices/${ID_SALES_INVOICE}.json"
-ID_ENTRY_FV_ACTUAL=$(jq_field '.idAccountingEntry // empty' | grep -v null | head -1)
-if [[ -n "$ID_ENTRY_FV_ACTUAL" && "$ID_ENTRY_FV_ACTUAL" != "null" ]]; then
-  # FV- (venta ingreso): DR 106 Caja / CR 117 Ingresos ₡16,950
-  check_entry "FV- (venta ingreso)" "$ID_ENTRY_FV_ACTUAL" "$ACC_CAJA" "$ACC_INGRESOS" "$EXP_VENTA_TOTAL"
-else
-  log_warn "idEntry FV- no encontrado en sales-invoice"
-fi
-
-# COGS-FV-: buscar en la lista de asientos por prefijo COGS-FV
-api_get "/accounting-entries/data.json"
-ID_ENTRY_COGS_ACTUAL=$(jq_field '[.[] | select(.numberEntry | test("^COGS-FV"; "i"))] | .[0].idAccountingEntry // empty' | grep -v null | head -1)
-if [[ -n "$ID_ENTRY_COGS_ACTUAL" && "$ID_ENTRY_COGS_ACTUAL" != "null" ]]; then
-  # COGS-FV- (costo de ventas): DR 119 COGS / CR 109 Inventario
-  check_entry "COGS-FV- (costo ventas)" "$ID_ENTRY_COGS_ACTUAL" "$ACC_COGS" "$ACC_INVENTARIO" "$EXP_COGS"
-else
-  log_warn "idEntry COGS-FV- no encontrado en accounting-entries"
-fi
-
-# DEV-COGS-FV- (devolución parcial): DR 109 Inventario / CR 119 COGS
-check_entry "DEV-COGS-FV- (devolución)" "$ID_ENTRY_DEV_COGS" "$ACC_INVENTARIO" "$ACC_COGS" "$EXP_COGS_REVERSA"
-
-# REINTEGRO-FV- (asiento manual): DR 117 Ingresos / CR 106 Caja ₡5,085
-check_entry "REINTEGRO-FV- (reintegro manual)" "$ID_ENTRY_REINTEGRO" "$ACC_INGRESOS" "$ACC_CAJA" "$EXP_REINTEGRO"
-
-# AJ- (regalía/ajuste): DR 113 Merma / CR 109 Inventario
-check_entry "AJ- (regalía)" "$ID_ADJ_ENTRY" "$ACC_MERMA" "$ACC_INVENTARIO" "$EXP_REGALIA_COSTO"
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# SECCIÓN 8 — TODOS LOS ASIENTOS DEL PERÍODO
-# ═══════════════════════════════════════════════════════════════════════════════
-
-section "SECCIÓN 8 — Todos los asientos del período"
-
-api_get "/accounting-entries/data.json"
-assert_200 "GET /accounting-entries/data.json"
-
-TOTAL_ENTRIES=$(jq_field 'length')
-log_info "Total asientos en el sistema: $TOTAL_ENTRIES"
-
-# Prefijos esperados en Caso 1 (prefijos reales generados por la API)
-PREFIXES=("FC-" "FV-" "COGS-FV-" "DEV-COGS-FV-" "REINTEGRO-FV-" "AJ-")
-for pfx in "${PREFIXES[@]}"; do
-  COUNT=$(jq_field "[.[] | select(.numberEntry | test(\"^${pfx}\"; \"i\"))] | length")
-  if [[ "${COUNT:-0}" -ge "1" ]]; then
-    log_ok "Asiento con prefijo '${pfx}' encontrado ($COUNT)"
-  else
-    log_fail "Asiento con prefijo '${pfx}' NO encontrado"
-  fi
-done
-
-# Verificar balance total (suma DR = suma CR en todos los asientos)
-TOTAL_DR=$(jq_field '[.[].lines // [] | .[]] | map(.debitAmount // 0) | add // 0')
-TOTAL_CR=$(jq_field '[.[].lines // [] | .[]] | map(.creditAmount // 0) | add // 0')
-if [[ -n "$TOTAL_DR" && -n "$TOTAL_CR" && "$TOTAL_DR" != "null" && "$TOTAL_CR" != "null" ]]; then
-  if awk "BEGIN {diff=$TOTAL_DR-$TOTAL_CR; if(diff<0)diff=-diff; exit !(diff<0.01)}"; then
-    log_ok "Balance contable DR = CR: ₡$TOTAL_DR"
-  else
-    log_fail "Desbalance contable: DR=₡$TOTAL_DR  CR=₡$TOTAL_CR"
-  fi
-else
-  log_warn "No se pudo calcular balance total (estructura de líneas no accesible en lista)"
-fi
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# SECCIÓN 9 — CUENTAS CONTABLES CLAVE
-# ═══════════════════════════════════════════════════════════════════════════════
-
-section "SECCIÓN 9 — Cuentas contables clave"
-
-check_account() {
-  local label="$1"
-  local id="$2"
-  api_get "/accounts/${id}.json"
-  if [[ "$HTTP_STATUS" == "200" ]]; then
-    NAME=$(jq_field '.nameAccount // .name // empty' | head -1)
-    log_ok "Cuenta $id existe: '$NAME'"
-  else
-    log_fail "Cuenta $id no encontrada — HTTP $HTTP_STATUS"
-  fi
-}
-
-check_account "106 Caja CRC"           "$ACC_CAJA"
-check_account "109 Inventario Mercad." "$ACC_INVENTARIO"
-check_account "117 Ingresos x Ventas"  "$ACC_INGRESOS"
-check_account "119 Costo de Ventas"    "$ACC_COGS"
-check_account "113 Faltantes/Merma"    "$ACC_MERMA"
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# SECCIÓN 10 — CONCILIACIÓN INVENTARIO vs CONTABILIDAD
-# ═══════════════════════════════════════════════════════════════════════════════
-
-section "SECCIÓN 10 — Tabla de Conciliación Final"
+section "SECCIÓN 7 — Tabla de Conciliación de Inventario"
 
 printf "\n"
 printf "  ${BOLD}%-35s %10s %12s %12s${NC}\n" "CONCEPTO" "UNIDADES" "C.UNIT" "TOTAL"
@@ -549,5 +408,13 @@ if [[ $CHECKS_FAIL -gt 0 ]]; then
   printf "  ${RED}❌  Fallidas : %d${NC}\n" "$CHECKS_FAIL"
 fi
 echo ""
+
+{
+  echo ""
+  echo "# ── RESUMEN ────────────────────────────────────────────────────────"
+  echo "  Verificaciones exitosas : $CHECKS_OK"
+  echo "  Verificaciones fallidas : $CHECKS_FAIL"
+} >> "$OUTPUT_FILE"
+printf "  Reporte guardado en: %s\n\n" "$OUTPUT_FILE"
 
 [[ $CHECKS_FAIL -eq 0 ]]

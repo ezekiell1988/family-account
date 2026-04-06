@@ -2773,7 +2773,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 115, true, "5.14.03", 112, true, 3, "Costos de Producción", "Gasto" },
                     { 117, true, "4.5.01", 116, true, 3, "Ingresos por Ventas — Mercadería", "Ingreso" },
                     { 119, true, "5.15.01", 118, true, 3, "Costo de Ventas — Mercadería", "Gasto" },
-                    { 120, false, "1.1.08", 7, true, 3, "Cuentas por Cobrar", "Activo" }
+                    { 120, false, "1.1.08", 7, true, 3, "Cuentas por Cobrar", "Activo" },
+                    { 123, false, "1.1.09", 7, true, 3, "IVA Acreditable", "Activo" },
+                    { 126, false, "2.1.04", 9, true, 3, "IVA por Pagar", "Pasivo" }
                 });
 
             migrationBuilder.InsertData(
@@ -2871,7 +2873,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 110, true, "1.1.07.02", 108, true, 4, "Materias Primas", "Activo" },
                     { 111, true, "1.1.07.03", 108, true, 4, "Productos en Proceso", "Activo" },
                     { 121, true, "1.1.08.01", 120, true, 4, "Cuentas por Cobrar — Clientes CRC (₡)", "Activo" },
-                    { 122, true, "1.1.08.02", 120, true, 4, "Cuentas por Cobrar — Clientes USD ($)", "Activo" }
+                    { 122, true, "1.1.08.02", 120, true, 4, "Cuentas por Cobrar — Clientes USD ($)", "Activo" },
+                    { 124, true, "1.1.09.01", 123, true, 4, "IVA Acreditable CRC (₡)", "Activo" },
+                    { 125, true, "1.1.09.02", 123, true, 4, "IVA Acreditable USD ($)", "Activo" },
+                    { 127, true, "2.1.04.01", 126, true, 4, "IVA por Pagar CRC (₡)", "Pasivo" },
+                    { 128, true, "2.1.04.02", 126, true, 4, "IVA por Pagar USD ($)", "Pasivo" }
                 });
 
             migrationBuilder.InsertData(

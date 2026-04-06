@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260406013849_InitialCreate")]
+    [Migration("20260406024232_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1264,6 +1264,72 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             LevelAccount = 4,
                             NameAccount = "Cuentas por Cobrar — Clientes USD ($)",
                             TypeAccount = "Activo"
+                        },
+                        new
+                        {
+                            IdAccount = 123,
+                            AllowsMovements = false,
+                            CodeAccount = "1.1.09",
+                            IdAccountParent = 7,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "IVA Acreditable",
+                            TypeAccount = "Activo"
+                        },
+                        new
+                        {
+                            IdAccount = 124,
+                            AllowsMovements = true,
+                            CodeAccount = "1.1.09.01",
+                            IdAccountParent = 123,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "IVA Acreditable CRC (₡)",
+                            TypeAccount = "Activo"
+                        },
+                        new
+                        {
+                            IdAccount = 125,
+                            AllowsMovements = true,
+                            CodeAccount = "1.1.09.02",
+                            IdAccountParent = 123,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "IVA Acreditable USD ($)",
+                            TypeAccount = "Activo"
+                        },
+                        new
+                        {
+                            IdAccount = 126,
+                            AllowsMovements = false,
+                            CodeAccount = "2.1.04",
+                            IdAccountParent = 9,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "IVA por Pagar",
+                            TypeAccount = "Pasivo"
+                        },
+                        new
+                        {
+                            IdAccount = 127,
+                            AllowsMovements = true,
+                            CodeAccount = "2.1.04.01",
+                            IdAccountParent = 126,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "IVA por Pagar CRC (₡)",
+                            TypeAccount = "Pasivo"
+                        },
+                        new
+                        {
+                            IdAccount = 128,
+                            AllowsMovements = true,
+                            CodeAccount = "2.1.04.02",
+                            IdAccountParent = 126,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "IVA por Pagar USD ($)",
+                            TypeAccount = "Pasivo"
                         });
                 });
 
