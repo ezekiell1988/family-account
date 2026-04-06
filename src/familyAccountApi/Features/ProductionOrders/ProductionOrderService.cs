@@ -311,6 +311,10 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
 
             await GenerateAdjustmentEntryAsync(adjustment, adjustmentType, entity.IdFiscalPeriod, today, ct);
 
+            // IAS 2.12 — Capitalizar costos de producción al inventario de producto terminado
+            // DR [cta inventario PT]  /  CR [cta costos de producción (115)]
+            await GenerateCapitalizationEntryAsync(adjustment, adjustmentType, line.IdProduct, totalMpCost, entity.IdFiscalPeriod, today, ct);
+
             // Costo unitario del PT
             var unitCostPt = quantityProduced > 0 ? Math.Round(totalMpCost / quantityProduced, 6) : 0m;
 
@@ -381,6 +385,71 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
         db.InventoryLot.Add(lot);
         await db.SaveChangesAsync(ct);
         return lot;
+    }
+
+    private async Task GenerateCapitalizationEntryAsync(
+        InventoryAdjustment adjustment, InventoryAdjustmentType adjustmentType,
+        int idProduct, decimal totalCost,
+        int idFiscalPeriod, DateOnly date, CancellationToken ct)
+    {
+        if (totalCost == 0m) return;
+        if (adjustmentType.IdAccountCounterpartExit is null) return;
+
+        // Cuenta de inventario PT: ProductAccount del producto, o fallback al default del tipo de ajuste
+        var productAccountEntry = await db.ProductAccount
+            .Where(pa => pa.IdProduct == idProduct)
+            .OrderBy(pa => pa.IdProductAccount)
+            .FirstOrDefaultAsync(ct);
+
+        var ptInventoryAccount = productAccountEntry?.IdAccount
+            ?? adjustmentType.IdAccountInventoryDefault;
+
+        if (ptInventoryAccount is null) return;
+
+        var desc = $"IAS 2 — Capitalización MP→PT — {adjustment.NumberAdjustment}";
+
+        var entry = new AccountingEntry
+        {
+            IdFiscalPeriod    = idFiscalPeriod,
+            IdCurrency        = adjustment.IdCurrency,
+            NumberEntry       = $"PROD-CAP-{adjustment.IdInventoryAdjustment:D6}",
+            DateEntry         = date,
+            DescriptionEntry  = desc,
+            StatusEntry       = "Publicado",
+            ReferenceEntry    = adjustment.NumberAdjustment,
+            ExchangeRateValue = adjustment.ExchangeRateValue,
+            OriginModule      = "ProductionOrder",
+            IdOriginRecord    = adjustment.IdProductionOrder,
+            CreatedAt         = DateTime.UtcNow
+        };
+
+        // DR: Inventario producto terminado
+        entry.AccountingEntryLines.Add(new AccountingEntryLine
+        {
+            IdAccount       = ptInventoryAccount.Value,
+            DebitAmount     = Math.Round(totalCost, 2),
+            CreditAmount    = 0m,
+            DescriptionLine = desc
+        });
+
+        // CR: Costos de Producción (115) — saldo queda en cero conforme a IAS 2.12
+        entry.AccountingEntryLines.Add(new AccountingEntryLine
+        {
+            IdAccount       = adjustmentType.IdAccountCounterpartExit.Value,
+            DebitAmount     = 0m,
+            CreditAmount    = Math.Round(totalCost, 2),
+            DescriptionLine = desc
+        });
+
+        db.AccountingEntry.Add(entry);
+        await db.SaveChangesAsync(ct);
+
+        db.InventoryAdjustmentEntry.Add(new InventoryAdjustmentEntry
+        {
+            IdInventoryAdjustment = adjustment.IdInventoryAdjustment,
+            IdAccountingEntry     = entry.IdAccountingEntry
+        });
+        await db.SaveChangesAsync(ct);
     }
 
     private async Task GenerateAdjustmentEntryAsync(

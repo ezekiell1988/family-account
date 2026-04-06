@@ -72,7 +72,8 @@ public sealed class InventoryAdjustmentTypeConfiguration : IEntityTypeConfigurat
 
         // Seed: 3 tipos con cuentas contables ya configuradas
         // Cuentas inventario:    109 = Inventario de Mercadería, 110 = Materias Primas, 111 = Productos en Proceso
-        // Cuentas contrapartida: 113 = Faltantes (Merma), 114 = Sobrantes, 115 = Costos de Producción
+        // Cuentas contrapartida: 129 = Merma Normal (IAS 2.16), 130 = Merma Anormal (IAS 2.16),
+        //                        114 = Sobrantes, 115 = Costos de Producción
         builder.HasData(
             new InventoryAdjustmentType
             {
@@ -81,7 +82,7 @@ public sealed class InventoryAdjustmentTypeConfiguration : IEntityTypeConfigurat
                 NameInventoryAdjustmentType = "Conteo Físico",
                 IdAccountInventoryDefault   = 109,  // 1.1.07.01 Inventario de Mercadería
                 IdAccountCounterpartEntry   = 114,  // 5.14.02 Sobrantes de Inventario (CR)
-                IdAccountCounterpartExit    = 113,  // 5.14.01 Faltantes de Inventario / Merma (DR)
+                IdAccountCounterpartExit    = 130,  // 5.14.01.02 Merma Anormal (DR) — IAS 2.16
                 IsActive                   = true
             },
             new InventoryAdjustmentType
@@ -101,7 +102,17 @@ public sealed class InventoryAdjustmentTypeConfiguration : IEntityTypeConfigurat
                 NameInventoryAdjustmentType = "Ajuste de Costo",
                 IdAccountInventoryDefault   = 109,  // 1.1.07.01 Inventario de Mercadería
                 IdAccountCounterpartEntry   = 114,  // 5.14.02 Sobrantes / ajuste favorable (CR)
-                IdAccountCounterpartExit    = 113,  // 5.14.01 Merma / ajuste desfavorable (DR)
+                IdAccountCounterpartExit    = 130,  // 5.14.01.02 Merma Anormal / ajuste desfavorable (DR) — IAS 2.16
+                IsActive                   = true
+            },
+            new InventoryAdjustmentType
+            {
+                IdInventoryAdjustmentType   = 4,
+                CodeInventoryAdjustmentType = "REGALIA",
+                NameInventoryAdjustmentType = "Regalía",
+                IdAccountInventoryDefault   = 109,  // 1.1.07.01 Inventario de Mercadería
+                IdAccountCounterpartEntry   = null, // No hay ajuste favorable en regalías
+                IdAccountCounterpartExit    = 130,  // 5.14.01.02 Merma Anormal (DR) — IAS 2.16
                 IsActive                   = true
             });
     }

@@ -374,6 +374,11 @@ ensure_product_account 10 110 ID_PA_CATSUP
 
 log_ok "ProductAccounts: Pan=$ID_PA_PAN  Salchicha=$ID_PA_SALCHICHA  Mostaza=$ID_PA_MOSTAZA  Catsup=$ID_PA_CATSUP"
 
+# IAS 2.12 — ProductAccount PT (Hot Dog id=11) → cuenta 109 (Inventario de Mercadería)
+#  Requerido para que GenerateCapitalizationEntryAsync use la cuenta correcta en el asiento PROD-CAP.
+ensure_product_account 11 109 ID_PA_HOTDOG_PT
+log_ok "ProductAccount PT Hot Dog → id=$ID_PA_HOTDOG_PT"
+
 # ════════════════════════════════════════════════════════════════════════════════
 # PASO 4 — FACTURA DE COMPRA (ingredientes para 50 hot dogs)
 #
@@ -661,14 +666,14 @@ log_info "  DEV-ING:  DR 117 Ingresos ₡3,000 + DR 127 IVA ₡390 / CR 106 Caja
 #
 #  Ajuste de salida sobre el lote PT.
 #  Asiento esperado:
-#   DR 113 Faltantes/Merma ₡3,390 / CR 109 Inventario ₡3,390  (2 × ₡1,695)
+#   DR 130 Merma Anormal (IAS 2.16) ₡3,390 / CR 109 Inventario ₡3,390  (2 × ₡1,695)
 # ════════════════════════════════════════════════════════════════════════════════
 step "PASO 7a — Crear ajuste de inventario en borrador (regalía: −2 hot dogs)"
 
 BODY_ADJ=$(cat <<EOF
 {
   "idFiscalPeriod": 4,
-  "idInventoryAdjustmentType": 1,
+  "idInventoryAdjustmentType": 4,
   "idCurrency": 1,
   "exchangeRateValue": 1.0,
   "dateAdjustment": "2026-04-05",

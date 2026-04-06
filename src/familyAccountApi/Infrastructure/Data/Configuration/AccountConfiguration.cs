@@ -235,26 +235,19 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             //
             //  Modelo de inventario híbrido (por diseño):
             //
-            //  • 109 Inventario de Mercadería — Cuenta de descarga COGS.
-            //    Se acredita al vender (DR 119 COGS / CR 109) y se debita en
-            //    reversiones de devolución (DR 109 / CR 119).
-            //    El saldo neto de 109 es NEGATIVO en el libro mayor (CR) porque
-            //    los lotes de producto terminado (PT) NO generan un asiento DR 109
-            //    al ingresar al almacén; su valor vive solo en la tabla InventoryLot
-            //    con el costo WAC calculado en CompleteProductionAsync.
-            //    Esto es intencional: la fuente de verdad del stock valuado es
-            //    InventoryLot, no el libro mayor.
+            //  • 109 Inventario de Mercadería — Activo de inventario corriente.
+            //    Se debita al capitalizar costos de producción (PROD-CAP: DR 109 / CR 115 — IAS 2.12).
+            //    Se acredita al vender (DR 119 COGS / CR 109) y al registrar regalías o merma anormal.
+            //    Se debita en reversiones de devolución (DR 109 / CR 119).
+            //    El costo WAC de cada lote vive en InventoryLot; 109 refleja los flujos contables.
             //
-            //  • 110 Materias Primas — Se debita al comprar MP (FC-XXXXXX)
-            //    y NO se acredita al consumirlas en producción.
-            //    El consumo se registra en 115 Costos de Producción (DR 115 / CR 111).
-            //    Por tanto 110 acumula saldo DR igual al total comprado, independiente
-            //    del consumo. Es también intencional: el costo de MP queda en 110
-            //    como referencia histórica de compras.
+            //  • 110 Materias Primas — Se debita al comprar MP (FC con ProductAccount → 110).
+            //    Se acredita al consumirlas en producción (DR 115 / CR 110 — asiento AJ-).
+            //    El saldo DR neto = MP aún no consumida en bodega.
             //
-            //  • 111 Productos en Proceso — Cuenta clearing de producción.
-            //    Se acredita al consumir MP (DR 115 / CR 111) y su saldo CR
-            //    refleja el costo acumulado de producción, no un pasivo real.
+            //  • 111 Productos en Proceso — Cuenta reservada (no usada en flujo actual).
+            //    El flujo de producción usa directamente 110 como CR del consumo y
+            //    genera el asiento PROD-CAP (DR 109 / CR 115) para capitalizar (IAS 2.12).
             //
             new Account { IdAccount = 108, CodeAccount = "1.1.07",    NameAccount = "Inventario",                TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,   AllowsMovements = false, IsActive = true },
             new Account { IdAccount = 109, CodeAccount = "1.1.07.01", NameAccount = "Inventario de Mercadería", TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 108, AllowsMovements = true,  IsActive = true },
@@ -263,7 +256,10 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
 
             // ── 5.14 Ajustes de Inventario ────────────────────────────────────
             new Account { IdAccount = 112, CodeAccount = "5.14",    NameAccount = "Ajustes de Inventario",          TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 113, CodeAccount = "5.14.01", NameAccount = "Faltantes de Inventario (Merma)", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 112, AllowsMovements = true,  IsActive = true },
+            // IAS 2.16 — 113 es agrupadora; los movimientos van a 129 (normal) o 130 (anormal)
+            new Account { IdAccount = 113, CodeAccount = "5.14.01",    NameAccount = "Faltantes de Inventario (Merma)", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 112, AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 129, CodeAccount = "5.14.01.01", NameAccount = "Merma Normal",   TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 113, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 130, CodeAccount = "5.14.01.02", NameAccount = "Merma Anormal",  TypeAccount = "Gasto", LevelAccount = 4, IdAccountParent = 113, AllowsMovements = true,  IsActive = true },
             new Account { IdAccount = 114, CodeAccount = "5.14.02", NameAccount = "Sobrantes de Inventario",         TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 112, AllowsMovements = true,  IsActive = true },
             new Account { IdAccount = 115, CodeAccount = "5.14.03", NameAccount = "Costos de Producción",            TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 112, AllowsMovements = true,  IsActive = true },
 

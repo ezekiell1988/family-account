@@ -88,7 +88,7 @@ T_ACCOUNTS=$(jq -r '
 # ── Nombres de cuentas (las que participan en el flujo) ───────────────────────
 ACC_NAME[106]="1.1.06.01  Caja CRC (₡)"
 ACC_NAME[109]="1.1.07.01  Inventario de Mercadería"
-ACC_NAME[113]="5.14.01    Faltantes de Inventario (Merma)"
+ACC_NAME[130]="5.14.01.02  Merma Anormal (IAS 2.16)"
 ACC_NAME[117]="4.5.01     Ingresos por Ventas — Mercadería"
 ACC_NAME[119]="5.15.01    Costo de Ventas — Mercadería"
 ACC_NAME[124]="1.1.09.01  IVA Acreditable CRC (₡)"
@@ -96,7 +96,7 @@ ACC_NAME[127]="2.1.04.01  IVA por Pagar CRC (₡)"
 # Tipo contable (Activo → saldo normal DR; Ingreso/Gasto → según tipo)
 ACC_NORMAL[106]="dr"   # Activo
 ACC_NORMAL[109]="dr"   # Activo
-ACC_NORMAL[113]="dr"   # Gasto
+ACC_NORMAL[130]="dr"   # Gasto
 ACC_NORMAL[117]="cr"   # Ingreso
 ACC_NORMAL[119]="dr"   # Gasto
 ACC_NORMAL[124]="dr"   # Activo (crédito fiscal)
@@ -109,11 +109,11 @@ ACC_NORMAL[127]="cr"   # Pasivo
 #  COGS-FV-000001:    DR 119=10000    CR 109=10000
 #  DEV-COGS-FV-:      DR 109=3000     CR 119=3000
 #  DEV-ING-FV-:       DR 117=4500  DR 127=585   CR 106=5085
-#  AJ-000001:         DR 113=2000     CR 109=2000
+#  AJ-000001:         DR 130=2000     CR 109=2000  (Merma Anormal — IAS 2.16 · tipo REGALIA)
 #
 #  106 Caja:       DR=16950   / CR=118085  → neto CR = 101135  (salida de caja)
 #  109 Inventario: DR=103000  / CR=12000   → neto DR = 91000   (100000+3000 / 10000+2000)
-#  113 Merma:      DR=2000    / CR=0       → neto DR = 2000
+#  130 Merma Anorm: DR=2000   / CR=0       → neto DR = 2000  (IAS 2.16)
 #  117 Ingresos:   DR=4500    / CR=15000   → neto CR = 10500   (subtotal sin IVA)
 #  119 COGS:       DR=10000   / CR=3000    → neto DR = 7000
 #  124 IVA Acred.: DR=13000   / CR=0       → neto DR = 13000
@@ -121,7 +121,7 @@ ACC_NORMAL[127]="cr"   # Pasivo
 
 EXP_DR[106]=16950;   EXP_CR[106]=118085;  EXP_NETO[106]=101135;  EXP_NETO_TIPO[106]="CR"
 EXP_DR[109]=103000;  EXP_CR[109]=12000;   EXP_NETO[109]=91000;   EXP_NETO_TIPO[109]="DR"
-EXP_DR[113]=2000;    EXP_CR[113]=0;       EXP_NETO[113]=2000;    EXP_NETO_TIPO[113]="DR"
+EXP_DR[130]=2000;    EXP_CR[130]=0;       EXP_NETO[130]=2000;    EXP_NETO_TIPO[130]="DR"
 EXP_DR[117]=4500;    EXP_CR[117]=15000;   EXP_NETO[117]=10500;   EXP_NETO_TIPO[117]="CR"
 EXP_DR[119]=10000;   EXP_CR[119]=3000;    EXP_NETO[119]=7000;    EXP_NETO_TIPO[119]="DR"
 EXP_DR[124]=13000;   EXP_CR[124]=0;       EXP_NETO[124]=13000;   EXP_NETO_TIPO[124]="DR"
@@ -241,7 +241,7 @@ check_account_balance() {
 
 check_account_balance 106
 check_account_balance 109
-check_account_balance 113
+check_account_balance 130   # Merma Anormal (IAS 2.16)
 check_account_balance 117
 check_account_balance 119
 check_account_balance 124

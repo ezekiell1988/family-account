@@ -502,7 +502,7 @@ step "PASO 7a — Crear ajuste de inventario en borrador (regalía −2 cajas)"
 BODY_ADJ=$(cat <<EOF
 {
   "idFiscalPeriod": 4,
-  "idInventoryAdjustmentType": 1,
+  "idInventoryAdjustmentType": 4,
   "idCurrency": 1,
   "exchangeRateValue": 1.0,
   "dateAdjustment": "2026-04-05",
@@ -650,7 +650,7 @@ idAccount_caja_crc    = 106  (1.1.06.01 Caja CRC)
 idAccount_inventario  = 109  (1.1.07.01 Inventario Mercadería)
 idAccount_cogs        = 119  (5.01 Costo de Ventas)
 idAccount_ingresos    = 117  (4.5.01 Ingresos por Ventas)
-idAccount_merma       = 113  (5.14.01 Faltantes/Merma)
+idAccount_merma       = 130  (5.14.01.02 Merma Anormal — IAS 2.16)
 
 # ── Endpoints de consulta rápida ────────────────────────────
 # (reemplazar HOST y TOKEN según corresponda)

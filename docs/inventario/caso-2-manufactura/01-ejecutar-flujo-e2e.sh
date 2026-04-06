@@ -311,26 +311,27 @@ log_ok "ProductUnit PT Chile Embot.  → idProductUnit=$ID_PU_PT"
 #  Sin este vínculo la compra se carga a cuenta 109 (default del tipo de factura).
 #  Con él, la compra queda en cuenta 110 Materias Primas, que es lo correcto.
 # ════════════════════════════════════════════════════════════════════════════════
-step "PASO 3 — Crear ProductAccounts (4 MP → cuenta 110, idempotente)"
+step "PASO 3 — Crear ProductAccounts (4 MP → cuenta 110 y PT → cuenta 109, idempotente)"
 
 ensure_product_account() {
   local id_product="$1"
+  local id_account="${2:-110}"
 
   api_call GET "/product-accounts/by-product/${id_product}.json" "" "$TOKEN"
   if [[ "$HTTP_STATUS" == "200" ]]; then
     local existing
-    existing=$(jq_field '[.[] | select(.idAccount == 110)] | first | .idProductAccount')
+    existing=$(jq_field "[.[] | select(.idAccount == ${id_account})] | first | .idProductAccount")
     if [[ -n "$existing" && "$existing" != "null" ]]; then
-      log_warn "ProductAccount (product=${id_product}, cta=110) ya existe (id=$existing)" >&2
+      log_warn "ProductAccount (product=${id_product}, cta=${id_account}) ya existe (id=$existing)" >&2
       echo "$existing"
       return
     fi
   fi
 
   api_call POST "/product-accounts" \
-    "{\"idProduct\":${id_product},\"idAccount\":110,\"percentageAccount\":100.00}" \
+    "{\"idProduct\":${id_product},\"idAccount\":${id_account},\"percentageAccount\":100.00}" \
     "$TOKEN"
-  assert_status 201 "create product-account (product=${id_product} → cta 110)" >&2
+  assert_status 201 "create product-account (product=${id_product} → cta ${id_account})" >&2
   jq_field '.idProductAccount'
 }
 
@@ -338,6 +339,10 @@ ID_PA_CHILE=$(ensure_product_account   2); log_ok "ProductAccount Chile Seco    
 ID_PA_VINAGRE=$(ensure_product_account 3); log_ok "ProductAccount Vinagre       → id=$ID_PA_VINAGRE"
 ID_PA_SAL=$(ensure_product_account     4); log_ok "ProductAccount Sal           → id=$ID_PA_SAL"
 ID_PA_FRASCO=$(ensure_product_account  5); log_ok "ProductAccount Frasco 250ml  → id=$ID_PA_FRASCO"
+
+# IAS 2.12 — ProductAccount PT (Chile Embotellado id=6) → cuenta 109 (Inventario de Mercadería)
+#  Requerido para que GenerateCapitalizationEntryAsync use la cuenta correcta en el asiento PROD-CAP.
+ID_PA_PT=$(ensure_product_account 6 109); log_ok "ProductAccount PT Chile Embot. → id=$ID_PA_PT"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # PASO 4 — FACTURA DE COMPRA (4 MP para producir 100 frascos)
@@ -698,7 +703,7 @@ log_info "  DEV-ING:  DR 117 ₡7,500 + DR 127 ₡975 / CR 106 ₡8,475"
 # ════════════════════════════════════════════════════════════════════════════════
 # PASO 11 — AJUSTE DE INVENTARIO (regalía: −2 frascos PT)
 #
-#  Asiento: DR 113 (Faltantes/Merma) ₡1,052 / CR 109 (Inventario) ₡1,052
+#  Asiento: DR 130 (Merma Anormal — IAS 2.16) ₡1,052 / CR 109 (Inventario) ₡1,052
 #           (2 × ₡526 costo neto del lote PT)
 # ════════════════════════════════════════════════════════════════════════════════
 step "PASO 11a — Crear ajuste de inventario (regalía −2 frascos)"
@@ -706,7 +711,7 @@ step "PASO 11a — Crear ajuste de inventario (regalía −2 frascos)"
 BODY_ADJ=$(cat <<EOF
 {
   "idFiscalPeriod": 4,
-  "idInventoryAdjustmentType": 1,
+  "idInventoryAdjustmentType": 4,
   "idCurrency": 1,
   "exchangeRateValue": 1.0,
   "dateAdjustment": "2026-04-05",

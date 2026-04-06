@@ -36,15 +36,15 @@
 #   DEV-ING-FV-XXX (reversión ingresos + IVA devolución 1 hot dog):
 #     DR 117=3,000   DR 127=390     CR 106=3,390
 #
-#   AJ-XXXXXX (ajuste regalía 2 hot dogs sobre lote PT; AdjType → 109/113):
-#     DR 113=3,000   CR 109=3,000   (2 × ₡1,500)
+#   AJ-XXXXXX (ajuste regalía 2 hot dogs sobre lote PT; AdjType REGALIA → 109/130  IAS 2.16):
+#     DR 130=3,000   CR 109=3,000   (2 × ₡1,500)  (Merma Anormal — IAS 2.16)
 #
 #  T-accounts esperados:
 #   106: DR= 10,170   CR= 88,140   Net=CR  77,970
 #   109: DR=  1,500   CR=  7,500   Net=CR   6,000
 #   110: DR= 75,000   CR=  4,500   Net=DR  70,500
 #   111: (eliminado — CR ahora va directamente a 110)
-#   113: DR=  3,000   CR=      0   Net=DR   3,000
+#   130: DR=  3,000   CR=      0   Net=DR   3,000  (Merma Anormal — IAS 2.16)
 #   115: DR=  4,500   CR=      0   Net=DR   4,500
 #   117: DR=  3,000   CR=  9,000   Net=CR   6,000
 #   119: DR=  4,500   CR=  1,500   Net=DR   3,000
@@ -135,7 +135,7 @@ ACC_NAME[106]="1.1.06.01  Caja CRC (₡)"
 ACC_NAME[109]="1.1.07.01  Inventario de Mercadería"
 ACC_NAME[110]="1.1.07.02  Materias Primas"
 ACC_NAME[111]="1.1.07.03  Productos en Proceso"
-ACC_NAME[113]="5.14.01    Faltantes de Inventario (Merma)"
+ACC_NAME[130]="5.14.01.02  Merma Anormal (IAS 2.16)"
 ACC_NAME[115]="5.14.03    Costos de Producción"
 ACC_NAME[117]="4.5.01     Ingresos por Ventas — Mercadería"
 ACC_NAME[119]="5.15.01    Costo de Ventas — Mercadería"
@@ -146,7 +146,7 @@ ACC_NORMAL[106]="dr"   # Activo
 ACC_NORMAL[109]="dr"   # Activo
 ACC_NORMAL[110]="dr"   # Activo (MP)
 ACC_NORMAL[111]="cr"   # Activo (WIP — acumula costo producción como CR)
-ACC_NORMAL[113]="dr"   # Gasto
+ACC_NORMAL[130]="dr"   # Gasto
 ACC_NORMAL[115]="dr"   # Gasto (Costos de Producción)
 ACC_NORMAL[117]="cr"   # Ingreso
 ACC_NORMAL[119]="dr"   # Gasto
@@ -162,6 +162,9 @@ ACC_NORMAL[127]="cr"   # Pasivo
 #    DR 115=4500   CR 110=4500  (ProductAccount → 110 para cada ingrediente)
 #    (PT unitCost = 4500 / 3 = ₡1,500/hot dog — precio pre-IVA)
 #
+#  PROD-CAP (IAS 2.12 — capitalización MP→PT):
+#    DR 109=4500   CR 115=4500  → 115 queda en saldo neto 0
+#
 #  FV (3 hot dogs × ₡3,000 + 13%):
 #    DR 106=10170   CR 117=9000   CR 127=1170
 #
@@ -174,15 +177,19 @@ ACC_NORMAL[127]="cr"   # Pasivo
 #  DEV-ING-FV (1 × ₡3,000 + IVA):
 #    DR 117=3000   DR 127=390   CR 106=3390
 #
-#  AJ-regalía (2 × ₡1,500 sobre lote PT; AdjType → 109/113):
-#    DR 113=3000   CR 109=3000
+#  AJ-regalía (2 × ₡1,500 sobre lote PT; AdjType REGALIA → 109/130  IAS 2.16):
+#    DR 130=3000   CR 109=3000
 #
+#  T-accounts actualizados (con PROD-CAP):
+#   109: DR=4500+1500=6000  CR=7500  Net=CR 1500  (1 unidad vendida de stock previo al caso)
+#   115: DR=4500            CR=4500  Net=0         (capitalizado íntegramente — IAS 2.12)
+#   ΣDR = ΣCR = 116,310
 
 EXP_DR[106]=10170;   EXP_CR[106]=88140;   EXP_NETO[106]=77970;  EXP_NETO_TIPO[106]="CR"
-EXP_DR[109]=1500;    EXP_CR[109]=7500;    EXP_NETO[109]=6000;   EXP_NETO_TIPO[109]="CR"
+EXP_DR[109]=6000;    EXP_CR[109]=7500;    EXP_NETO[109]=1500;   EXP_NETO_TIPO[109]="CR"
 EXP_DR[110]=75000;   EXP_CR[110]=4500;    EXP_NETO[110]=70500;  EXP_NETO_TIPO[110]="DR"
-EXP_DR[113]=3000;    EXP_CR[113]=0;       EXP_NETO[113]=3000;   EXP_NETO_TIPO[113]="DR"
-EXP_DR[115]=4500;    EXP_CR[115]=0;       EXP_NETO[115]=4500;   EXP_NETO_TIPO[115]="DR"
+EXP_DR[130]=3000;    EXP_CR[130]=0;       EXP_NETO[130]=3000;   EXP_NETO_TIPO[130]="DR"
+EXP_DR[115]=4500;    EXP_CR[115]=4500;    EXP_NETO[115]=0;      EXP_NETO_TIPO[115]="ZERO"
 EXP_DR[117]=3000;    EXP_CR[117]=9000;    EXP_NETO[117]=6000;   EXP_NETO_TIPO[117]="CR"
 EXP_DR[119]=4500;    EXP_CR[119]=1500;    EXP_NETO[119]=3000;   EXP_NETO_TIPO[119]="DR"
 EXP_DR[124]=9750;    EXP_CR[124]=0;       EXP_NETO[124]=9750;   EXP_NETO_TIPO[124]="DR"
@@ -296,23 +303,23 @@ check_account_balance() {
 check_account_balance 106   # Caja CRC
 check_account_balance 109   # Inventario (COGS y regalía del PT)
 check_account_balance 110   # Materias Primas (DR 75,000 − CR 4,500 = DR 70,500)
-check_account_balance 113   # Faltantes/Merma
+check_account_balance 130   # Merma Anormal (IAS 2.16)
 check_account_balance 115   # Costos de Producción
 check_account_balance 117   # Ingresos por Ventas
 check_account_balance 119   # Costo de Ventas
 check_account_balance 124   # IVA Acreditable
 check_account_balance 127   # IVA por Pagar
 
-# ── Verificar asientos de producción (originModule=ProductionOrder) ────────────
+# ── Verificar asientos de producción (originModule=ProductionOrder, AJ-*) ────────
 printf "\n  ${BOLD}Asientos PROD-OP — producción automática al confirmar pedido (DR 115 / CR 110)${NC}\n"
 echo "" >> "$OUTPUT_FILE"
 echo "  Asientos PROD-OP (originModule=ProductionOrder)" >> "$OUTPUT_FILE"
 
-PROD_COUNT=$(jq '[.[] | select(.originModule == "ProductionOrder")] | length' "$TEMP_ENTRIES")
+PROD_COUNT=$(jq '[.[] | select(.originModule == "ProductionOrder") | select(.numberEntry | startswith("AJ-"))] | length' "$TEMP_ENTRIES")
 if [[ "${PROD_COUNT:-0}" -ge 1 ]]; then
   log_ok "Asientos de producción encontrados: $PROD_COUNT (esperado=4, uno por ingrediente)"
-  PROD_DR_115=$(jq '[.[] | select(.originModule == "ProductionOrder") | .lines[] | select(.idAccount == 115) | .debitAmount] | add // 0' "$TEMP_ENTRIES")
-  PROD_CR_110=$(jq '[.[] | select(.originModule == "ProductionOrder") | .lines[] | select(.idAccount == 110) | .creditAmount] | add // 0' "$TEMP_ENTRIES")
+  PROD_DR_115=$(jq '[.[] | select(.originModule == "ProductionOrder") | select(.numberEntry | startswith("AJ-")) | .lines[] | select(.idAccount == 115) | .debitAmount] | add // 0' "$TEMP_ENTRIES")
+  PROD_CR_110=$(jq '[.[] | select(.originModule == "ProductionOrder") | select(.numberEntry | startswith("AJ-")) | .lines[] | select(.idAccount == 110) | .creditAmount] | add // 0' "$TEMP_ENTRIES")
   assert_float_eq "    Producción: ΣDR 115 (Costos Producción) = ₡4,500" "4500" "$PROD_DR_115"
   assert_float_eq "    Producción: ΣCR 110 (Materias Primas) = ₡4,500"   "4500" "$PROD_CR_110"
   assert_float_eq "    Producción: DR 115 = CR 110 (partida doble OK)"    "$PROD_DR_115" "$PROD_CR_110"
@@ -320,6 +327,25 @@ if [[ "${PROD_COUNT:-0}" -ge 1 ]]; then
 else
   log_fail "No se encontraron asientos de producción (originModule=ProductionOrder)"
   echo "    [FAIL] No se encontraron asientos de producción" >> "$OUTPUT_FILE"
+fi
+
+# ── Verificar asiento PROD-CAP (IAS 2.12 — capitalización MP→PT) ─────────────
+printf "\n  ${BOLD}Asiento PROD-CAP (IAS 2.12) — DR 109 Inventario PT / CR 115 Costos Producción${NC}\n"
+echo "" >> "$OUTPUT_FILE"
+echo "  Asiento PROD-CAP (IAS 2.12 — capitalización MP→PT)" >> "$OUTPUT_FILE"
+
+CAP_COUNT=$(jq '[.[] | select(.numberEntry | startswith("PROD-CAP-"))] | length' "$TEMP_ENTRIES")
+if [[ "${CAP_COUNT:-0}" -ge 1 ]]; then
+  CAP_DR_109=$(jq '[.[] | select(.numberEntry | startswith("PROD-CAP-")) | .lines[] | select(.idAccount == 109) | .debitAmount] | add // 0' "$TEMP_ENTRIES")
+  CAP_CR_115=$(jq '[.[] | select(.numberEntry | startswith("PROD-CAP-")) | .lines[] | select(.idAccount == 115) | .creditAmount] | add // 0' "$TEMP_ENTRIES")
+  log_ok "PROD-CAP encontrado ($CAP_COUNT asiento(s))"
+  assert_float_eq "    DR 109 Inventario PT = ₡4,500 (3 × ₡1,500)" "4500" "$CAP_DR_109"
+  assert_float_eq "    CR 115 Costos Producción = ₡4,500"           "4500" "$CAP_CR_115"
+  assert_float_eq "    DR 109 = CR 115 (IAS 2.12 partida doble OK)" "$CAP_DR_109" "$CAP_CR_115"
+  echo "    CAP_COUNT=$CAP_COUNT  DR_109=$CAP_DR_109  CR_115=$CAP_CR_115" >> "$OUTPUT_FILE"
+else
+  log_fail "PROD-CAP no encontrado — IAS 2.12 no aplicado"
+  echo "    [FAIL] PROD-CAP no encontrado" >> "$OUTPUT_FILE"
 fi
 
 # ── Verificar asiento COGS-FV (DR 119 / CR 109) ──────────────────────────────
@@ -396,11 +422,11 @@ echo "  Asiento AJ-regalía" >> "$OUTPUT_FILE"
 AJ_COUNT=$(jq '[.[] | select(.numberEntry | startswith("AJ-"))] | length' "$TEMP_ENTRIES")
 if [[ "${AJ_COUNT:-0}" -ge 1 ]]; then
   log_ok "Asiento AJ encontrado ($AJ_COUNT)"
-  AJ_DR_113=$(jq '[.[] | select(.numberEntry | startswith("AJ-")) | .lines[] | select(.idAccount == 113) | .debitAmount] | add // 0' "$TEMP_ENTRIES")
+  AJ_DR_130=$(jq '[.[] | select(.numberEntry | startswith("AJ-")) | .lines[] | select(.idAccount == 130) | .debitAmount] | add // 0' "$TEMP_ENTRIES")
   AJ_CR_109=$(jq '[.[] | select(.numberEntry | startswith("AJ-")) | .lines[] | select(.idAccount == 109) | .creditAmount] | add // 0' "$TEMP_ENTRIES")
-  assert_float_eq "    AJ DR 113 (Merma, regalía 2 × ₡1,500) = ₡3,000"  "3000" "$AJ_DR_113"
-  assert_float_eq "    AJ CR 109 (Inventario) = ₡3,000"                  "3000" "$AJ_CR_109"
-  echo "    AJ_COUNT=$AJ_COUNT  DR_113=$AJ_DR_113  CR_109=$AJ_CR_109" >> "$OUTPUT_FILE"
+  assert_float_eq "    AJ DR 130 (Merma Anormal — IAS 2.16, regalía 2 × ₡1,500) = ₡3,000"  "3000" "$AJ_DR_130"
+  assert_float_eq "    AJ CR 109 (Inventario) = ₡3,000"                                    "3000" "$AJ_CR_109"
+  echo "    AJ_COUNT=$AJ_COUNT  DR_130=$AJ_DR_130  CR_109=$AJ_CR_109" >> "$OUTPUT_FILE"
 else
   log_fail "Asiento AJ no encontrado — la regalía no generó asiento de merma"
   echo "    [FAIL] AJ no encontrado" >> "$OUTPUT_FILE"
@@ -408,7 +434,7 @@ fi
 
 # ── Verificación de partida doble ─────────────────────────────────────────────
 printf "\n  ${BOLD}Partida doble (DR = CR)${NC}\n"
-assert_float_eq "    ΣDR = ΣCR = 111,810" "111810" "$GRAND_DR"
+assert_float_eq "    ΣDR = ΣCR = 116,310" "116310" "$GRAND_DR"
 assert_float_eq "    ΣDR = ΣCR"           "$GRAND_DR" "$GRAND_CR"
 {
   echo ""
@@ -430,19 +456,21 @@ fi
 
 printf "\n"
 printf "  ${YELLOW}${BOLD}📋 Nota contable (desde asientos reales)${NC}\n"
-printf "  ${YELLOW}Cuenta 110 Materias Primas:     saldo neto DR = ₡%s (MP restante no consumida en producción)${NC}\n"   "$_SALDO_110"
-printf "  ${YELLOW}Cuenta 115 Costos Producción:   saldo neto DR = ₡%s (idem, lado débito)${NC}\n"        "$_SALDO_115"
-printf "  ${YELLOW}Cuenta 109 Inventario:          saldo neto CR = ₡%s (salida neta por COGS/regalía)${NC}\n" "$(( -_SALDO_109 ))"
-printf "  ${YELLOW}Cuenta 124 IVA Acreditable:     saldo neto DR = ₡%s (crédito fiscal de compras)${NC}\n" "$_SALDO_124"
-printf "  ${YELLOW}Cuenta 127 IVA por Pagar:       saldo neto CR = ₡%s${NC}\n"                            "$_SALDO_127"
-printf "  ${YELLOW}Posición IVA vs gobierno:        ₡%s − ₡%s = ₡%s (%s)${NC}\n" "$_SALDO_127" "$_SALDO_124" "$_IVA_NETO" "$_IVA_SIGNO"
+printf "  ${YELLOW}Cuenta 110 Materias Primas:   saldo neto DR = ₡%s (MP restante no consumida en ensamble)${NC}\n"   "$_SALDO_110"
+printf "  ${YELLOW}Cuenta 115 Costos Producc.:   saldo neto = ₡%s (IAS 2.12 — capitalizado íntegramente a inv. PT)${NC}\n" "$_SALDO_115"
+printf "  ${YELLOW}Cuenta 109 Inventario PT:     saldo neto %s ₡%s${NC}\n" \
+  "$(awk "BEGIN {exit !(${REAL_DR[109]:-0} >= ${REAL_CR[109]:-0})}" && echo "DR =" || echo "CR =")" \
+  "$(awk "BEGIN {n=${REAL_DR[109]:-0}-${REAL_CR[109]:-0}; if(n<0)n=-n; print int(n)}")"
+printf "  ${YELLOW}Cuenta 124 IVA Acreditable:   saldo neto DR = ₡%s (crédito fiscal de compras)${NC}\n" "$_SALDO_124"
+printf "  ${YELLOW}Cuenta 127 IVA por Pagar:     saldo neto CR = ₡%s${NC}\n"                            "$_SALDO_127"
+printf "  ${YELLOW}Posición IVA vs gobierno:     ₡%s − ₡%s = ₡%s (%s)${NC}\n" "$_SALDO_127" "$_SALDO_124" "$_IVA_NETO" "$_IVA_SIGNO"
 
 {
   echo ""
   echo "# ── NOTA CONTABLE (calculada desde asientos reales) ──────────────"
   echo "#  - Cuenta 110 MP:               saldo neto DR = $_SALDO_110 (MP restante no consumida)"
-  echo "#  - Cuenta 115 Costos Producc.:  saldo neto DR = $_SALDO_115 (idem, lado débito)"
-  echo "#  - Cuenta 109 Inventario:       saldo neto CR = $(( -_SALDO_109 )) (salida neta)"
+  echo "#  - Cuenta 115 Costos Producc.:  saldo neto = $_SALDO_115 (IAS 2.12 — capitalizado a inv. PT)"
+  echo "#  - Cuenta 109 Inventario:       saldo neto dinámico (ver T-accounts)"
   echo "#  - Cuenta 124 IVA Acreditable:  saldo neto DR = $_SALDO_124 (crédito fiscal de compras)"
   echo "#  - Cuenta 127 IVA por Pagar:    saldo neto CR = $_SALDO_127"
   echo "#  Posición IVA vs gobierno: $_SALDO_127 - $_SALDO_124 = $_IVA_NETO ($_IVA_SIGNO)"
