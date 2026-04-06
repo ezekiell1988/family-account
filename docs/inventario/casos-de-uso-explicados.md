@@ -1,4 +1,4 @@
-# Los 6 casos de uso del inventario — Guía para todos
+# Los 9 casos de uso del inventario — Guía para todos
 
 > Este documento explica de forma sencilla cómo funciona el inventario en cada situación del negocio.
 > No se necesita conocimiento técnico. Solo leer y seguir los pasos.
@@ -170,6 +170,73 @@
 
 ---
 
+## Casos 7, 8 y 9 — Ajustes de inventario
+
+Antes de vender, y en cualquier momento de la operación, pueden ocurrir ajustes de **cantidad**, de **costo**, o de ambos a la vez.
+
+---
+
+### Caso 7 — Ajuste de cantidad (ejemplo: Inventario físico)
+
+**¿Qué es?** Se hace un conteo físico de la bodega y las cantidades reales no coinciden con lo que dice el sistema.
+
+**Ejemplo:**
+
+Un operador cuenta los productos y encuentra:
+- **Azúcar**: el sistema dice 50 kg pero en bodega hay solo **45 kg** → hay **5 kg de menos**.
+- **Harina**: el sistema dice 30 kg pero en bodega hay **33 kg** → hay **3 kg de más**.
+
+**¿Qué hace el sistema?**
+
+1. El operador registra el conteo físico con las cantidades reales.
+2. El sistema compara con lo que tenía registrado.
+3. Se generan dos ajustes automáticamente:
+   - Un ajuste de **reducción** para el azúcar (−5 kg).
+   - Un ajuste de **aumento** para la harina (+3 kg).
+4. Cada ajuste queda registrado con fecha, responsable y motivo.
+5. A partir de ese momento el inventario refleja la realidad de la bodega.
+
+> Los ajustes de cantidad sí modifican el stock disponible.
+
+---
+
+### Caso 8 — Ajuste de costo (ejemplo: Factura con monto incorrecto)
+
+**¿Qué es?** Se descubre que una compra se registró con el precio equivocado. Las unidades en bodega están correctas, pero el costo del lote está mal.
+
+**Ejemplo:**
+
+Se compró azúcar y se registró a **$0.80/kg** cuando el precio real era **$1.00/kg**. Hay 45 kg en bodega.
+
+**¿Qué hace el sistema?**
+
+1. El operador localiza el lote afectado y registra el costo correcto.
+2. El sistema actualiza el costo del lote sin tocar las cantidades disponibles.
+3. Esto impacta el costo de venta de las unidades que salgan de ese lote en adelante.
+4. El ajuste queda registrado con el costo anterior, el costo nuevo, la diferencia y el responsable.
+
+> Los ajustes de costo **no** modifican el stock disponible, solo el valor del inventario.
+
+---
+
+### Caso 9 — Ajuste de cantidad y costo (ejemplo: Factura con cantidad y precio incorrectos)
+
+**¿Qué es?** Se descubre que una compra se registró con el precio equivocado **y** con una cantidad diferente a la que realmente entró a bodega. Hay que corregir ambas cosas.
+
+**Ejemplo:**
+
+Se compró aceite y se registró: 100 litros a $1.20/lt. En realidad llegaron solo **90 litros** a **$1.50/lt**.
+
+**¿Qué hace el sistema?**
+
+1. El operador detecta la diferencia y registra la cantidad y el precio reales.
+2. El sistema genera un ajuste de cantidad (−10 litros) y un ajuste de costo ($1.20 → $1.50/lt).
+3. Ambos ajustes quedan registrados con fecha, responsable y motivo vinculados al mismo lote.
+
+> Ambos ajustes pueden hacerse en una sola operación o por separado.
+
+---
+
 ## Resumen rápido
 
 | Caso | ¿Qué hago? | ¿Cuándo sale el stock? | Devolución parcial | Regalía (admin) |
@@ -180,3 +247,11 @@
 | C4 Variantes | Vendo un producto en diferentes versiones (talla/color) | Al confirmar la venta de la variante | Sí, devuelve a la variante exacta | Sí, ajuste sin factura |
 | C5 Pedido configurado | El cliente elige opciones → pasa a producción → se entrega | Al completar la producción | Sí, devuelve unidades de PT | Sí, ajuste sin factura |
 | C6 Combo configurado | El cliente arma un combo con varios productos y opciones | Al completar cada producción del combo | Sí, por ítem del combo | Sí, por ítem o combo completo |
+
+### Ajustes
+
+| Caso | ¿Qué corrige? | ¿Modifica stock? | ¿Modifica costo? |
+|------|--------------|-----------------|------------------|
+| C7 Ajuste de cantidad | Diferencia entre conteo físico y sistema | Sí | No |
+| C8 Ajuste de costo | Precio incorrecto en una compra registrada | No | Sí |
+| C9 Ajuste de cantidad y costo | Cantidad y precio incorrectos en la misma compra | Sí | Sí |
