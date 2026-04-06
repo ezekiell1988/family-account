@@ -181,12 +181,7 @@ public sealed class InventoryAdjustmentService(AppDbContext db) : IInventoryAdju
 
             if (line.QuantityDelta != 0)
             {
-                var newQty = lot2.QuantityAvailable + line.QuantityDelta;
-                if (newQty < 0)
-                    throw new InvalidOperationException(
-                        $"El lote {lot2.IdInventoryLot} quedaría con stock negativo ({newQty}).");
-
-                lot2.QuantityAvailable = newQty;
+                lot2.QuantityAvailable += line.QuantityDelta;
             }
 
             if (line.UnitCostNew.HasValue)

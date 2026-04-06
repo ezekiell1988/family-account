@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260406060104_InitialCreate")]
+    [Migration("20260406073224_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -3653,8 +3653,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.ToTable("inventoryLot", t =>
                         {
                             t.HasComment("Registro de stock de inventario por producto y lote. Es la unidad mínima de trazabilidad. quantityAvailable nunca se edita directamente: solo se modifica al confirmar purchaseInvoice, salesInvoice o inventoryAdjustment. quantityReserved se incrementa al asignar un SalesOrderLineFulfillment tipo Stock y se decrementa al confirmar o eliminar el fulfillment.");
-
-                            t.HasCheckConstraint("CK_inventoryLot_quantityAvailable", "quantityAvailable >= 0");
 
                             t.HasCheckConstraint("CK_inventoryLot_quantityReserved", "quantityReserved >= 0");
 
@@ -7355,7 +7353,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             t.HasComment("Detalle de cómo se cumple cada línea del pedido: con stock existente (FulfillmentType='Stock' → IdInventoryLot) o con producción planificada (FulfillmentType='Produccion' → IdProductionOrder). Una línea puede tener múltiples registros para mezclar stock y producción.");
 
-                            t.HasCheckConstraint("CK_salesOrderLineFulfillment_lot_or_order", "(fulfillmentType = 'Stock' AND idInventoryLot IS NOT NULL AND idProductionOrder IS NULL) OR (fulfillmentType = 'Produccion' AND idProductionOrder IS NOT NULL AND idInventoryLot IS NULL)");
+                            t.HasCheckConstraint("CK_salesOrderLineFulfillment_lot_or_order", "(fulfillmentType = 'Stock' AND idInventoryLot IS NOT NULL AND idProductionOrder IS NULL) OR (fulfillmentType = 'Produccion' AND idProductionOrder IS NOT NULL)");
 
                             t.HasCheckConstraint("CK_salesOrderLineFulfillment_type", "fulfillmentType IN ('Stock', 'Produccion')");
                         });

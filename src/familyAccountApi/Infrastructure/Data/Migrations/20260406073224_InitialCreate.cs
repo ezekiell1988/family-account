@@ -1656,7 +1656,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_inventoryLot", x => x.idInventoryLot);
-                    table.CheckConstraint("CK_inventoryLot_quantityAvailable", "quantityAvailable >= 0");
                     table.CheckConstraint("CK_inventoryLot_quantityReserved", "quantityReserved >= 0");
                     table.CheckConstraint("CK_inventoryLot_sourceType", "sourceType IN ('Compra', 'Producción', 'Ajuste')");
                     table.CheckConstraint("CK_inventoryLot_statusLot", "statusLot IN ('Disponible', 'Cuarentena', 'Bloqueado', 'Vencido')");
@@ -2395,7 +2394,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_salesOrderLineFulfillment", x => x.idSalesOrderLineFulfillment);
-                    table.CheckConstraint("CK_salesOrderLineFulfillment_lot_or_order", "(fulfillmentType = 'Stock' AND idInventoryLot IS NOT NULL AND idProductionOrder IS NULL) OR (fulfillmentType = 'Produccion' AND idProductionOrder IS NOT NULL AND idInventoryLot IS NULL)");
+                    table.CheckConstraint("CK_salesOrderLineFulfillment_lot_or_order", "(fulfillmentType = 'Stock' AND idInventoryLot IS NOT NULL AND idProductionOrder IS NULL) OR (fulfillmentType = 'Produccion' AND idProductionOrder IS NOT NULL)");
                     table.CheckConstraint("CK_salesOrderLineFulfillment_type", "fulfillmentType IN ('Stock', 'Produccion')");
                     table.ForeignKey(
                         name: "FK_salesOrderLineFulfillment_inventoryLot_idInventoryLot",

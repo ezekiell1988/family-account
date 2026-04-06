@@ -14,7 +14,7 @@ public sealed class SalesOrderLineFulfillmentConfiguration : IEntityTypeConfigur
             t.HasCheckConstraint("CK_salesOrderLineFulfillment_type", "fulfillmentType IN ('Stock', 'Produccion')");
             t.HasCheckConstraint("CK_salesOrderLineFulfillment_lot_or_order",
                 "(fulfillmentType = 'Stock' AND idInventoryLot IS NOT NULL AND idProductionOrder IS NULL) OR " +
-                "(fulfillmentType = 'Produccion' AND idProductionOrder IS NOT NULL AND idInventoryLot IS NULL)");
+                "(fulfillmentType = 'Produccion' AND idProductionOrder IS NOT NULL)");
         });
 
         builder.HasKey(f => f.IdSalesOrderLineFulfillment);

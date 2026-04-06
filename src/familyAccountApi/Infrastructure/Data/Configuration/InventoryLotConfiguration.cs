@@ -12,7 +12,6 @@ public sealed class InventoryLotConfiguration : IEntityTypeConfiguration<Invento
         {
             t.HasComment("Registro de stock de inventario por producto y lote. Es la unidad mínima de trazabilidad. quantityAvailable nunca se edita directamente: solo se modifica al confirmar purchaseInvoice, salesInvoice o inventoryAdjustment. quantityReserved se incrementa al asignar un SalesOrderLineFulfillment tipo Stock y se decrementa al confirmar o eliminar el fulfillment.");
             t.HasCheckConstraint("CK_inventoryLot_sourceType", "sourceType IN ('Compra', 'Producción', 'Ajuste')");
-            t.HasCheckConstraint("CK_inventoryLot_quantityAvailable", "quantityAvailable >= 0");
             t.HasCheckConstraint("CK_inventoryLot_quantityReserved", "quantityReserved >= 0");
             t.HasCheckConstraint("CK_inventoryLot_statusLot", "statusLot IN ('Disponible', 'Cuarentena', 'Bloqueado', 'Vencido')");
         });

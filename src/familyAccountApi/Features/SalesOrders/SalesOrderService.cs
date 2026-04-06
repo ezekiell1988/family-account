@@ -839,19 +839,21 @@ public sealed class SalesOrderService(
             });
 
             db.ProductionOrder.Add(po);
+            // Guardar la OP aquí para obtener su IdProductionOrder real antes de insertar el fulfillment.
+            // CK_salesOrderLineFulfillment_lot_or_order exige idProductionOrder IS NOT NULL para FulfillmentType='Produccion'.
+            await db.SaveChangesAsync(ct);
 
-            // Fulfillment: liga la línea del pedido con la OP; IdInventoryLot se asignará al completar la OP
             db.SalesOrderLineFulfillment.Add(new SalesOrderLineFulfillment
             {
                 IdSalesOrderLine  = line.IdSalesOrderLine,
                 FulfillmentType   = "Produccion",
-                IdProductionOrder = 0,  // se actualizará tras SaveChanges
+                IdProductionOrder = po.IdProductionOrder,
                 QuantityBase      = line.QuantityBase,
                 CreatedAt         = DateTime.UtcNow
             });
 
             createdOrders.Add(new CreatedProductionOrderInfo(
-                0,
+                po.IdProductionOrder,
                 opNumber,
                 line.IdSalesOrderLine,
                 line.IdProductNavigation.NameProduct));
@@ -860,35 +862,11 @@ public sealed class SalesOrderService(
         if (createdOrders.Count == 0)
             return (null, "Ninguna línea del pedido tiene una receta activa para generar órdenes de producción.");
 
-        // 5. Cambiar estado
+        // 5. Cambiar estado y guardar fulfillments
         order.StatusOrder = "EnProduccion";
         await db.SaveChangesAsync(ct);
 
-        // 6. Actualizar IdProductionOrder en fulfillments (ahora tenemos los IDs)
-        var fulfillments = await db.SalesOrderLineFulfillment
-            .Where(f => f.IdSalesOrderLineNavigation.IdSalesOrder == idSalesOrder
-                     && f.FulfillmentType == "Produccion"
-                     && f.IdProductionOrder == 0)
-            .ToListAsync(ct);
-
-        var opsList = await db.ProductionOrder
-            .Where(po => po.IdSalesOrder == idSalesOrder && po.StatusProductionOrder != "Anulado")
-            .OrderBy(po => po.IdProductionOrder)
-            .ToListAsync(ct);
-
-        for (var i = 0; i < fulfillments.Count && i < opsList.Count; i++)
-            fulfillments[i].IdProductionOrder = opsList[i].IdProductionOrder;
-
-        await db.SaveChangesAsync(ct);
-
-        // Completar respuesta con IDs reales
-        var finalCreated = opsList.Select((po, i) => new CreatedProductionOrderInfo(
-            po.IdProductionOrder,
-            po.NumberProductionOrder,
-            createdOrders[i].IdSalesOrderLine,
-            createdOrders[i].ProductName)).ToList();
-
-        return (new SendToProductionResponse(finalCreated), null);
+        return (new SendToProductionResponse(createdOrders), null);
     }
 
     // ── T17: complete ─────────────────────────────────────────────────────────
