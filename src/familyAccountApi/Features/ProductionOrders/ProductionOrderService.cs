@@ -395,6 +395,21 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
                     .ThenInclude(il => il.Product)
             .FirstAsync(ia => ia.IdInventoryAdjustment == adjustment.IdInventoryAdjustment, ct);
 
+        var productIds = adjWithLots.InventoryAdjustmentLines
+            .Where(l => l.QuantityDelta < 0)
+            .Select(l => l.IdInventoryLotNavigation!.IdProduct)
+            .Distinct()
+            .ToList();
+
+        var productAccountList = await db.ProductAccount
+            .Where(pa => productIds.Contains(pa.IdProduct))
+            .Select(pa => new { pa.IdProduct, pa.IdAccount })
+            .ToListAsync(ct);
+
+        var productAccounts = productAccountList
+            .GroupBy(pa => pa.IdProduct)
+            .ToDictionary(g => g.Key, g => g.Min(x => x.IdAccount));
+
         var entryLines = new List<AccountingEntryLine>();
 
         foreach (var line in adjWithLots.InventoryAdjustmentLines.Where(l => l.QuantityDelta < 0))
@@ -412,9 +427,14 @@ public sealed class ProductionOrderService(AppDbContext db) : IProductionOrderSe
                 CreditAmount    = 0m,
                 DescriptionLine = desc
             });
+
+            var crAccount = productAccounts.TryGetValue(lot.IdProduct, out var paAccount)
+                ? paAccount
+                : adjustmentType.IdAccountInventoryDefault!.Value;
+
             entryLines.Add(new AccountingEntryLine
             {
-                IdAccount       = adjustmentType.IdAccountInventoryDefault.Value,
+                IdAccount       = crAccount,
                 DebitAmount     = 0m,
                 CreditAmount    = amount,
                 DescriptionLine = desc

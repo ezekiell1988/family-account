@@ -17,11 +17,11 @@
 #     DR 110=75,000   DR 124=9,750   CR 106=84,750
 #
 #   PROD-OP (4 asientos, uno por ingrediente consumido para 3 hot dogs):
-#     DR 115=  900   CR 111=  900   (3 panes      × ₡300)
-#     DR 115=1,800   CR 111=1,800   (3 salchichas  × ₡600)
-#     DR 115=  900   CR 111=  900   (45 ml mostaza × ₡20)
-#     DR 115=  900   CR 111=  900   (60 ml catsup  × ₡15)
-#     Acumulado: DR 115=4,500 / CR 111=4,500
+#     DR 115=  900   CR 110=  900   (3 panes      × ₡300)
+#     DR 115=1,800   CR 110=1,800   (3 salchichas  × ₡600)
+#     DR 115=  900   CR 110=  900   (45 ml mostaza × ₡20)
+#     DR 115=  900   CR 110=  900   (60 ml catsup  × ₡15)
+#     Acumulado: DR 115=4,500 / CR 110=4,500
 #     PT lote unitCost = 4,500 / 3 = ₡1,500 por hot dog
 #
 #   FV-XXXXXXXX-XXX (Factura Venta 3 hot dogs × ₡3,000 + 13% IVA):
@@ -42,8 +42,8 @@
 #  T-accounts esperados:
 #   106: DR= 10,170   CR= 88,140   Net=CR  77,970
 #   109: DR=  1,500   CR=  7,500   Net=CR   6,000
-#   110: DR= 75,000   CR=      0   Net=DR  75,000
-#   111: DR=      0   CR=  4,500   Net=CR   4,500
+#   110: DR= 75,000   CR=  4,500   Net=DR  70,500
+#   111: (eliminado — CR ahora va directamente a 110)
 #   113: DR=  3,000   CR=      0   Net=DR   3,000
 #   115: DR=  4,500   CR=      0   Net=DR   4,500
 #   117: DR=  3,000   CR=  9,000   Net=CR   6,000
@@ -159,7 +159,7 @@ ACC_NORMAL[127]="cr"   # Pasivo
 #    DR 110=75000   DR 124=9750   CR 106=84750
 #
 #  PROD-OP (4 asientos, acumulado para 3 hot dogs):
-#    DR 115=4500   CR 111=4500
+#    DR 115=4500   CR 110=4500  (ProductAccount → 110 para cada ingrediente)
 #    (PT unitCost = 4500 / 3 = ₡1,500/hot dog — precio pre-IVA)
 #
 #  FV (3 hot dogs × ₡3,000 + 13%):
@@ -180,8 +180,7 @@ ACC_NORMAL[127]="cr"   # Pasivo
 
 EXP_DR[106]=10170;   EXP_CR[106]=88140;   EXP_NETO[106]=77970;  EXP_NETO_TIPO[106]="CR"
 EXP_DR[109]=1500;    EXP_CR[109]=7500;    EXP_NETO[109]=6000;   EXP_NETO_TIPO[109]="CR"
-EXP_DR[110]=75000;   EXP_CR[110]=0;       EXP_NETO[110]=75000;  EXP_NETO_TIPO[110]="DR"
-EXP_DR[111]=0;       EXP_CR[111]=4500;    EXP_NETO[111]=4500;   EXP_NETO_TIPO[111]="CR"
+EXP_DR[110]=75000;   EXP_CR[110]=4500;    EXP_NETO[110]=70500;  EXP_NETO_TIPO[110]="DR"
 EXP_DR[113]=3000;    EXP_CR[113]=0;       EXP_NETO[113]=3000;   EXP_NETO_TIPO[113]="DR"
 EXP_DR[115]=4500;    EXP_CR[115]=0;       EXP_NETO[115]=4500;   EXP_NETO_TIPO[115]="DR"
 EXP_DR[117]=3000;    EXP_CR[117]=9000;    EXP_NETO[117]=6000;   EXP_NETO_TIPO[117]="CR"
@@ -296,8 +295,7 @@ check_account_balance() {
 
 check_account_balance 106   # Caja CRC
 check_account_balance 109   # Inventario (COGS y regalía del PT)
-check_account_balance 110   # Materias Primas
-check_account_balance 111   # Productos en Proceso (WIP)
+check_account_balance 110   # Materias Primas (DR 75,000 − CR 4,500 = DR 70,500)
 check_account_balance 113   # Faltantes/Merma
 check_account_balance 115   # Costos de Producción
 check_account_balance 117   # Ingresos por Ventas
@@ -306,7 +304,7 @@ check_account_balance 124   # IVA Acreditable
 check_account_balance 127   # IVA por Pagar
 
 # ── Verificar asientos de producción (originModule=ProductionOrder) ────────────
-printf "\n  ${BOLD}Asientos PROD-OP — producción automática al confirmar pedido (DR 115 / CR 111)${NC}\n"
+printf "\n  ${BOLD}Asientos PROD-OP — producción automática al confirmar pedido (DR 115 / CR 110)${NC}\n"
 echo "" >> "$OUTPUT_FILE"
 echo "  Asientos PROD-OP (originModule=ProductionOrder)" >> "$OUTPUT_FILE"
 
@@ -314,11 +312,11 @@ PROD_COUNT=$(jq '[.[] | select(.originModule == "ProductionOrder")] | length' "$
 if [[ "${PROD_COUNT:-0}" -ge 1 ]]; then
   log_ok "Asientos de producción encontrados: $PROD_COUNT (esperado=4, uno por ingrediente)"
   PROD_DR_115=$(jq '[.[] | select(.originModule == "ProductionOrder") | .lines[] | select(.idAccount == 115) | .debitAmount] | add // 0' "$TEMP_ENTRIES")
-  PROD_CR_111=$(jq '[.[] | select(.originModule == "ProductionOrder") | .lines[] | select(.idAccount == 111) | .creditAmount] | add // 0' "$TEMP_ENTRIES")
+  PROD_CR_110=$(jq '[.[] | select(.originModule == "ProductionOrder") | .lines[] | select(.idAccount == 110) | .creditAmount] | add // 0' "$TEMP_ENTRIES")
   assert_float_eq "    Producción: ΣDR 115 (Costos Producción) = ₡4,500" "4500" "$PROD_DR_115"
-  assert_float_eq "    Producción: ΣCR 111 (Prod. en Proceso) = ₡4,500"  "4500" "$PROD_CR_111"
-  assert_float_eq "    Producción: DR 115 = CR 111 (partida doble OK)"    "$PROD_DR_115" "$PROD_CR_111"
-  echo "    Producción asientos=$PROD_COUNT  DR115=$PROD_DR_115  CR111=$PROD_CR_111" >> "$OUTPUT_FILE"
+  assert_float_eq "    Producción: ΣCR 110 (Materias Primas) = ₡4,500"   "4500" "$PROD_CR_110"
+  assert_float_eq "    Producción: DR 115 = CR 110 (partida doble OK)"    "$PROD_DR_115" "$PROD_CR_110"
+  echo "    Producción asientos=$PROD_COUNT  DR115=$PROD_DR_115  CR110=$PROD_CR_110" >> "$OUTPUT_FILE"
 else
   log_fail "No se encontraron asientos de producción (originModule=ProductionOrder)"
   echo "    [FAIL] No se encontraron asientos de producción" >> "$OUTPUT_FILE"
@@ -419,7 +417,6 @@ assert_float_eq "    ΣDR = ΣCR"           "$GRAND_DR" "$GRAND_CR"
 
 # ── Nota contable (calculada desde asientos reales) ───────────────────────────
 _SALDO_110=$(awk "BEGIN {printf \"%.0f\", ${REAL_DR[110]:-0} - ${REAL_CR[110]:-0}}")
-_SALDO_111=$(awk "BEGIN {printf \"%.0f\", ${REAL_CR[111]:-0} - ${REAL_DR[111]:-0}}")
 _SALDO_115=$(awk "BEGIN {printf \"%.0f\", ${REAL_DR[115]:-0} - ${REAL_CR[115]:-0}}")
 _SALDO_109=$(awk "BEGIN {printf \"%.0f\", ${REAL_DR[109]:-0} - ${REAL_CR[109]:-0}}")
 _SALDO_124=$(awk "BEGIN {printf \"%.0f\", ${REAL_DR[124]:-0} - ${REAL_CR[124]:-0}}")
@@ -433,8 +430,7 @@ fi
 
 printf "\n"
 printf "  ${YELLOW}${BOLD}📋 Nota contable (desde asientos reales)${NC}\n"
-printf "  ${YELLOW}Cuenta 110 Materias Primas:     saldo neto DR = ₡%s (MP comprada, acumulada)${NC}\n"   "$_SALDO_110"
-printf "  ${YELLOW}Cuenta 111 Prod. en Proceso:    saldo neto CR = ₡%s (costo producción consumido)${NC}\n" "$_SALDO_111"
+printf "  ${YELLOW}Cuenta 110 Materias Primas:     saldo neto DR = ₡%s (MP restante no consumida en producción)${NC}\n"   "$_SALDO_110"
 printf "  ${YELLOW}Cuenta 115 Costos Producción:   saldo neto DR = ₡%s (idem, lado débito)${NC}\n"        "$_SALDO_115"
 printf "  ${YELLOW}Cuenta 109 Inventario:          saldo neto CR = ₡%s (salida neta por COGS/regalía)${NC}\n" "$(( -_SALDO_109 ))"
 printf "  ${YELLOW}Cuenta 124 IVA Acreditable:     saldo neto DR = ₡%s (crédito fiscal de compras)${NC}\n" "$_SALDO_124"
@@ -444,8 +440,7 @@ printf "  ${YELLOW}Posición IVA vs gobierno:        ₡%s − ₡%s = ₡%s (%s
 {
   echo ""
   echo "# ── NOTA CONTABLE (calculada desde asientos reales) ──────────────"
-  echo "#  - Cuenta 110 MP:               saldo neto DR = $_SALDO_110 (MP comprada, acumulada)"
-  echo "#  - Cuenta 111 Prod. en Proceso: saldo neto CR = $_SALDO_111 (costo producción consumido)"
+  echo "#  - Cuenta 110 MP:               saldo neto DR = $_SALDO_110 (MP restante no consumida)"
   echo "#  - Cuenta 115 Costos Producc.:  saldo neto DR = $_SALDO_115 (idem, lado débito)"
   echo "#  - Cuenta 109 Inventario:       saldo neto CR = $(( -_SALDO_109 )) (salida neta)"
   echo "#  - Cuenta 124 IVA Acreditable:  saldo neto DR = $_SALDO_124 (crédito fiscal de compras)"
