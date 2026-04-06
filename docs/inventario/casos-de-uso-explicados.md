@@ -20,6 +20,10 @@
 
 **Si cancelo la venta:** las 10 cajas vuelven a la bodega automáticamente.
 
+**Devolución parcial:** si el cliente devuelve solo una parte (por ejemplo, 3 de las 10 cajas), el operador registra la devolución indicando cantidad y lote. El sistema suma esas 3 cajas de vuelta al inventario y genera una nota de crédito.
+
+**Regalía (solo administrador):** un administrador puede emitir un documento de regalía que descuenta inventario sin generar venta ni factura. Queda registrado con motivo y responsable.
+
 ---
 
 ## Caso 2 — Manufactura (ejemplo: Chile embotellado)
@@ -42,6 +46,12 @@
 - Produzco 100 frascos → el sistema descuenta 20 kg de chile, 5 lt de vinagre y 500g de sal.
 - Quedan 100 frascos disponibles para vender.
 
+**Si cancelo la factura de venta:** los frascos vendidos vuelven al lote de producto terminado automáticamente.
+
+**Devolución parcial:** si el cliente devuelve solo parte de los frascos facturados, el operador registra la cantidad devuelta. El sistema suma esos frascos al inventario de producto terminado y genera una nota de crédito.
+
+**Regalía (solo administrador):** un administrador puede emitir un documento de regalía sobre el producto terminado que descuenta inventario sin generar venta ni factura. Queda registrado con motivo y responsable.
+
 ---
 
 ## Caso 3 — Ensamble en venta (ejemplo: Hot dog)
@@ -63,6 +73,10 @@
 
 **Si cancelo la factura:** todos los ingredientes regresan a bodega automáticamente.
 
+**Devolución parcial:** si el cliente devuelve parte de los hot dogs facturados, el operador registra la cantidad. El sistema recalcula los ingredientes de esas unidades usando la receta y los devuelve a bodega. Se genera una nota de crédito.
+
+**Regalía (solo administrador):** un administrador puede emitir un documento de regalía sobre el producto ensamblado. El sistema descuenta los ingredientes correspondientes usando la receta, sin generar venta ni factura. Queda registrado con motivo y responsable.
+
 ---
 
 ## Caso 4 — Variantes (ejemplo: Ropa por talla y color)
@@ -81,6 +95,12 @@
 - Talla S Azul: 5 unidades disponibles.
 - Talla M Azul: 20 unidades disponibles.
 - Talla L Rojo: 0 unidades → no se puede vender.
+
+**Si cancelo la factura:** las unidades de la variante vendida vuelven a su inventario específico automáticamente.
+
+**Devolución parcial:** si el cliente devuelve solo algunas unidades de la variante, el operador registra variante y cantidad. El sistema suma esas unidades al inventario de esa variante exacta y genera una nota de crédito.
+
+**Regalía (solo administrador):** un administrador puede emitir un documento de regalía sobre una variante específica que descuenta inventario sin generar venta ni factura. Queda registrado con motivo y responsable.
 
 ---
 
@@ -102,6 +122,12 @@
 9. Se crea un lote de "Pizza terminada".
 10. El operador marca el pedido como entregado.
 11. Se genera la factura al cliente mostrando: Pizza + opciones elegidas + precio total.
+
+**Si cancelo la factura:** el lote de pizza terminada vuelve al inventario. Los ingredientes descontados al completar la producción no se revierten (la producción ya ocurrió).
+
+**Devolución parcial:** si el pedido incluía varias unidades y el cliente devuelve solo algunas, el operador registra la cantidad. El sistema devuelve esas unidades al inventario de producto terminado y genera una nota de crédito.
+
+**Regalía (solo administrador):** un administrador puede emitir un documento de regalía sobre el producto terminado que descuenta inventario sin generar venta ni factura. Queda registrado con motivo y responsable.
 
 ---
 
@@ -136,15 +162,21 @@
     - → Bebida: Coca-Cola
     - **Total: $26.50**
 
+**Si cancelo la factura:** los lotes de pizza terminada y la bebida vuelven al inventario. Los ingredientes descontados durante la producción no se revierten.
+
+**Devolución parcial:** si el cliente devuelve solo parte del combo (por ejemplo, una pizza), el operador registra qué ítems retorna. El sistema ajusta el inventario de esos ítems y genera una nota de crédito proporcional.
+
+**Regalía (solo administrador):** un administrador puede emitir un documento de regalía sobre cualquier ítem del combo o el combo completo, descontando inventario sin generar venta ni factura. Queda registrado con motivo y responsable.
+
 ---
 
 ## Resumen rápido
 
-| Caso | ¿Qué hago? | ¿Cuándo sale el stock? |
-|------|-----------|----------------------|
-| C1 Reventa | Compro y vendo tal cual | Al confirmar la venta |
-| C2 Manufactura | Compro MP, produzco y vendo el producto terminado | Al completar la producción |
-| C3 Ensamble | Vendo un producto que se arma al momento con ingredientes | Al confirmar la factura |
-| C4 Variantes | Vendo un producto en diferentes versiones (talla/color) | Al confirmar la venta de la variante |
-| C5 Pedido configurado | El cliente elige opciones → pasa a producción → se entrega | Al completar la producción |
-| C6 Combo configurado | El cliente arma un combo con varios productos y opciones | Al completar cada producción del combo |
+| Caso | ¿Qué hago? | ¿Cuándo sale el stock? | Devolución parcial | Regalía (admin) |
+|------|-----------|----------------------|-------------------|------------------|
+| C1 Reventa | Compro y vendo tal cual | Al confirmar la venta | Sí, devuelve al lote original | Sí, ajuste sin factura |
+| C2 Manufactura | Compro MP, produzco y vendo el producto terminado | Al completar la producción | Sí, devuelve al lote de PT | Sí, ajuste sin factura |
+| C3 Ensamble | Vendo un producto que se arma al momento con ingredientes | Al confirmar la factura | Sí, revierte ingredientes por receta | Sí, descuenta ingredientes sin factura |
+| C4 Variantes | Vendo un producto en diferentes versiones (talla/color) | Al confirmar la venta de la variante | Sí, devuelve a la variante exacta | Sí, ajuste sin factura |
+| C5 Pedido configurado | El cliente elige opciones → pasa a producción → se entrega | Al completar la producción | Sí, devuelve unidades de PT | Sí, ajuste sin factura |
+| C6 Combo configurado | El cliente arma un combo con varios productos y opciones | Al completar cada producción del combo | Sí, por ítem del combo | Sí, por ítem o combo completo |
