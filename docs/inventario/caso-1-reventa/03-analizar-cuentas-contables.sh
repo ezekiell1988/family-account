@@ -110,24 +110,24 @@ ACC_NORMAL[127]="cr"   # Pasivo
 #  FV-20260405-001:   DR 106=16950    CR 117=15000  CR 127=1950
 #  COGS-FV-000001:    DR 119=10000    CR 109=10000
 #  DEV-COGS-FV-:      DR 109=3000     CR 119=3000
-#  REINTEGRO-FV-001:  DR 117=5085     CR 106=5085
+#  DEV-ING-FV-:       DR 117=4500  DR 127=585   CR 106=5085
 #  AJ-000001:         DR 113=2000     CR 109=2000
 #
 #  106 Caja:       DR=16950   / CR=118085  → neto CR = 101135  (salida de caja)
 #  109 Inventario: DR=103000  / CR=12000   → neto DR = 91000   (100000+3000 / 10000+2000)
 #  113 Merma:      DR=2000    / CR=0       → neto DR = 2000
-#  117 Ingresos:   DR=5085    / CR=15000   → neto CR = 9915    (subtotal sin IVA)
+#  117 Ingresos:   DR=4500    / CR=15000   → neto CR = 10500   (subtotal sin IVA)
 #  119 COGS:       DR=10000   / CR=3000    → neto DR = 7000
 #  124 IVA Acred.: DR=13000   / CR=0       → neto DR = 13000
-#  127 IVA x Pag.: DR=0       / CR=1950    → neto CR = 1950
+#  127 IVA x Pag.: DR=585     / CR=1950    → neto CR = 1365
 
 EXP_DR[106]=16950;   EXP_CR[106]=118085;  EXP_NETO[106]=101135;  EXP_NETO_TIPO[106]="CR"
 EXP_DR[109]=103000;  EXP_CR[109]=12000;   EXP_NETO[109]=91000;   EXP_NETO_TIPO[109]="DR"
 EXP_DR[113]=2000;    EXP_CR[113]=0;       EXP_NETO[113]=2000;    EXP_NETO_TIPO[113]="DR"
-EXP_DR[117]=5085;    EXP_CR[117]=15000;   EXP_NETO[117]=9915;    EXP_NETO_TIPO[117]="CR"
+EXP_DR[117]=4500;    EXP_CR[117]=15000;   EXP_NETO[117]=10500;   EXP_NETO_TIPO[117]="CR"
 EXP_DR[119]=10000;   EXP_CR[119]=3000;    EXP_NETO[119]=7000;    EXP_NETO_TIPO[119]="DR"
 EXP_DR[124]=13000;   EXP_CR[124]=0;       EXP_NETO[124]=13000;   EXP_NETO_TIPO[124]="DR"
-EXP_DR[127]=0;       EXP_CR[127]=1950;    EXP_NETO[127]=1950;    EXP_NETO_TIPO[127]="CR"
+EXP_DR[127]=585;     EXP_CR[127]=1950;    EXP_NETO[127]=1365;    EXP_NETO_TIPO[127]="CR"
 
 # ── Nota contable: cuentas de IVA (124 y 127) no tienen valores esperados quemados;
 #  se calculan dinámicamente al final del script desde los asientos reales.
@@ -248,6 +248,31 @@ check_account_balance 117
 check_account_balance 119
 check_account_balance 124
 check_account_balance 127
+
+# ── Verificar asiento DEV-ING-FV (reversión ingresos + IVA, generado por partial-return) ────
+printf "\n  ${BOLD}Asiento DEV-ING-FV — reversión de ingresos + IVA devolución parcial${NC}\n"
+echo "" >> "$OUTPUT_FILE"
+echo "  Asiento DEV-ING-FV" >> "$OUTPUT_FILE"
+
+DEV_ING_COUNT=$(jq '[.[] | select(.numberEntry | startswith("DEV-ING-FV-"))] | length' "$TEMP_ENTRIES")
+if [[ "${DEV_ING_COUNT:-0}" -ge 1 ]]; then
+  log_ok "Asiento DEV-ING-FV existe ($DEV_ING_COUNT encontrado(s))"
+  echo "    DEV-ING-FV existe: $DEV_ING_COUNT" >> "$OUTPUT_FILE"
+
+  DEV_ING_DR=$(jq '[.[] | select(.numberEntry | startswith("DEV-ING-FV-")) | .lines[] | .debitAmount] | add // 0' "$TEMP_ENTRIES")
+  DEV_ING_CR=$(jq '[.[] | select(.numberEntry | startswith("DEV-ING-FV-")) | .lines[] | .creditAmount] | add // 0' "$TEMP_ENTRIES")
+  assert_float_eq "    DEV-ING-FV DR total (ingresos+IVA revertidos)" "5085" "$DEV_ING_DR"
+  assert_float_eq "    DEV-ING-FV CR total (salida caja/banco)"       "5085" "$DEV_ING_CR"
+
+  DEV_ING_DR_117=$(jq '[.[] | select(.numberEntry | startswith("DEV-ING-FV-")) | .lines[] | select(.idAccount == 117) | .debitAmount] | add // 0' "$TEMP_ENTRIES")
+  DEV_ING_DR_127=$(jq '[.[] | select(.numberEntry | startswith("DEV-ING-FV-")) | .lines[] | select(.idAccount == 127) | .debitAmount] | add // 0' "$TEMP_ENTRIES")
+  assert_float_eq "    DEV-ING-FV DR cuenta 117 (ingresos netos)" "4500" "$DEV_ING_DR_117"
+  assert_float_eq "    DEV-ING-FV DR cuenta 127 (IVA revertido)"  "585"  "$DEV_ING_DR_127"
+  echo "    DR_117=$DEV_ING_DR_117  DR_127=$DEV_ING_DR_127  CR=$DEV_ING_CR" >> "$OUTPUT_FILE"
+else
+  log_fail "Asiento DEV-ING-FV no encontrado — partial-return no generó reversión de ingresos"
+  echo "    [FAIL] DEV-ING-FV no encontrado" >> "$OUTPUT_FILE"
+fi
 
 # ── Verificar asiento DEV-COGS-FV (Bug 2 fix: usa fecha factura; Bug 5: cuenta != 0) ──
 printf "\n  ${BOLD}Asiento DEV-COGS-FV — reversión COGS devolución parcial${NC}\n"

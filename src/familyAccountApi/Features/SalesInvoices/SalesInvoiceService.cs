@@ -961,8 +961,16 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
     public async Task<(bool Success, string? Error, PartialReturnResponse? Result)> PartialReturnAsync(
         int idSalesInvoice, PartialReturnRequest request, CancellationToken ct = default)
     {
+        // ── Validar RefundMode antes de tocar la BD ────────────────────────────
+        if (request.RefundMode is not ("EfectivoInmediato" or "NotaCredito"))
+            return (false, "RefundMode inválido. Use 'EfectivoInmediato' o 'NotaCredito'.", null);
+
+        if (request.RefundMode == "NotaCredito" && request.IdAccountCreditNote is null)
+            return (false, "Para RefundMode='NotaCredito' se debe indicar IdAccountCreditNote.", null);
+
         var invoice = await db.SalesInvoice
             .Include(si => si.IdSalesInvoiceTypeNavigation)
+            .Include(si => si.IdCurrencyNavigation)
             .FirstOrDefaultAsync(si => si.IdSalesInvoice == idSalesInvoice, ct);
 
         if (invoice is null)
@@ -1075,12 +1083,171 @@ public sealed class SalesInvoiceService(AppDbContext db) : ISalesInvoiceService
             idAccountingEntry = entry.IdAccountingEntry;
         }
 
+        // ── 3. Asiento de reversión de ingresos (DR Ingresos+IVA / CR Banco-Caja o NotaCredito) ──
+        int? idAccountingEntryRefund = null;
+
+        // Determinar cuenta CR de la contrapartida del reintegro
+        int crRefundAccountId;
+        if (request.RefundMode == "NotaCredito")
+        {
+            crRefundAccountId = request.IdAccountCreditNote!.Value;
+        }
+        else // EfectivoInmediato
+        {
+            var invoiceType2 = invoice.IdSalesInvoiceTypeNavigation;
+            if (!invoiceType2.CounterpartFromBankMovement)
+            {
+                bool isUsdCurr = invoice.IdCurrencyNavigation.CodeCurrency
+                    .Equals("USD", StringComparison.OrdinalIgnoreCase);
+                crRefundAccountId = (isUsdCurr
+                    ? invoiceType2.IdAccountCounterpartUSD
+                    : invoiceType2.IdAccountCounterpartCRC) ?? 0;
+
+                if (crRefundAccountId == 0)
+                    return (false,
+                        $"El tipo de factura '{invoiceType2.CodeSalesInvoiceType}' no tiene configurada la cuenta Caja " +
+                        $"para la moneda '{invoice.IdCurrencyNavigation.CodeCurrency}'. " +
+                        "Configure IdAccountCounterpartCRC o IdAccountCounterpartUSD.",
+                        null);
+            }
+            else
+            {
+                if (invoice.IdBankAccount is null)
+                    return (false,
+                        "La factura no tiene una cuenta bancaria vinculada (IdBankAccount). " +
+                        "No se puede generar el reintegro automático.",
+                        null);
+
+                var bkAcc = await db.BankAccount
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.IdBankAccount == invoice.IdBankAccount.Value, CancellationToken.None);
+
+                if (bkAcc is null)
+                    return (false, "La cuenta bancaria vinculada a la factura no existe.", null);
+
+                crRefundAccountId = bkAcc.IdAccount;
+            }
+        }
+
+        // Construir líneas DR por línea devuelta (separando subtotal e IVA)
+        bool isUsdInvoice = invoice.IdCurrencyNavigation.CodeCurrency
+            .Equals("USD", StringComparison.OrdinalIgnoreCase);
+        int ivaAccountId = isUsdInvoice ? 128 : 127;
+
+        decimal totalRefundGross = 0m;
+        var refundLines = new List<AccountingEntryLine>();
+
+        foreach (var line in request.Lines)
+        {
+            var salesLine = salesLines.First(sl => sl.IdInventoryLot == line.IdInventoryLot);
+
+            decimal taxFactor  = salesLine.TaxPercent > 0 ? (1m + salesLine.TaxPercent / 100m) : 1m;
+            decimal lineSubtotal = Math.Round(line.TotalLineAmount / taxFactor, 2);
+            decimal lineTax      = Math.Round(line.TotalLineAmount - lineSubtotal, 2);
+            totalRefundGross += line.TotalLineAmount;
+
+            // Determinar cuenta(s) de ingresos: ProductAccount o fallback
+            bool addedViaProductAccount = false;
+            if (salesLine.IdProduct.HasValue)
+            {
+                var productAccounts = await db.ProductAccount
+                    .AsNoTracking()
+                    .Where(pa => pa.IdProduct == salesLine.IdProduct.Value)
+                    .ToListAsync(CancellationToken.None);
+
+                if (productAccounts.Count > 0)
+                {
+                    foreach (var pa in productAccounts)
+                    {
+                        decimal drAmt = Math.Round(lineSubtotal * pa.PercentageAccount / 100m, 2);
+                        refundLines.Add(new AccountingEntryLine
+                        {
+                            IdAccount       = pa.IdAccount,
+                            DebitAmount     = drAmt,
+                            CreditAmount    = 0,
+                            DescriptionLine = line.DescriptionLine
+                                             ?? $"Reversión ingreso — lote {line.IdInventoryLot}"
+                        });
+                    }
+                    addedViaProductAccount = true;
+                }
+            }
+
+            if (!addedViaProductAccount)
+            {
+                if (invoiceType.IdAccountSalesRevenue is null)
+                    return (false,
+                        "El tipo de factura no tiene cuenta de ingresos configurada (IdAccountSalesRevenue). " +
+                        "Configure el campo o asigne distribución contable (ProductAccount) al producto.",
+                        null);
+
+                refundLines.Add(new AccountingEntryLine
+                {
+                    IdAccount       = invoiceType.IdAccountSalesRevenue.Value,
+                    DebitAmount     = lineSubtotal,
+                    CreditAmount    = 0,
+                    DescriptionLine = line.DescriptionLine
+                                     ?? $"Reversión ingreso — lote {line.IdInventoryLot}"
+                });
+            }
+
+            // DR IVA por Pagar (reduce el pasivo hacia el gobierno)
+            if (lineTax > 0)
+            {
+                refundLines.Add(new AccountingEntryLine
+                {
+                    IdAccount       = ivaAccountId,
+                    DebitAmount     = lineTax,
+                    CreditAmount    = 0,
+                    DescriptionLine = $"Reversión IVA — devolución lote {line.IdInventoryLot}"
+                });
+            }
+        }
+
+        // CR contrapartida total bruto
+        refundLines.Add(new AccountingEntryLine
+        {
+            IdAccount       = crRefundAccountId,
+            DebitAmount     = 0,
+            CreditAmount    = totalRefundGross,
+            DescriptionLine = $"Reintegro — devolución parcial FV-{idSalesInvoice:D6}"
+        });
+
+        var refundEntry = new AccountingEntry
+        {
+            IdFiscalPeriod    = invoice.IdFiscalPeriod,
+            IdCurrency        = invoice.IdCurrency,
+            NumberEntry       = $"DEV-ING-FV-{idSalesInvoice:D6}",
+            DateEntry         = request.DateReturn,
+            DescriptionEntry  = request.DescriptionReturn
+                                ?? $"Reintegro devolución parcial — {invoice.NumberInvoice}",
+            StatusEntry       = "Publicado",
+            ExchangeRateValue = invoice.ExchangeRateValue,
+            OriginModule      = "SalesReturnPartial",
+            IdOriginRecord    = idSalesInvoice,
+            CreatedAt         = DateTime.UtcNow
+        };
+        foreach (var rl in refundLines) refundEntry.AccountingEntryLines.Add(rl);
+
+        db.AccountingEntry.Add(refundEntry);
+        await db.SaveChangesAsync(CancellationToken.None);
+
+        db.SalesInvoiceEntry.Add(new SalesInvoiceEntry
+        {
+            IdSalesInvoice    = idSalesInvoice,
+            IdAccountingEntry = refundEntry.IdAccountingEntry
+        });
+        await db.SaveChangesAsync(CancellationToken.None);
+
+        idAccountingEntryRefund = refundEntry.IdAccountingEntry;
+
         return (true, null, new PartialReturnResponse(
             idSalesInvoice,
             invoice.NumberInvoice,
             request.DateReturn,
             request.DescriptionReturn,
             totalReturnAmount,
-            idAccountingEntry));
+            idAccountingEntry,
+            idAccountingEntryRefund));
     }
 }

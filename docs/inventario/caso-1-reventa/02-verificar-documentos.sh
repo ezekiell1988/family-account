@@ -158,19 +158,24 @@ ID_PURCHASE_INVOICE=$(read_var "idPurchaseInvoice")
 ID_LOT=$(read_var "idInventoryLot")
 ID_SALES_INVOICE=$(read_var "idSalesInvoice")
 ID_ADJUSTMENT=$(read_var "idInventoryAdjustment")
+ID_ENTRY_DEV_ING=$(read_var "idEntryDevIng")
 ID_FISCAL_PERIOD=$(read_var "idFiscalPeriod" 2>/dev/null | grep -oE '^[0-9]+' || echo "4")
 [[ -z "$ID_FISCAL_PERIOD" ]] && ID_FISCAL_PERIOD="4"
 
 # Valores esperados de inventario
-#  unitCost en la BD = precio de compra sin IVA (1000), no el costo con IVA (1130).
-#  El campo unitCost del lote refleja el valor neto almacenado por EF.
+#  unitCost en la BD = precio de compra sin IVA (1000), no el costo con IVA.
 EXP_UNIT_COST="1000"
 EXP_STOCK_FINAL="91"
+EXP_QTY_RESERVED="0"
+EXP_QTY_NET="91"
+EXP_STATUS_LOT="Disponible"
+EXP_SOURCE_TYPE="Compra"
+ID_WAREHOUSE="1"
 
 printf "\n"
 printf "  ${DIM}IDs cargados:${NC}\n"
-printf "  ${DIM}  PC=%s  LOT=%s  FV=%s  ADJ=%s${NC}\n" \
-  "$ID_PURCHASE_INVOICE" "$ID_LOT" "$ID_SALES_INVOICE" "$ID_ADJUSTMENT"
+printf "  ${DIM}  PC=%s  LOT=%s  FV=%s  ADJ=%s  EntryDevIng=%s${NC}\n" \
+  "$ID_PURCHASE_INVOICE" "$ID_LOT" "$ID_SALES_INVOICE" "$ID_ADJUSTMENT" "${ID_ENTRY_DEV_ING:-(no capturado)}"
 
 # ── Autenticación ─────────────────────────────────────────────────────────────
 
@@ -276,37 +281,153 @@ log_info "  PC número de lote en línea: ${PC_LOT_NUMBER:-'(campo no expuesto d
 log_info "  PC total (si expuesto): ${PC_TOTAL:-'(verificar en asiento PC-)'}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SECCIÓN 3 — INVENTARIO
+# SECCIÓN 3 — INVENTARIO COMPLETO
 # ═══════════════════════════════════════════════════════════════════════════════
 
-section "SECCIÓN 3 — Inventario (lote id=$ID_LOT)"
+# 3-a  Stock total global del producto 1
+# ─────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 3a — Stock total global del producto 1"
 
-# 3-a  Stock total producto 1
 api_get "/inventory-lots/stock/1.json"
 assert_200 "GET /inventory-lots/stock/1.json"
-STOCK_ACTUAL=$(jq_field '.totalQuantity // .quantity // .stock // . | if type == "number" then . else empty end')
-# Intentar extraer número del response (puede venir como número simple o en objeto)
-if [[ -z "$STOCK_ACTUAL" ]]; then
-  STOCK_ACTUAL=$(cat "$TEMP_RESPONSE" | tr -d '"' | xargs)
-fi
-assert_float_eq "stock total producto 1" "$EXP_STOCK_FINAL" "$STOCK_ACTUAL"
+STOCK_ACTUAL=$(jq_field '. | if type == "number" then . else empty end')
+[[ -z "$STOCK_ACTUAL" ]] && STOCK_ACTUAL=$(cat "$TEMP_RESPONSE" | tr -d '"' | xargs)
+assert_float_eq "stock total = $EXP_STOCK_FINAL u." "$EXP_STOCK_FINAL" "$STOCK_ACTUAL"
+log_info "  Fórmula: 100 (compra) − 10 (venta) + 3 (devolución) − 2 (regalía) = 91"
 
-# 3-b  Lote específico
+# 3-b  Lote específico — todos los campos relevantes
+# ─────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 3b — Lote específico (id=$ID_LOT) — detalle completo"
+
 api_get "/inventory-lots/${ID_LOT}.json"
 assert_200 "GET /inventory-lots/${ID_LOT}.json"
-LOT_STATUS=$(jq_field '.statusLot // .status // empty'           | grep -v null | head -1)
-LOT_QTY=$(jq_field    '.quantityAvailable // .quantity // empty' | grep -v null | head -1)
-LOT_COST=$(jq_field   '.unitCost // .costPerUnit // empty'       | grep -v null | head -1)
 
-assert_eq       "lote statusLot = Disponible" "Disponible"    "$LOT_STATUS"
-assert_float_eq "lote quantityAvailable"      "$EXP_STOCK_FINAL" "${LOT_QTY:-0}"
-assert_float_eq "lote unitCost"               "$EXP_UNIT_COST"   "${LOT_COST:-0}"
+LOT_STATUS=$(jq_field '.statusLot'          | grep -v null | head -1)
+LOT_QTY=$(jq_field    '.quantityAvailable'  | grep -v null | head -1)
+LOT_RESERVED=$(jq_field '.quantityReserved' | grep -v null | head -1)
+LOT_NET=$(jq_field    '.quantityAvailableNet' | grep -v null | head -1)
+LOT_COST=$(jq_field   '.unitCost'           | grep -v null | head -1)
+LOT_SOURCE=$(jq_field '.sourceType'         | grep -v null | head -1)
+LOT_PROD=$(jq_field   '.idProduct'          | grep -v null | head -1)
+LOT_WH=$(jq_field     '.idWarehouse'        | grep -v null | head -1)
+LOT_WH_NAME=$(jq_field '.nameWarehouse'     | grep -v null | head -1)
+LOT_PC=$(jq_field     '.idPurchaseInvoice'  | grep -v null | head -1)
 
-# 3-c  Lotes por producto → debe aparecer el lote
+assert_eq       "lote statusLot"            "$EXP_STATUS_LOT"  "$LOT_STATUS"
+assert_float_eq "lote quantityAvailable"    "$EXP_STOCK_FINAL" "${LOT_QTY:-0}"
+assert_float_eq "lote quantityReserved"     "$EXP_QTY_RESERVED" "${LOT_RESERVED:-0}"
+assert_float_eq "lote quantityAvailableNet" "$EXP_QTY_NET"     "${LOT_NET:-0}"
+assert_float_eq "lote unitCost"             "$EXP_UNIT_COST"   "${LOT_COST:-0}"
+assert_eq       "lote sourceType = Compra"  "$EXP_SOURCE_TYPE" "$LOT_SOURCE"
+assert_eq       "lote idProduct = 1"        "1"                "$LOT_PROD"
+assert_eq       "lote idWarehouse = $ID_WAREHOUSE" "$ID_WAREHOUSE" "$LOT_WH"
+assert_gte      "lote nameWarehouse no vacío" "1" "${#LOT_WH_NAME}"
+assert_eq       "lote origen = idPurchaseInvoice=$ID_PURCHASE_INVOICE" \
+                "$ID_PURCHASE_INVOICE" "$LOT_PC"
+log_info "  Almacén: ${LOT_WH_NAME:-?} (id=$LOT_WH)"
+
+# 3-c  Lotes por producto — sin filtro (todos los almacenes)
+# ─────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 3c — Lotes por producto (todos los almacenes)"
+
 api_get "/inventory-lots/by-product/1.json"
 assert_200 "GET /inventory-lots/by-product/1.json"
-LOT_COUNT=$(jq_field 'length // 1')
+
+LOT_COUNT=$(jq_field 'length')
 assert_gte "al menos 1 lote activo del producto 1" "1" "$LOT_COUNT"
+
+# Suma total desde la lista de lotes (debe coincidir con /stock/)
+SUM_FROM_LIST=$(jq '[.[].quantityAvailable] | add // 0' "$TEMP_RESPONSE")
+assert_float_eq "suma quantityAvailable en lista = stock total" "$EXP_STOCK_FINAL" "$SUM_FROM_LIST"
+log_info "  Lotes encontrados: $LOT_COUNT  |  Suma quantityAvailable: $SUM_FROM_LIST"
+
+# Orden FEFO: si hay fecha de vencimiento, el primero fue el más antiguo
+FIRST_LOT_ID=$(jq_field '.[0].idInventoryLot')
+assert_eq "lote[0] en lista = lote del caso" "$ID_LOT" "$FIRST_LOT_ID"
+
+# 3-d  Lotes por producto filtrado por almacén 1
+# ─────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 3d — Lotes por almacén (idWarehouse=$ID_WAREHOUSE)"
+
+api_get "/inventory-lots/by-product/1.json?idWarehouse=${ID_WAREHOUSE}"
+assert_200 "GET /inventory-lots/by-product/1.json?idWarehouse=$ID_WAREHOUSE"
+
+LOT_COUNT_WH=$(jq_field 'length')
+assert_gte "al menos 1 lote en almacén $ID_WAREHOUSE" "1" "$LOT_COUNT_WH"
+
+SUM_WH=$(jq '[.[].quantityAvailable] | add // 0' "$TEMP_RESPONSE")
+assert_float_eq "stock en almacén $ID_WAREHOUSE = $EXP_STOCK_FINAL" "$EXP_STOCK_FINAL" "$SUM_WH"
+log_info "  Lotes en almacén $ID_WAREHOUSE: $LOT_COUNT_WH  |  Suma: $SUM_WH"
+
+# Todos los lotes deben pertenecer al almacén correcto
+WRONG_WH=$(jq "[.[] | select(.idWarehouse != $ID_WAREHOUSE)] | length" "$TEMP_RESPONSE")
+assert_eq "ningún lote en almacén diferente a $ID_WAREHOUSE" "0" "$WRONG_WH"
+
+# 3-e  Verificar que almacén no existente devuelve lista vacía (no 404)
+# ─────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 3e — Almacén inexistente → lista vacía"
+
+api_get "/inventory-lots/by-product/1.json?idWarehouse=9999"
+assert_200 "GET /inventory-lots/by-product/1.json?idWarehouse=9999"
+EMPTY_COUNT=$(jq_field 'length')
+assert_eq "almacén 9999 devuelve 0 lotes" "0" "$EMPTY_COUNT"
+
+# 3-f  Lote sugerido FEFO — sin filtro de almacén
+# ─────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 3f — Lote sugerido FEFO (sin filtro almacén)"
+
+api_get "/inventory-lots/suggest/1.json"
+assert_200 "GET /inventory-lots/suggest/1.json"
+
+SUGGEST_ID=$(jq_field '.idInventoryLot'       | grep -v null | head -1)
+SUGGEST_QTY=$(jq_field '.quantityAvailableNet' | grep -v null | head -1)
+SUGGEST_STATUS=$(jq_field '.statusLot'         | grep -v null | head -1)
+
+assert_eq       "lote sugerido = lote del caso"       "$ID_LOT"          "$SUGGEST_ID"
+assert_eq       "lote sugerido statusLot = Disponible" "Disponible"       "$SUGGEST_STATUS"
+assert_float_eq "lote sugerido quantityAvailableNet"   "$EXP_QTY_NET"    "${SUGGEST_QTY:-0}"
+log_info "  FEFO sugerido: id=$SUGGEST_ID  disponibleNeto=$SUGGEST_QTY"
+
+# 3-g  Lote sugerido FEFO — filtrado por almacén 1
+# ─────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 3g — Lote sugerido FEFO (almacén $ID_WAREHOUSE)"
+
+api_get "/inventory-lots/suggest/1.json?idWarehouse=${ID_WAREHOUSE}"
+assert_200 "GET /inventory-lots/suggest/1.json?idWarehouse=$ID_WAREHOUSE"
+
+SUGGEST_WH_ID=$(jq_field '.idInventoryLot'  | grep -v null | head -1)
+SUGGEST_WH_WH=$(jq_field '.idWarehouse'     | grep -v null | head -1)
+assert_eq "lote sugerido almacén $ID_WAREHOUSE = lote del caso" "$ID_LOT" "$SUGGEST_WH_ID"
+assert_eq "lote sugerido pertenece al almacén $ID_WAREHOUSE"    "$ID_WAREHOUSE" "$SUGGEST_WH_WH"
+
+# 3-h  Lote sugerido en almacén inexistente → 404
+# ─────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 3h — Lote sugerido en almacén inexistente → 404"
+
+api_get "/inventory-lots/suggest/1.json?idWarehouse=9999"
+if [[ "$HTTP_STATUS" == "404" ]]; then
+  log_ok "Almacén 9999 sin lotes → HTTP 404 ✓"
+else
+  log_fail "Almacén 9999 sin lotes → esperado HTTP 404, recibido $HTTP_STATUS"
+fi
+
+# 3-i  Catálogo de almacenes — el almacén del lote debe existir
+# ─────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 3i — Catálogo de almacenes"
+
+api_get "/warehouses/data.json"
+assert_200 "GET /warehouses/data.json"
+
+WH_COUNT=$(jq_field 'length')
+assert_gte "al menos 1 almacén registrado" "1" "$WH_COUNT"
+
+WH_EXISTS=$(jq "[.[] | select(.idWarehouse == $ID_WAREHOUSE)] | length" "$TEMP_RESPONSE")
+assert_eq "almacén id=$ID_WAREHOUSE existe en catálogo" "1" "$WH_EXISTS"
+
+WH_NAME=$(jq_field "[.[] | select(.idWarehouse == $ID_WAREHOUSE)] | first | .nameWarehouse")
+WH_ACTIVE=$(jq_field "[.[] | select(.idWarehouse == $ID_WAREHOUSE)] | first | .isActive")
+assert_eq "almacén $ID_WAREHOUSE isActive = true" "true" "$WH_ACTIVE"
+log_info  "  Almacén $ID_WAREHOUSE: '$WH_NAME'  activo=$WH_ACTIVE  total almacenes=$WH_COUNT"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECCIÓN 4 — FACTURA DE VENTA
@@ -331,7 +452,7 @@ log_info   "  FV idAccountingEntry (ingreso FV-): ${ID_ENTRY_FV_FROM_FV:-?}"
 
 section "SECCIÓN 4b — Guardia devolución parcial (cantidad > vendida → debe fallar)"
 
-# Fix Bug 4: PartialReturnAsync valida que quantity <= salesLine.QuantityBase.
+# PartialReturnAsync valida que quantity <= salesLine.QuantityBase.
 # Se vendieron 10 cajas del lote; intentar devolver 11 debe ser rechazado con HTTP 422.
 log_info "Probando guardia: devolver 11 cajas (>10 vendidas) desde lote $ID_LOT"
 
@@ -339,7 +460,7 @@ HTTP_STATUS_EXCESS=$(curl -k -s -o "$TEMP_RESPONSE" -w "%{http_code}" \
   -X POST "${HOST}/sales-invoices/${ID_SALES_INVOICE}/partial-return" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"dateReturn\":\"$(date '+%Y-%m-%d')\",\"descriptionReturn\":\"Test guardia — debe fallar\",\"lines\":[{\"idInventoryLot\":${ID_LOT},\"quantity\":11,\"totalLineAmount\":16500}]}")
+  -d "{\"dateReturn\":\"$(date '+%Y-%m-%d')\",\"descriptionReturn\":\"Test guardia — debe fallar\",\"refundMode\":\"EfectivoInmediato\",\"lines\":[{\"idInventoryLot\":${ID_LOT},\"quantity\":11,\"totalLineAmount\":16500}]}")
 
 if [[ "$HTTP_STATUS_EXCESS" == "422" ]]; then
   ERR_MSG=$(jq -r '.error // empty' "$TEMP_RESPONSE" 2>/dev/null | head -1)
@@ -350,6 +471,53 @@ elif [[ "$HTTP_STATUS_EXCESS" == "200" ]]; then
   log_warn "  Verificar que PartialReturnAsync valida quantity <= salesLine.QuantityBase"
 else
   log_fail "Guardia exceso: HTTP inesperado $HTTP_STATUS_EXCESS (esperado 422)"
+fi
+
+# ───────────────────────────────────────────────────────────────────────────────
+section "SECCIÓN 4c — Asento DEV-ING-FV (reintegro automático de la devolución)"
+
+if [[ -n "$ID_ENTRY_DEV_ING" && "$ID_ENTRY_DEV_ING" != "null" && "$ID_ENTRY_DEV_ING" != "0" ]]; then
+  api_get "/accounting-entries/${ID_ENTRY_DEV_ING}.json"
+  assert_200 "GET /accounting-entries/${ID_ENTRY_DEV_ING}.json"
+
+  ENTRY_NUMBER=$(jq_field '.numberEntry'     | grep -v null | head -1)
+  ENTRY_STATUS=$(jq_field '.statusEntry'     | grep -v null | head -1)
+  ENTRY_MODULE=$(jq_field '.originModule'    | grep -v null | head -1)
+  ENTRY_RECORD=$(jq_field '.idOriginRecord'  | grep -v null | head -1)
+
+  # Número debe empezar con DEV-ING-FV-
+  if [[ "$ENTRY_NUMBER" == DEV-ING-FV-* ]]; then
+    log_ok "numberEntry empieza con DEV-ING-FV-: $ENTRY_NUMBER"
+  else
+    log_fail "numberEntry inesperado: '$ENTRY_NUMBER' (esperado DEV-ING-FV-...)"
+  fi
+  assert_eq "statusEntry = Publicado"              "Publicado"          "$ENTRY_STATUS"
+  assert_eq "originModule = SalesReturnPartial"    "SalesReturnPartial" "$ENTRY_MODULE"
+  assert_eq "idOriginRecord = idSalesInvoice"      "$ID_SALES_INVOICE"  "$ENTRY_RECORD"
+
+  # Verificar montos por cuenta
+  LINES_COUNT=$(jq_field '.lines | length')
+  assert_gte "DEV-ING-FV tiene al menos 3 líneas (ingresos + IVA + caja)" "3" "$LINES_COUNT"
+
+  TOTAL_DR=$(jq '[.lines[].debitAmount]  | add // 0' "$TEMP_RESPONSE")
+  TOTAL_CR=$(jq '[.lines[].creditAmount] | add // 0' "$TEMP_RESPONSE")
+  assert_float_eq "DEV-ING-FV ΣDR = ΣCR (partida doble)" "$TOTAL_DR" "$TOTAL_CR"
+  assert_float_eq "DEV-ING-FV total = ₡5,085 (3 × ₡1,695)" "5085" "$TOTAL_DR"
+
+  # DR cuenta 117 (ingresos netos 3 × 1500)
+  DR_117=$(jq '[.lines[] | select(.idAccount == 117) | .debitAmount] | add // 0' "$TEMP_RESPONSE")
+  assert_float_eq "DEV-ING-FV DR cta 117 Ingresos = ₡4,500" "4500" "$DR_117"
+
+  # DR cuenta 127 (IVA revertido 4500 × 13%)
+  DR_127=$(jq '[.lines[] | select(.idAccount == 127) | .debitAmount] | add // 0' "$TEMP_RESPONSE")
+  assert_float_eq "DEV-ING-FV DR cta 127 IVA = ₡585" "585" "$DR_127"
+
+  # CR cuenta 106 (salida caja)
+  CR_106=$(jq '[.lines[] | select(.idAccount == 106) | .creditAmount] | add // 0' "$TEMP_RESPONSE")
+  assert_float_eq "DEV-ING-FV CR cta 106 Caja = ₡5,085" "5085" "$CR_106"
+else
+  log_warn "idEntryDevIng no disponible en resultado — omitiendo verificación DEV-ING-FV"
+  log_info "  Asegúrate de que el resultado_caso1_*.txt incluye 'idEntryDevIng'"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -407,7 +575,7 @@ STOCK_FINAL_CHECK=$(jq_field '.totalQuantity // .quantity // .stock // . | if ty
 [[ -z "$STOCK_FINAL_CHECK" ]] && STOCK_FINAL_CHECK=$(cat "$TEMP_RESPONSE" | tr -d '"' | xargs)
 assert_float_eq "Stock físico final = 91 u." "$EXP_STOCK_FINAL" "$STOCK_FINAL_CHECK"
 
-# Costo en libros (91 × 1130 = 102830)
+# Costo en libros (91 × 1000 = 91000)
 api_get "/inventory-lots/${ID_LOT}.json"
 LOT_COST_FINAL=$(jq_field '.unitCost // .costPerUnit // empty' | grep -v null | head -1)
 LOT_QTY_FINAL=$(jq_field  '.quantityAvailable // .quantity // empty' | grep -v null | head -1)

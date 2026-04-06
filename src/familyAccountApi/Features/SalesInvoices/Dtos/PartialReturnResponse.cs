@@ -6,4 +6,5 @@ public sealed record PartialReturnResponse(
     DateOnly DateReturn,
     string?  DescriptionReturn,
     decimal  TotalReturnAmount,
-    int?     IdAccountingEntry);
+    int?     IdAccountingEntry,
+    int?     IdAccountingEntryRefund);

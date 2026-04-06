@@ -467,6 +467,7 @@ BODY_RETURN=$(cat <<EOF
 {
   "dateReturn": "2026-04-05",
   "descriptionReturn": "Devolución parcial — cliente devuelve 3 cajas Coca-Cola dañadas en tránsito",
+  "refundMode": "EfectivoInmediato",
   "lines": [
     {
       "idInventoryLot": $ID_LOT,
@@ -489,52 +490,21 @@ if [[ -n "$PARTIAL_ENTRY" && "$PARTIAL_ENTRY" != "null" ]]; then
 else
   log_warn "La devolución no generó asiento COGS (puede ser que el tipo de venta no tenga IdAccountCOGS configurado)"
 fi
-log_info "  Esperado: DR 109 Inventario ₡3,390 / CR 119 COGS ₡3,390"
+log_info "  DEV-COGS: DR 109 Inventario ₡3,000 / CR 119 COGS ₡3,000  (3 u × ₡1,000 costo neto)"
+
+REFUND_ENTRY=$(jq_field '.idAccountingEntryRefund')
+if [[ -n "$REFUND_ENTRY" && "$REFUND_ENTRY" != "null" ]]; then
+  ID_ENTRY_REINTEGRO="$REFUND_ENTRY"
+  log_ok "idAccountingEntryRefund DEV-ING = $ID_ENTRY_REINTEGRO"
+else
+  log_warn "La devolución no generó asiento de reversión de ingresos"
+fi
+log_info "  DEV-ING:  DR 117 Ingresos ₡4,500 + DR 127 IVA ₡585 / CR 106 Caja ₡5,085"
 
 # ════════════════════════════════════════════════════════════════════════════════
-# PASO 7 — ASIENTO MANUAL DE REINTEGRO BANCARIO
+# PASO 7 — AJUSTE DE INVENTARIO (regalía: −2 cajas)
 # ════════════════════════════════════════════════════════════════════════════════
-step "PASO 7 — Asiento manual de reintegro bancario (₡5,085 al cliente)"
-
-BODY_REINTEGRO=$(cat <<'EOF'
-{
-  "idFiscalPeriod": 4,
-  "idCurrency": 1,
-  "numberEntry": "REINTEGRO-FV-001",
-  "dateEntry": "2026-04-05",
-  "descriptionEntry": "Reintegro en efectivo — devolución parcial 3 cajas Coca-Cola",
-  "statusEntry": "Publicado",
-  "referenceEntry": "Devolución parcial venta contado CRC",
-  "exchangeRateValue": 1.0,
-  "lines": [
-    {
-      "idAccount": 117,
-      "debitAmount": 5085.00,
-      "creditAmount": 0,
-      "descriptionLine": "Reversa ingreso venta — 3 cajas devueltas × ₡1,695"
-    },
-    {
-      "idAccount": 106,
-      "debitAmount": 0,
-      "creditAmount": 5085.00,
-      "descriptionLine": "Salida de caja — reintegro al cliente 3 cajas"
-    }
-  ]
-}
-EOF
-)
-
-api_call POST "/accounting-entries" "$BODY_REINTEGRO" "$TOKEN"
-assert_status 201 "create reintegro accounting-entry"
-
-ID_ENTRY_REINTEGRO=$(jq_field '.idAccountingEntry')
-log_ok "idAccountingEntry REINTEGRO = $ID_ENTRY_REINTEGRO"
-log_info "  Registrado: DR 117 Ingresos ₡5,085 / CR 106 Caja ₡5,085"
-
-# ════════════════════════════════════════════════════════════════════════════════
-# PASO 8 — AJUSTE DE INVENTARIO (regalía: −2 cajas)
-# ════════════════════════════════════════════════════════════════════════════════
-step "PASO 8a — Crear ajuste de inventario en borrador (regalía −2 cajas)"
+step "PASO 7a — Crear ajuste de inventario en borrador (regalía −2 cajas)"
 
 BODY_ADJ=$(cat <<EOF
 {
@@ -561,7 +531,7 @@ assert_status 201 "create inventory-adjustment"
 ID_ADJUSTMENT=$(jq_field '.idInventoryAdjustment')
 log_ok "idInventoryAdjustment = $ID_ADJUSTMENT"
 
-step "PASO 8b — Confirmar ajuste de inventario"
+step "PASO 7b — Confirmar ajuste de inventario"
 
 api_call POST "/inventory-adjustments/${ID_ADJUSTMENT}/confirm" "" "$TOKEN"
 assert_status 200 "confirm inventory-adjustment"
@@ -571,7 +541,7 @@ ADJ_ENTRY=$(jq_field '.idAccountingEntry')
 log_ok "statusAdjustment = $ADJ_STATUS"
 [[ "$ADJ_STATUS" == "Confirmado" ]] || fail "Se esperaba statusAdjustment = 'Confirmado', recibido: '$ADJ_STATUS'"
 log_ok "idAccountingEntry ADJ = $ADJ_ENTRY"
-log_info "  Esperado: DR 113 Merma ₡2,260 / CR 109 Inventario ₡2,260"
+log_info "  Esperado: DR 113 Merma ₡2,000 / CR 109 Inventario ₡2,000  (2 u × ₡1,000 costo neto)"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # VERIFICACIÓN FINAL DE STOCK
@@ -589,7 +559,7 @@ log_info "  Fórmula: 100 (compra) − 10 (venta) + 3 (devolución) − 2 (regal
 EXPECTED=91
 MATCH=$(awk "BEGIN { print ($STOCK_FINAL == $EXPECTED) ? \"yes\" : \"no\" }" 2>/dev/null || echo "no")
 if [[ "$MATCH" == "yes" ]]; then
-  log_ok "Stock = 91 ✓  Saldo de costo en libros esperado: 91 × ₡1,130 = ₡102,830"
+  log_ok "Stock = 91 ✓  Saldo de costo en libros esperado: 91 × ₡1,000 = ₡91,000"
 else
   log_warn "Stock final = $STOCK_FINAL (esperado 91 si la BD estaba limpia antes de correr el script)"
 fi
@@ -605,7 +575,7 @@ printf "  %-22s %s\n" "idPurchaseInvoice:"  "$ID_PURCHASE_INVOICE"
 printf "  %-22s %s\n" "idLot:"              "$ID_LOT"
 printf "  %-22s %s\n" "idSalesInvoice:"     "$ID_SALES_INVOICE"
 printf "  %-22s %s\n" "idEntryDevCogs:"     "$ID_ENTRY_DEV_COGS"
-printf "  %-22s %s\n" "idEntryReintegro:"   "$ID_ENTRY_REINTEGRO"
+printf "  %-22s %s\n" "idEntryDevIng:"      "$ID_ENTRY_REINTEGRO"
 printf "  %-22s %s\n" "idAdjustment:"       "$ID_ADJUSTMENT"
 printf "  %-22s %s\n" "idAdjEntry:"         "$ADJ_ENTRY"
 printf "  %-22s %s\n" "Stock final:"        "$STOCK_FINAL u."
@@ -655,7 +625,7 @@ idInventoryLot        = $ID_LOT
 idSalesInvoice        = $ID_SALES_INVOICE
 numberSalesInvoice    = $NUMBER_FV
 idEntryDevCogs        = $ID_ENTRY_DEV_COGS
-idEntryReintegro      = $ID_ENTRY_REINTEGRO
+idEntryDevIng         = $ID_ENTRY_REINTEGRO
 idInventoryAdjustment = $ID_ADJUSTMENT
 idAdjEntry            = $ADJ_ENTRY
 
@@ -666,10 +636,12 @@ compra_total          = 113000.00
 venta_subtotal        = 15000.00
 venta_iva             = 1950.00
 venta_total           = 16950.00
-cogs_venta            = 11300.00  (10 u × 1130)
+cogs_venta            = 10000.00  (10 u × 1000)
 devolucion_monto      = 5085.00   (3 u × 1695)
-cogs_reversa          = 3390.00   (3 u × 1130)
-regalia_costo         = 2260.00   (2 u × 1130)
+devolucion_subtotal   = 4500.00   (3 u × 1500 neto)
+devolucion_iva        = 585.00    (4500 × 13%)
+cogs_reversa          = 3000.00   (3 u × 1000)
+regalia_costo         = 2000.00   (2 u × 1000)
 
 # ── Verificación de stock ────────────────────────────────────
 stock_inicial         = 0
@@ -678,7 +650,7 @@ stock_post_venta      = 90
 stock_post_devolucion = 93
 stock_post_regalia    = 91
 stock_final_real      = $STOCK_FINAL
-stock_costo_libros    = 102830.00  (91 × 1130)
+stock_costo_libros    = 91000.00  (91 × 1000)
 
 # ── Cuentas involucradas ─────────────────────────────────────
 idAccount_caja_crc    = 106  (1.1.06.01 Caja CRC)

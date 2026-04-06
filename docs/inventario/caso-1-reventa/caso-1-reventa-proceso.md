@@ -40,23 +40,29 @@ Un cliente pide **10 cajas**. Se consultan los lotes disponibles, se elige el lo
 
 ### 4. Devolución parcial
 
-El cliente devuelve **3 cajas** dañadas en tránsito. El sistema las reintegra al lote (quedan 93) y genera la reversa de COGS.
+El cliente devuelve **3 cajas** dañadas en tránsito. Al confirmar, el sistema:
+- Reintegra las 3 cajas al lote (quedan 93).
+- Genera el asiento de reversión de COGS (`DEV-COGS-FV-`).
+- Genera el asiento de reintegro al cliente (`DEV-ING-FV-`), revirtiendo ingresos e IVA por separado y acreditando la cuenta bancaria o de nota de crédito según el modo elegido.
+
+```
+DEV-COGS-FV:  DR Inventario / CR COGS
+DEV-ING-FV:   DR Ingresos (neto) + DR IVA por Pagar / CR Banco·Caja  [EfectivoInmediato]
+              DR Ingresos (neto) + DR IVA por Pagar / CR Cuentas×Pagar·Cliente  [NotaCredito]
+```
 
 - `POST /sales-invoices/{id}/partial-return`
 
-> La cantidad a devolver por líte no puede superar la cantidad originalmente vendida en esa línea. El sistema responde HTTP 422 si se intenta devolver un exceso.
+| Campo | Descripción |
+|---|---|
+| `refundMode` | `"EfectivoInmediato"` — saldo a devolver en Banco/Caja; `"NotaCredito"` — saldo a favor del cliente |
+| `idAccountCreditNote` | Cuenta contable destino (requerida solo para `NotaCredito`) |
+
+> La cantidad a devolver por lote no puede superar la cantidad originalmente vendida en esa línea. El sistema responde HTTP 422 si se intenta devolver un exceso.
 
 ---
 
-### 5. Reintegro bancario al cliente (manual)
-
-La devolución del efectivo al cliente se registra como un asiento manual.
-
-- `POST /accounting-entries`
-
----
-
-### 6. Ajuste de inventario / Regalía
+### 5. Ajuste de inventario / Regalía
 
 Un administrador regala **2 cajas** a un cliente VIP. Se registra un ajuste de inventario con cantidad negativa y se confirma. El sistema descuenta las 2 cajas del lote (quedan 91) y genera el asiento de merma.
 
