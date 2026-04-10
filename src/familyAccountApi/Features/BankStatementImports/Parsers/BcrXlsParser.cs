@@ -22,30 +22,20 @@ public sealed record BcrColumnMapping
     public int SkipHeaderRows  { get; init; } = 1;
 }
 
-public sealed record ParsedTransaction(
-    DateOnly  AccountingDate,
-    DateOnly  TransactionDate,
-    TimeOnly? TransactionTime,
-    string?   DocumentNumber,
-    string    Description,
-    decimal?  DebitAmount,
-    decimal?  CreditAmount,
-    decimal?  Balance);
-
 /// <summary>
 /// Parsea el formato HTML-XLS que exporta el Banco de Costa Rica (BCR).
 /// El archivo .xls es en realidad HTML con una tabla <c>id="t1"</c>.
 /// </summary>
-public static class BcrXlsParser
+public sealed class BcrXlsParser : IBankStatementParser
 {
     private static readonly JsonSerializerOptions JsonOpts =
         new(JsonSerializerDefaults.Web);
 
-    public static IReadOnlyList<ParsedTransaction> Parse(
-        Stream     fileStream,
-        string     columnMappingsJson,
-        string?    dateFormat = "dd/MM/yyyy",
-        string?    timeFormat = "HH:mm:ss")
+    public IReadOnlyList<ParsedTransaction> Parse(
+        Stream  fileStream,
+        string  columnMappingsJson,
+        string? dateFormat = "dd/MM/yyyy",
+        string? timeFormat = "HH:mm:ss")
     {
         var mapping = JsonSerializer.Deserialize<BcrColumnMapping>(columnMappingsJson, JsonOpts)
                       ?? new BcrColumnMapping();

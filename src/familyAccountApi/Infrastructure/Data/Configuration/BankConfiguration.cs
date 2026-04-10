@@ -20,7 +20,7 @@ public sealed class BankConfiguration : IEntityTypeConfiguration<Bank>
             .HasMaxLength(20)
             .IsRequired()
             .IsUnicode(false)
-            .HasComment("Código único de la entidad bancaria. Ejemplo: BCR, BN, BAC, COOPEALIANZA.");
+            .HasComment("Código único de la entidad bancaria. Ejemplo: BCR, BNCR, BAC, COOPEALIANZA.");
 
         builder.Property(b => b.NameBank)
             .HasMaxLength(150)
@@ -38,12 +38,11 @@ public sealed class BankConfiguration : IEntityTypeConfiguration<Bank>
 
         // ── Seed ──────────────────────────────────────────────────────────────
         builder.HasData(
-            new Bank { IdBank = 1, CodeBank = "BCR",          NameBank = "Banco de Costa Rica",                    IsActive = true },
-            new Bank { IdBank = 2, CodeBank = "BAC",          NameBank = "BAC Credomatic",                         IsActive = true },
-            new Bank { IdBank = 3, CodeBank = "BN",           NameBank = "Banco Nacional de Costa Rica",           IsActive = true },
-            new Bank { IdBank = 4, CodeBank = "COOPEALIANZA", NameBank = "Coopealianza",                           IsActive = true },
-            new Bank { IdBank = 5, CodeBank = "DAVIVIENDA",   NameBank = "Davivienda",                             IsActive = true },
-            new Bank { IdBank = 6, CodeBank = "BPOPULAR",     NameBank = "Banco Popular y de Desarrollo Comunal", IsActive = true }
+            new Bank { IdBank = 1, CodeBank = "BCR",          NameBank = "Banco de Costa Rica",          IsActive = true },
+            new Bank { IdBank = 2, CodeBank = "BAC",          NameBank = "BAC Credomatic",                IsActive = true },
+            new Bank { IdBank = 3, CodeBank = "BNCR",         NameBank = "Banco Nacional de Costa Rica", IsActive = true },
+            new Bank { IdBank = 4, CodeBank = "COOPEALIANZA", NameBank = "Coopealianza",                 IsActive = true },
+            new Bank { IdBank = 5, CodeBank = "DAVIVIENDA",   NameBank = "Davivienda",                   IsActive = true }
         );
     }
 }

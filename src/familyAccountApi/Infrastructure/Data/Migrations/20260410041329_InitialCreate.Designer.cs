@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260406194256_InitialCreate")]
+    [Migration("20260410041329_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -228,7 +228,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             IdAccountParent = 7,
                             IsActive = true,
                             LevelAccount = 3,
-                            NameAccount = "Banco Nacional de Costa Rica (BN)",
+                            NameAccount = "Banco Nacional de Costa Rica (BNCR)",
                             TypeAccount = "Activo"
                         },
                         new
@@ -239,7 +239,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             IdAccountParent = 33,
                             IsActive = true,
                             LevelAccount = 4,
-                            NameAccount = "BN - Cta. CR86015100020019688637 (₡) - Baltodano Cubillo Ezequiel",
+                            NameAccount = "BNCR - Cta. CR86015100020019688637 (₡) - Baltodano Cubillo Ezequiel",
                             TypeAccount = "Activo"
                         },
                         new
@@ -250,7 +250,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             IdAccountParent = 33,
                             IsActive = true,
                             LevelAccount = 4,
-                            NameAccount = "BN - Cta. CR06015107220020012339 ($) - Baltodano Cubillo Ezequiel",
+                            NameAccount = "BNCR - Cta. CR06015107220020012339 ($) - Baltodano Cubillo Ezequiel",
                             TypeAccount = "Activo"
                         },
                         new
@@ -404,40 +404,73 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             IdAccountParent = 28,
                             IsActive = true,
                             LevelAccount = 4,
-                            NameAccount = "BAC - AMEX ****-8052 - Baltodano Cubillo Ezequiel",
+                            NameAccount = "BAC - AMEX  CR64010202312918989651 (₡) - Baltodano Cubillo Ezequiel",
+                            TypeAccount = "Pasivo"
+                        },
+                        new
+                        {
+                            IdAccount = 131,
+                            AllowsMovements = true,
+                            CodeAccount = "2.1.01.02",
+                            IdAccountParent = 28,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "BAC - AMEX  CR13010202321157328803 ($) - Baltodano Cubillo Ezequiel",
                             TypeAccount = "Pasivo"
                         },
                         new
                         {
                             IdAccount = 30,
                             AllowsMovements = true,
-                            CodeAccount = "2.1.01.02",
+                            CodeAccount = "2.1.01.03",
                             IdAccountParent = 28,
                             IsActive = true,
                             LevelAccount = 4,
-                            NameAccount = "BAC - MCARD ****-6515 - Baltodano Cubillo Ezequiel",
+                            NameAccount = "BAC - MCARD CR69010202510369031047 (₡) - Baltodano Cubillo Ezequiel",
+                            TypeAccount = "Pasivo"
+                        },
+                        new
+                        {
+                            IdAccount = 132,
+                            AllowsMovements = true,
+                            CodeAccount = "2.1.01.04",
+                            IdAccountParent = 28,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "BAC - MCARD CR17010202526537778556 ($) - Baltodano Cubillo Ezequiel",
                             TypeAccount = "Pasivo"
                         },
                         new
                         {
                             IdAccount = 31,
                             AllowsMovements = true,
-                            CodeAccount = "2.1.01.03",
+                            CodeAccount = "2.1.01.05",
                             IdAccountParent = 28,
                             IsActive = true,
                             LevelAccount = 4,
-                            NameAccount = "BAC - MCARD ****-8608 - Baltodano Cubillo Ezequiel",
+                            NameAccount = "BAC - MCARD CR48010202514509181545 (₡) - Baltodano Cubillo Ezequiel",
+                            TypeAccount = "Pasivo"
+                        },
+                        new
+                        {
+                            IdAccount = 133,
+                            AllowsMovements = true,
+                            CodeAccount = "2.1.01.06",
+                            IdAccountParent = 28,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "BAC - MCARD CR18010202522447454214 ($) - Baltodano Cubillo Ezequiel",
                             TypeAccount = "Pasivo"
                         },
                         new
                         {
                             IdAccount = 32,
                             AllowsMovements = true,
-                            CodeAccount = "2.1.01.04",
+                            CodeAccount = "2.1.01.07",
                             IdAccountParent = 28,
                             IsActive = true,
                             LevelAccount = 4,
-                            NameAccount = "BAC - VISA ****-1593 - Baltodano Cubillo Ezequiel",
+                            NameAccount = "BAC - VISA  ****-1593               (₡) - Baltodano Cubillo Ezequiel",
                             TypeAccount = "Pasivo"
                         },
                         new
@@ -1613,7 +1646,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(20)")
                         .HasColumnName("codeBank")
-                        .HasComment("Código único de la entidad bancaria. Ejemplo: BCR, BN, BAC, COOPEALIANZA.");
+                        .HasComment("Código único de la entidad bancaria. Ejemplo: BCR, BNCR, BAC, COOPEALIANZA.");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -1658,7 +1691,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         new
                         {
                             IdBank = 3,
-                            CodeBank = "BN",
+                            CodeBank = "BNCR",
                             IsActive = true,
                             NameBank = "Banco Nacional de Costa Rica"
                         },
@@ -1675,13 +1708,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             CodeBank = "DAVIVIENDA",
                             IsActive = true,
                             NameBank = "Davivienda"
-                        },
-                        new
-                        {
-                            IdBank = 6,
-                            CodeBank = "BPOPULAR",
-                            IsActive = true,
-                            NameBank = "Banco Popular y de Desarrollo Comunal"
                         });
                 });
 
@@ -1791,8 +1817,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             IdBankAccount = 3,
                             AccountHolder = "Baltodano Cubillo Ezequiel",
-                            AccountNumber = "****-8052",
-                            CodeBankAccount = "BAC-CC-AMEX-8052",
+                            AccountNumber = "CR64010202312918989651",
+                            CodeBankAccount = "BAC-CC-AMEX-8052-CRC",
                             IdAccount = 29,
                             IdBank = 2,
                             IdCurrency = 1,
@@ -1802,8 +1828,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             IdBankAccount = 4,
                             AccountHolder = "Baltodano Cubillo Ezequiel",
-                            AccountNumber = "****-6515",
-                            CodeBankAccount = "BAC-CC-MC-6515",
+                            AccountNumber = "CR69010202510369031047",
+                            CodeBankAccount = "BAC-CC-MC-6515-CRC",
                             IdAccount = 30,
                             IdBank = 2,
                             IdCurrency = 1,
@@ -1813,8 +1839,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         {
                             IdBankAccount = 5,
                             AccountHolder = "Baltodano Cubillo Ezequiel",
-                            AccountNumber = "****-8608",
-                            CodeBankAccount = "BAC-CC-MC-8608",
+                            AccountNumber = "CR48010202514509181545",
+                            CodeBankAccount = "BAC-CC-MC-8608-CRC",
                             IdAccount = 31,
                             IdBank = 2,
                             IdCurrency = 1,
@@ -1825,7 +1851,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             IdBankAccount = 6,
                             AccountHolder = "Baltodano Cubillo Ezequiel",
                             AccountNumber = "****-1593",
-                            CodeBankAccount = "BAC-CC-VISA-1593",
+                            CodeBankAccount = "BAC-CC-VISA-1593-CRC",
                             IdAccount = 32,
                             IdBank = 2,
                             IdCurrency = 1,
@@ -1833,10 +1859,43 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         },
                         new
                         {
+                            IdBankAccount = 12,
+                            AccountHolder = "Baltodano Cubillo Ezequiel",
+                            AccountNumber = "CR13010202321157328803",
+                            CodeBankAccount = "BAC-CC-AMEX-8052-USD",
+                            IdAccount = 131,
+                            IdBank = 2,
+                            IdCurrency = 2,
+                            IsActive = true
+                        },
+                        new
+                        {
+                            IdBankAccount = 13,
+                            AccountHolder = "Baltodano Cubillo Ezequiel",
+                            AccountNumber = "CR17010202526537778556",
+                            CodeBankAccount = "BAC-CC-MC-6515-USD",
+                            IdAccount = 132,
+                            IdBank = 2,
+                            IdCurrency = 2,
+                            IsActive = true
+                        },
+                        new
+                        {
+                            IdBankAccount = 14,
+                            AccountHolder = "Baltodano Cubillo Ezequiel",
+                            AccountNumber = "CR18010202522447454214",
+                            CodeBankAccount = "BAC-CC-MC-8608-USD",
+                            IdAccount = 133,
+                            IdBank = 2,
+                            IdCurrency = 2,
+                            IsActive = true
+                        },
+                        new
+                        {
                             IdBankAccount = 7,
                             AccountHolder = "Baltodano Cubillo Ezequiel",
                             AccountNumber = "CR86015100020019688637",
-                            CodeBankAccount = "BN-AHO-CRC-001",
+                            CodeBankAccount = "BNCR-AHO-CRC-001",
                             IdAccount = 34,
                             IdBank = 3,
                             IdCurrency = 1,
@@ -1847,7 +1906,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             IdBankAccount = 8,
                             AccountHolder = "Baltodano Cubillo Ezequiel",
                             AccountNumber = "CR06015107220020012339",
-                            CodeBankAccount = "BN-AHO-USD-001",
+                            CodeBankAccount = "BNCR-AHO-USD-001",
                             IdAccount = 35,
                             IdBank = 3,
                             IdCurrency = 2,
@@ -2411,10 +2470,34 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             ColumnMappings = "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}",
                             DateFormat = "dd/MM/yyyy",
                             IsActive = true,
-                            KeywordRules = "[\r\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\r\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\r\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\r\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\r\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\r\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\r\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\r\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\r\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\r\n]",
+                            KeywordRules = "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\",\"DB AH TELEF\",\"MOVISTAR\",\"KOLBI\",\"PG AH TIEMPO AIRE TD\"],\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\",\"TRANSFERENC BANCOBCR\"],\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\",\"MONEDERO SINPE MOVIL\"],\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]",
                             NameTemplate = "BCR – Movimientos de Cuenta (HTML-XLS)",
                             Notes = "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.",
                             TimeFormat = "HH:mm:ss"
+                        },
+                        new
+                        {
+                            IdBankStatementTemplate = 2,
+                            BankName = "BAC Credomatic",
+                            CodeTemplate = "BAC-TXT-V1",
+                            ColumnMappings = "{}",
+                            DateFormat = "dd/MM/yyyy",
+                            IsActive = true,
+                            KeywordRules = "[\n  {\"keywords\":[\"SU PAGO RECIBIDO GRACIAS\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"UBER\",\"DLC*UBER\",\"DLC*LYFT\",\"BOLT\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"APPLE.COM\",\"NETFLIX.COM\",\"GITHUB\",\"SPOTIFY\",\"YOUTUBE\",\"AMAZON\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"WALMART\",\"MAXIPALI\",\"MXM \",\"SUPER SALON\",\"AUTOMERCADO\",\"PALI \"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"IVA -\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"}\n]",
+                            NameTemplate = "BAC Credomatic – Estado de Cuenta Tarjeta (TXT)",
+                            Notes = "Archivo .txt pipe-delimitado exportado desde el portal BAC. Aplica para estados de cuenta de tarjetas de crédito (AMEX, Visa, Mastercard). La columna Local contiene montos en CRC y Dollars en USD; se usa el no-cero."
+                        },
+                        new
+                        {
+                            IdBankStatementTemplate = 3,
+                            BankName = "Banco Nacional de Costa Rica",
+                            CodeTemplate = "BNCR-CSV-V1",
+                            ColumnMappings = "{}",
+                            DateFormat = "dd/MM/yyyy",
+                            IsActive = true,
+                            KeywordRules = "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                            \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERESES GANADOS\"],\n                                            \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"TRANSFERENCIA SINPE\",\"SINPE MOVIL\",\"PAGO TARJETA BAC\",\"PAGOTARJETABAC\",\"SEMANA MAXIPAL\",\"PAGO SERVICIO PROFESIONAL\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\"],\n                                            \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TARJET\",\"PAGO TC\",\"TARJETA CRED\"],\n                                            \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                            \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL DEB\",\"DEB SINPE\",\"CARGO SINPE\",\"TRANSF DEB\"],\n                                            \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]",
+                            NameTemplate = "BNCR – Movimientos de Cuenta (CSV)",
+                            Notes = "Archivo .csv punto-y-coma exportado desde BN en línea. Codificación Latin-1/Windows-1252. Aplica para cuentas de ahorros en colones y dólares."
                         });
                 });
 

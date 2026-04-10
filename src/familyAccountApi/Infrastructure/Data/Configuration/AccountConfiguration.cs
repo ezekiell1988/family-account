@@ -92,10 +92,10 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             new Account { IdAccount = 26, CodeAccount = "1.1.02",    NameAccount = "BAC Credomatic",                                                           TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,  AllowsMovements = false, IsActive = true },
             new Account { IdAccount = 27, CodeAccount = "1.1.02.01", NameAccount = "BAC - Cta. CR73010200009497305680 - Baltodano Cubillo Ezequiel",            TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 26, AllowsMovements = true,  IsActive = true },
 
-            // ── Nivel 3: Banco Nacional de Costa Rica (BN) ───────────────────
-            new Account { IdAccount = 33, CodeAccount = "1.1.03",    NameAccount = "Banco Nacional de Costa Rica (BN)",                                        TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,  AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 34, CodeAccount = "1.1.03.01", NameAccount = "BN - Cta. CR86015100020019688637 (₡) - Baltodano Cubillo Ezequiel",        TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 33, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 35, CodeAccount = "1.1.03.02", NameAccount = "BN - Cta. CR06015107220020012339 ($) - Baltodano Cubillo Ezequiel",        TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 33, AllowsMovements = true,  IsActive = true },
+            // ── Nivel 3: Banco Nacional de Costa Rica (BNCR) ──────────────────
+            new Account { IdAccount = 33, CodeAccount = "1.1.03",    NameAccount = "Banco Nacional de Costa Rica (BNCR)",                                      TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,  AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 34, CodeAccount = "1.1.03.01", NameAccount = "BNCR - Cta. CR86015100020019688637 (₡) - Baltodano Cubillo Ezequiel",     TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 33, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 35, CodeAccount = "1.1.03.02", NameAccount = "BNCR - Cta. CR06015107220020012339 ($) - Baltodano Cubillo Ezequiel",     TypeAccount = "Activo", LevelAccount = 4, IdAccountParent = 33, AllowsMovements = true,  IsActive = true },
 
             // ── Nivel 3: Coopealianza (hijos de Activo Corriente) ────────────
             new Account { IdAccount = 38, CodeAccount = "1.1.04",    NameAccount = "Coopealianza",                                                                            TypeAccount = "Activo", LevelAccount = 3, IdAccountParent = 7,  AllowsMovements = false, IsActive = true },
@@ -123,10 +123,13 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
 
             // ── Nivel 3: Tarjetas BAC Credomatic (hijos de Pasivo Corriente) ──
             new Account { IdAccount = 28, CodeAccount = "2.1.01",    NameAccount = "BAC Credomatic - Tarjetas",                TypeAccount = "Pasivo", LevelAccount = 3, IdAccountParent = 9,  AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 29, CodeAccount = "2.1.01.01", NameAccount = "BAC - AMEX ****-8052 - Baltodano Cubillo Ezequiel",  TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 30, CodeAccount = "2.1.01.02", NameAccount = "BAC - MCARD ****-6515 - Baltodano Cubillo Ezequiel", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 31, CodeAccount = "2.1.01.03", NameAccount = "BAC - MCARD ****-8608 - Baltodano Cubillo Ezequiel", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 32, CodeAccount = "2.1.01.04", NameAccount = "BAC - VISA ****-1593 - Baltodano Cubillo Ezequiel",  TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 29,  CodeAccount = "2.1.01.01", NameAccount = "BAC - AMEX  CR64010202312918989651 (₡) - Baltodano Cubillo Ezequiel",  TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 131, CodeAccount = "2.1.01.02", NameAccount = "BAC - AMEX  CR13010202321157328803 ($) - Baltodano Cubillo Ezequiel",  TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 30,  CodeAccount = "2.1.01.03", NameAccount = "BAC - MCARD CR69010202510369031047 (₡) - Baltodano Cubillo Ezequiel", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 132, CodeAccount = "2.1.01.04", NameAccount = "BAC - MCARD CR17010202526537778556 ($) - Baltodano Cubillo Ezequiel", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 31,  CodeAccount = "2.1.01.05", NameAccount = "BAC - MCARD CR48010202514509181545 (₡) - Baltodano Cubillo Ezequiel", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 133, CodeAccount = "2.1.01.06", NameAccount = "BAC - MCARD CR18010202522447454214 ($) - Baltodano Cubillo Ezequiel", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 32,  CodeAccount = "2.1.01.07", NameAccount = "BAC - VISA  ****-1593               (₡) - Baltodano Cubillo Ezequiel",  TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true,  IsActive = true },
 
             // ── Nivel 3: Coopealianza - Préstamos (Pasivo Corriente) ──────────
             new Account { IdAccount = 40, CodeAccount = "2.1.02",    NameAccount = "Coopealianza - Préstamos",                                                              TypeAccount = "Pasivo", LevelAccount = 3, IdAccountParent = 9,  AllowsMovements = false, IsActive = true },

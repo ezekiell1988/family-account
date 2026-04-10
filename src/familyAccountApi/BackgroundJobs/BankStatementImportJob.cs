@@ -10,7 +10,7 @@ namespace FamilyAccountApi.BackgroundJobs;
 /// Job de Hangfire que ejecuta el ciclo completo de importación de un extracto bancario:
 ///   1. Recupera el archivo (bytes) guardado en Redis por el endpoint de upload.
 ///   2. Marca la importación como "Procesando".
-///   3. Parsea el HTML-XLS con <see cref="BcrXlsParser"/>.
+///   3. Selecciona el parser adecuado vía <see cref="BankStatementParserFactory"/>.
 ///   4. Auto-clasifica cada transacción con <see cref="KeywordClassifier"/>.
 ///   5. Persiste las <see cref="BankStatementTransaction"/> en base de datos.
 ///   6. Actualiza el registro de importación a "Completado" (o "Error").
@@ -19,7 +19,8 @@ namespace FamilyAccountApi.BackgroundJobs;
 public sealed class BankStatementImportJob(
     AppDbContext db,
     IDistributedCache cache,
-    ILogger<BankStatementImportJob> logger)
+    ILogger<BankStatementImportJob> logger,
+    BankStatementParserFactory parserFactory)
 {
     /// <summary>Clave Redis donde se almacena el archivo mientras espera ser procesado.</summary>
     public static string BuildRedisKey(int importId) => $"bankstatement:upload:{importId}";
@@ -73,9 +74,10 @@ public sealed class BankStatementImportJob(
                 .Where(t => t.IdBankStatementImport == importId)
                 .ExecuteDeleteAsync();
 
-            // ── 4. Parsear el archivo HTML-XLS ────────────────────────────────
+            // ── 4. Parsear el archivo según el formato del template ───────────────
             using var stream = new MemoryStream(fileBytes);
-            var parsed = BcrXlsParser.Parse(
+            var parser = parserFactory.GetParser(template.CodeTemplate);
+            var parsed = parser.Parse(
                 stream,
                 template.ColumnMappings,
                 template.DateFormat,

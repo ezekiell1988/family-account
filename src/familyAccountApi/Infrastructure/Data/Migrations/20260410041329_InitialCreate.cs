@@ -46,7 +46,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 {
                     idBank = table.Column<int>(type: "int", nullable: false, comment: "Identificador único autoincremental del banco.")
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    codeBank = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false, comment: "Código único de la entidad bancaria. Ejemplo: BCR, BN, BAC, COOPEALIANZA."),
+                    codeBank = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false, comment: "Código único de la entidad bancaria. Ejemplo: BCR, BNCR, BAC, COOPEALIANZA."),
                     nameBank = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false, comment: "Nombre completo de la entidad bancaria."),
                     isActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true, comment: "Indica si el banco está activo y disponible para asociar cuentas bancarias.")
                 },
@@ -2523,16 +2523,20 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 {
                     { 1, "BCR", true, "Banco de Costa Rica" },
                     { 2, "BAC", true, "BAC Credomatic" },
-                    { 3, "BN", true, "Banco Nacional de Costa Rica" },
+                    { 3, "BNCR", true, "Banco Nacional de Costa Rica" },
                     { 4, "COOPEALIANZA", true, "Coopealianza" },
-                    { 5, "DAVIVIENDA", true, "Davivienda" },
-                    { 6, "BPOPULAR", true, "Banco Popular y de Desarrollo Comunal" }
+                    { 5, "DAVIVIENDA", true, "Davivienda" }
                 });
 
             migrationBuilder.InsertData(
                 table: "bankStatementTemplate",
                 columns: new[] { "idBankStatementTemplate", "bankName", "codeTemplate", "columnMappings", "dateFormat", "isActive", "keywordRules", "nameTemplate", "notes", "timeFormat" },
-                values: new object[] { 1, "Banco de Costa Rica", "BCR-HTML-XLS-V1", "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}", "dd/MM/yyyy", true, "[\r\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\r\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\r\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\r\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\r\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\r\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\"],\r\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\r\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\r\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\"],\r\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\r\n]", "BCR – Movimientos de Cuenta (HTML-XLS)", "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.", "HH:mm:ss" });
+                values: new object[,]
+                {
+                    { 1, "Banco de Costa Rica", "BCR-HTML-XLS-V1", "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\",\"DB AH TELEF\",\"MOVISTAR\",\"KOLBI\",\"PG AH TIEMPO AIRE TD\"],\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\",\"TRANSFERENC BANCOBCR\"],\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\",\"MONEDERO SINPE MOVIL\"],\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]", "BCR – Movimientos de Cuenta (HTML-XLS)", "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.", "HH:mm:ss" },
+                    { 2, "BAC Credomatic", "BAC-TXT-V1", "{}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SU PAGO RECIBIDO GRACIAS\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"UBER\",\"DLC*UBER\",\"DLC*LYFT\",\"BOLT\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"APPLE.COM\",\"NETFLIX.COM\",\"GITHUB\",\"SPOTIFY\",\"YOUTUBE\",\"AMAZON\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"WALMART\",\"MAXIPALI\",\"MXM \",\"SUPER SALON\",\"AUTOMERCADO\",\"PALI \"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"IVA -\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"}\n]", "BAC Credomatic – Estado de Cuenta Tarjeta (TXT)", "Archivo .txt pipe-delimitado exportado desde el portal BAC. Aplica para estados de cuenta de tarjetas de crédito (AMEX, Visa, Mastercard). La columna Local contiene montos en CRC y Dollars en USD; se usa el no-cero.", null },
+                    { 3, "Banco Nacional de Costa Rica", "BNCR-CSV-V1", "{}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                            \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERESES GANADOS\"],\n                                            \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"TRANSFERENCIA SINPE\",\"SINPE MOVIL\",\"PAGO TARJETA BAC\",\"PAGOTARJETABAC\",\"SEMANA MAXIPAL\",\"PAGO SERVICIO PROFESIONAL\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\"],\n                                            \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TARJET\",\"PAGO TC\",\"TARJETA CRED\"],\n                                            \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                            \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL DEB\",\"DEB SINPE\",\"CARGO SINPE\",\"TRANSF DEB\"],\n                                            \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]", "BNCR – Movimientos de Cuenta (CSV)", "Archivo .csv punto-y-coma exportado desde BN en línea. Codificación Latin-1/Windows-1252. Aplica para cuentas de ahorros en colones y dólares.", null }
+                });
 
             migrationBuilder.InsertData(
                 table: "company",
@@ -2731,7 +2735,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 24, false, "1.1.01", 7, true, 3, "Banco de Costa Rica (BCR)", "Activo" },
                     { 26, false, "1.1.02", 7, true, 3, "BAC Credomatic", "Activo" },
                     { 28, false, "2.1.01", 9, true, 3, "BAC Credomatic - Tarjetas", "Pasivo" },
-                    { 33, false, "1.1.03", 7, true, 3, "Banco Nacional de Costa Rica (BN)", "Activo" },
+                    { 33, false, "1.1.03", 7, true, 3, "Banco Nacional de Costa Rica (BNCR)", "Activo" },
                     { 36, false, "1.2.01", 8, true, 3, "Coopealianza", "Activo" },
                     { 38, false, "1.1.04", 7, true, 3, "Coopealianza", "Activo" },
                     { 40, false, "2.1.02", 9, true, 3, "Coopealianza - Préstamos", "Pasivo" },
@@ -2859,12 +2863,12 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 {
                     { 25, true, "1.1.01.01", 24, true, 4, "BCR - Cta. 07015202001294229652 - Soto Arce Karen Tatiana", "Activo" },
                     { 27, true, "1.1.02.01", 26, true, 4, "BAC - Cta. CR73010200009497305680 - Baltodano Cubillo Ezequiel", "Activo" },
-                    { 29, true, "2.1.01.01", 28, true, 4, "BAC - AMEX ****-8052 - Baltodano Cubillo Ezequiel", "Pasivo" },
-                    { 30, true, "2.1.01.02", 28, true, 4, "BAC - MCARD ****-6515 - Baltodano Cubillo Ezequiel", "Pasivo" },
-                    { 31, true, "2.1.01.03", 28, true, 4, "BAC - MCARD ****-8608 - Baltodano Cubillo Ezequiel", "Pasivo" },
-                    { 32, true, "2.1.01.04", 28, true, 4, "BAC - VISA ****-1593 - Baltodano Cubillo Ezequiel", "Pasivo" },
-                    { 34, true, "1.1.03.01", 33, true, 4, "BN - Cta. CR86015100020019688637 (₡) - Baltodano Cubillo Ezequiel", "Activo" },
-                    { 35, true, "1.1.03.02", 33, true, 4, "BN - Cta. CR06015107220020012339 ($) - Baltodano Cubillo Ezequiel", "Activo" },
+                    { 29, true, "2.1.01.01", 28, true, 4, "BAC - AMEX  CR64010202312918989651 (₡) - Baltodano Cubillo Ezequiel", "Pasivo" },
+                    { 30, true, "2.1.01.03", 28, true, 4, "BAC - MCARD CR69010202510369031047 (₡) - Baltodano Cubillo Ezequiel", "Pasivo" },
+                    { 31, true, "2.1.01.05", 28, true, 4, "BAC - MCARD CR48010202514509181545 (₡) - Baltodano Cubillo Ezequiel", "Pasivo" },
+                    { 32, true, "2.1.01.07", 28, true, 4, "BAC - VISA  ****-1593               (₡) - Baltodano Cubillo Ezequiel", "Pasivo" },
+                    { 34, true, "1.1.03.01", 33, true, 4, "BNCR - Cta. CR86015100020019688637 (₡) - Baltodano Cubillo Ezequiel", "Activo" },
+                    { 35, true, "1.1.03.02", 33, true, 4, "BNCR - Cta. CR06015107220020012339 ($) - Baltodano Cubillo Ezequiel", "Activo" },
                     { 37, true, "1.2.01.01", 36, true, 4, "Coopealianza - Aporte al Patrimonio CR02081300010008440263 (₡) - Baltodano Cubillo Ezequiel", "Activo" },
                     { 39, true, "1.1.04.01", 38, true, 4, "Coopealianza - Cta. CR54081300210008440287 (₡) - Baltodano Cubillo Ezequiel", "Activo" },
                     { 42, true, "2.2.01.01", 41, true, 4, "Coopealianza - Préstamo CR05081302810003488995 (₡) - Baltodano Cubillo Ezequiel", "Pasivo" },
@@ -2885,7 +2889,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 127, true, "2.1.04.01", 126, true, 4, "IVA por Pagar CRC (₡)", "Pasivo" },
                     { 128, true, "2.1.04.02", 126, true, 4, "IVA por Pagar USD ($)", "Pasivo" },
                     { 129, true, "5.14.01.01", 113, true, 4, "Merma Normal", "Gasto" },
-                    { 130, true, "5.14.01.02", 113, true, 4, "Merma Anormal", "Gasto" }
+                    { 130, true, "5.14.01.02", 113, true, 4, "Merma Anormal", "Gasto" },
+                    { 131, true, "2.1.01.02", 28, true, 4, "BAC - AMEX  CR13010202321157328803 ($) - Baltodano Cubillo Ezequiel", "Pasivo" },
+                    { 132, true, "2.1.01.04", 28, true, 4, "BAC - MCARD CR17010202526537778556 ($) - Baltodano Cubillo Ezequiel", "Pasivo" },
+                    { 133, true, "2.1.01.06", 28, true, 4, "BAC - MCARD CR18010202522447454214 ($) - Baltodano Cubillo Ezequiel", "Pasivo" }
                 });
 
             migrationBuilder.InsertData(
@@ -2983,15 +2990,18 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 {
                     { 1, "Soto Arce Karen Tatiana", "07015202001294229652", "BCR-AHO-001", 25, 1, 1, true },
                     { 2, "Baltodano Cubillo Ezequiel", "CR73010200009497305680", "BAC-AHO-001", 27, 2, 1, true },
-                    { 3, "Baltodano Cubillo Ezequiel", "****-8052", "BAC-CC-AMEX-8052", 29, 2, 1, true },
-                    { 4, "Baltodano Cubillo Ezequiel", "****-6515", "BAC-CC-MC-6515", 30, 2, 1, true },
-                    { 5, "Baltodano Cubillo Ezequiel", "****-8608", "BAC-CC-MC-8608", 31, 2, 1, true },
-                    { 6, "Baltodano Cubillo Ezequiel", "****-1593", "BAC-CC-VISA-1593", 32, 2, 1, true },
-                    { 7, "Baltodano Cubillo Ezequiel", "CR86015100020019688637", "BN-AHO-CRC-001", 34, 3, 1, true },
-                    { 8, "Baltodano Cubillo Ezequiel", "CR06015107220020012339", "BN-AHO-USD-001", 35, 3, 2, true },
+                    { 3, "Baltodano Cubillo Ezequiel", "CR64010202312918989651", "BAC-CC-AMEX-8052-CRC", 29, 2, 1, true },
+                    { 4, "Baltodano Cubillo Ezequiel", "CR69010202510369031047", "BAC-CC-MC-6515-CRC", 30, 2, 1, true },
+                    { 5, "Baltodano Cubillo Ezequiel", "CR48010202514509181545", "BAC-CC-MC-8608-CRC", 31, 2, 1, true },
+                    { 6, "Baltodano Cubillo Ezequiel", "****-1593", "BAC-CC-VISA-1593-CRC", 32, 2, 1, true },
+                    { 7, "Baltodano Cubillo Ezequiel", "CR86015100020019688637", "BNCR-AHO-CRC-001", 34, 3, 1, true },
+                    { 8, "Baltodano Cubillo Ezequiel", "CR06015107220020012339", "BNCR-AHO-USD-001", 35, 3, 2, true },
                     { 9, "Baltodano Cubillo Ezequiel", "CR54081300210008440287", "COOPEAL-AHO-001", 39, 4, 1, true },
                     { 10, "Baltodano Cubillo Ezequiel", "CR02081300010008440263", "COOPEAL-PAT-001", 37, 4, 1, true },
-                    { 11, "Baltodano Cubillo Ezequiel", "CR98010401446613244113", "DAVIV-AHO-001", 55, 5, 1, true }
+                    { 11, "Baltodano Cubillo Ezequiel", "CR98010401446613244113", "DAVIV-AHO-001", 55, 5, 1, true },
+                    { 12, "Baltodano Cubillo Ezequiel", "CR13010202321157328803", "BAC-CC-AMEX-8052-USD", 131, 2, 2, true },
+                    { 13, "Baltodano Cubillo Ezequiel", "CR17010202526537778556", "BAC-CC-MC-6515-USD", 132, 2, 2, true },
+                    { 14, "Baltodano Cubillo Ezequiel", "CR18010202522447454214", "BAC-CC-MC-8608-USD", 133, 2, 2, true }
                 });
 
             migrationBuilder.InsertData(

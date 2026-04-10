@@ -101,16 +101,88 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
                                                                         "idBankMovementType":2,"matchMode":"Any"},
   {"keywords":["INTERNET DTR SINPE","DTR SINPE","SINPE CR","TRANSF CREDIT","CREDITO SINPE","SINPE MOVIL CR","ABONO SINPE","RECIBO SINPE"],
                                                                         "idBankMovementType":3,"matchMode":"Any"},
-  {"keywords":["COMPRAS EN COMERCIOS","COMPRA EN COMERCIO","COMPRAS COMERC","COMPRA COMERC"],
+  {"keywords":["COMPRAS EN COMERCIOS","COMPRA EN COMERCIO","COMPRAS COMERC","COMPRA COMERC","DB AH TELEF","MOVISTAR","KOLBI","PG AH TIEMPO AIRE TD"],
                                                                         "idBankMovementType":4,"matchMode":"Any"},
   {"keywords":["RETIRO ATM","RETIRO CAJERO","RETIRO EFECTIVO","CAJERO AUTOMATICO"],
                                                                         "idBankMovementType":5,"matchMode":"Any"},
-  {"keywords":["PAGO TC","PAGO TARJETA","TRJ CRED","PAGO TARJETA CREDITO","PAGO TRJ","PAGO TARJETAS"],
+  {"keywords":["PAGO TC","PAGO TARJETA","TRJ CRED","PAGO TARJETA CREDITO","PAGO TRJ","PAGO TARJETAS","TRANSFERENC BANCOBCR"],
                                                                         "idBankMovementType":6,"matchMode":"Any"},
   {"keywords":["PAGO PREST","CUOTA PREST","PAGO PRESTAMO","CUOTA PRESTAMO"],
                                                                         "idBankMovementType":7,"matchMode":"Any"},
-  {"keywords":["SINPE MOVIL OTRA ENT","OTRA ENT","TRANSF DEB","SINPE DEB","DEB SINPE","SINPE MOVIL DEB","DEBITO SINPE","TRANSFERENCIA SINPE DEB","CARGO SINPE"],
+  {"keywords":["SINPE MOVIL OTRA ENT","OTRA ENT","TRANSF DEB","SINPE DEB","DEB SINPE","SINPE MOVIL DEB","DEBITO SINPE","TRANSFERENCIA SINPE DEB","CARGO SINPE","MONEDERO SINPE MOVIL"],
                                                                         "idBankMovementType":8,"matchMode":"Any"}
+]
+"""
+        },
+
+        // ── BAC Credomatic ─────────────────────────────────────────────────────────
+        // Archivo TXT pipe-delimitado exportado desde el portal BAC.
+        // Aplica para cuentas de tarjetas de crédito (IdBankAccount 3–6).
+        // Formato de columnas: Date | Descripción | Local CRC | Dollars USD
+        //   Montos positivos = cargo (DebitAmount)
+        //   Montos negativos = pago recibido (CreditAmount)
+        new BankStatementTemplate
+        {
+            IdBankStatementTemplate = 2,
+            CodeTemplate  = "BAC-TXT-V1",
+            NameTemplate  = "BAC Credomatic – Estado de Cuenta Tarjeta (TXT)",
+            BankName      = "BAC Credomatic",
+            DateFormat    = "dd/MM/yyyy",
+            TimeFormat    = null,
+            IsActive      = true,
+            Notes         = "Archivo .txt pipe-delimitado exportado desde el portal BAC. " +
+                            "Aplica para estados de cuenta de tarjetas de crédito (AMEX, Visa, Mastercard). " +
+                            "La columna Local contiene montos en CRC y Dollars en USD; se usa el no-cero.",
+            ColumnMappings = "{}",
+            KeywordRules   = """
+[
+  {"keywords":["SU PAGO RECIBIDO GRACIAS"],
+                                            "idBankMovementType":3,"matchMode":"Any"},
+  {"keywords":["UBER","DLC*UBER","DLC*LYFT","BOLT"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["APPLE.COM","NETFLIX.COM","GITHUB","SPOTIFY","YOUTUBE","AMAZON"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["WALMART","MAXIPALI","MXM ","SUPER SALON","AUTOMERCADO","PALI "],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["IVA -"],
+                                            "idBankMovementType":4,"matchMode":"Any"}
+]
+"""
+        },
+
+        // ── Banco Nacional de Costa Rica (BNCR) ────────────────────────────────────
+        // Archivo CSV punto-y-coma exportado desde el portal BN en línea.
+        // Aplica para cuentas de ahorros (IdBankAccount 7–8).
+        // Formato de columnas: oficina ; fechaMovimiento ; numeroDocumento ; debito ; credito ; descripcion
+        new BankStatementTemplate
+        {
+            IdBankStatementTemplate = 3,
+            CodeTemplate  = "BNCR-CSV-V1",
+            NameTemplate  = "BNCR – Movimientos de Cuenta (CSV)",
+            BankName      = "Banco Nacional de Costa Rica",
+            DateFormat    = "dd/MM/yyyy",
+            TimeFormat    = null,
+            IsActive      = true,
+            Notes         = "Archivo .csv punto-y-coma exportado desde BN en línea. " +
+                            "Codificación Latin-1/Windows-1252. " +
+                            "Aplica para cuentas de ahorros en colones y dólares.",
+            ColumnMappings = "{}",
+            KeywordRules   = """
+[
+  {"keywords":["SALARIO","ITQS","IT QUEST","NOMINA","PLANILLA"],
+                                            "idBankMovementType":1,"matchMode":"Any"},
+  {"keywords":["INTERESES GANADOS"],
+                                            "idBankMovementType":2,"matchMode":"Any"},
+  {"keywords":["TRANSFERENCIA SINPE","SINPE MOVIL","PAGO TARJETA BAC","PAGOTARJETABAC","SEMANA MAXIPAL","PAGO SERVICIO PROFESIONAL"],
+                                            "idBankMovementType":3,"matchMode":"Any"},
+  {"keywords":["RETIRO ATM","RETIRO CAJERO","RETIRO EFECTIVO"],
+                                            "idBankMovementType":5,"matchMode":"Any"},
+  {"keywords":["PAGO TARJET","PAGO TC","TARJETA CRED"],
+                                            "idBankMovementType":6,"matchMode":"Any"},
+  {"keywords":["PAGO PREST","CUOTA PREST","PAGO PRESTAMO","CUOTA PRESTAMO"],
+                                            "idBankMovementType":7,"matchMode":"Any"},
+  {"keywords":["SINPE MOVIL DEB","DEB SINPE","CARGO SINPE","TRANSF DEB"],
+                                            "idBankMovementType":8,"matchMode":"Any"}
 ]
 """
         });

@@ -84,7 +84,7 @@ public sealed class BankAccountConfiguration : IEntityTypeConfiguration<BankAcco
 
         // ── Seed ──────────────────────────────────────────────────────────────
         // IdCurrency: 1 = CRC (₡), 2 = USD ($)
-        // IdBank:     1=BCR  2=BAC  3=BN  4=COOPEALIANZA  5=DAVIVIENDA  6=BPOPULAR
+        // IdBank:     1=BCR  2=BAC  3=BNCR  4=COOPEALIANZA  5=DAVIVIENDA
         // IdAccount:  ver AccountConfiguration seed (nivel 4)
         builder.HasData(
             // BCR ─────────────────────────────────────────────────────────────
@@ -93,15 +93,20 @@ public sealed class BankAccountConfiguration : IEntityTypeConfiguration<BankAcco
             // BAC Credomatic – cuenta de ahorros ──────────────────────────────
             new BankAccount { IdBankAccount = 2,  IdBank = 2, IdAccount = 27, IdCurrency = 1, CodeBankAccount = "BAC-AHO-001",       AccountNumber = "CR73010200009497305680", AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },
 
-            // BAC Credomatic – tarjetas de crédito ────────────────────────────
-            new BankAccount { IdBankAccount = 3,  IdBank = 2, IdAccount = 29, IdCurrency = 1, CodeBankAccount = "BAC-CC-AMEX-8052",  AccountNumber = "****-8052",             AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },
-            new BankAccount { IdBankAccount = 4,  IdBank = 2, IdAccount = 30, IdCurrency = 1, CodeBankAccount = "BAC-CC-MC-6515",    AccountNumber = "****-6515",             AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },
-            new BankAccount { IdBankAccount = 5,  IdBank = 2, IdAccount = 31, IdCurrency = 1, CodeBankAccount = "BAC-CC-MC-8608",    AccountNumber = "****-8608",             AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },
-            new BankAccount { IdBankAccount = 6,  IdBank = 2, IdAccount = 32, IdCurrency = 1, CodeBankAccount = "BAC-CC-VISA-1593",  AccountNumber = "****-1593",             AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },
+            // BAC Credomatic – tarjetas de crédito CRC ───────────────────────────────────────
+            new BankAccount { IdBankAccount = 3,  IdBank = 2, IdAccount = 29,  IdCurrency = 1, CodeBankAccount = "BAC-CC-AMEX-8052-CRC", AccountNumber = "CR64010202312918989651", AccountHolder = "Baltodano Cubillo Ezequiel", IsActive = true },
+            new BankAccount { IdBankAccount = 4,  IdBank = 2, IdAccount = 30,  IdCurrency = 1, CodeBankAccount = "BAC-CC-MC-6515-CRC",   AccountNumber = "CR69010202510369031047", AccountHolder = "Baltodano Cubillo Ezequiel", IsActive = true },
+            new BankAccount { IdBankAccount = 5,  IdBank = 2, IdAccount = 31,  IdCurrency = 1, CodeBankAccount = "BAC-CC-MC-8608-CRC",   AccountNumber = "CR48010202514509181545", AccountHolder = "Baltodano Cubillo Ezequiel", IsActive = true },
+            new BankAccount { IdBankAccount = 6,  IdBank = 2, IdAccount = 32,  IdCurrency = 1, CodeBankAccount = "BAC-CC-VISA-1593-CRC", AccountNumber = "****-1593",             AccountHolder = "Baltodano Cubillo Ezequiel", IsActive = true },
+
+            // BAC Credomatic – tarjetas de crédito USD ───────────────────────────────────────
+            new BankAccount { IdBankAccount = 12, IdBank = 2, IdAccount = 131, IdCurrency = 2, CodeBankAccount = "BAC-CC-AMEX-8052-USD", AccountNumber = "CR13010202321157328803", AccountHolder = "Baltodano Cubillo Ezequiel", IsActive = true },
+            new BankAccount { IdBankAccount = 13, IdBank = 2, IdAccount = 132, IdCurrency = 2, CodeBankAccount = "BAC-CC-MC-6515-USD",   AccountNumber = "CR17010202526537778556", AccountHolder = "Baltodano Cubillo Ezequiel", IsActive = true },
+            new BankAccount { IdBankAccount = 14, IdBank = 2, IdAccount = 133, IdCurrency = 2, CodeBankAccount = "BAC-CC-MC-8608-USD",   AccountNumber = "CR18010202522447454214", AccountHolder = "Baltodano Cubillo Ezequiel", IsActive = true },
 
             // Banco Nacional ──────────────────────────────────────────────────
-            new BankAccount { IdBankAccount = 7,  IdBank = 3, IdAccount = 34, IdCurrency = 1, CodeBankAccount = "BN-AHO-CRC-001",    AccountNumber = "CR86015100020019688637", AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },
-            new BankAccount { IdBankAccount = 8,  IdBank = 3, IdAccount = 35, IdCurrency = 2, CodeBankAccount = "BN-AHO-USD-001",    AccountNumber = "CR06015107220020012339", AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },
+            new BankAccount { IdBankAccount = 7,  IdBank = 3, IdAccount = 34, IdCurrency = 1, CodeBankAccount = "BNCR-AHO-CRC-001",   AccountNumber = "CR86015100020019688637", AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },
+            new BankAccount { IdBankAccount = 8,  IdBank = 3, IdAccount = 35, IdCurrency = 2, CodeBankAccount = "BNCR-AHO-USD-001",   AccountNumber = "CR06015107220020012339", AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },
 
             // Coopealianza – ahorros y aporte al patrimonio ───────────────────
             new BankAccount { IdBankAccount = 9,  IdBank = 4, IdAccount = 39, IdCurrency = 1, CodeBankAccount = "COOPEAL-AHO-001",   AccountNumber = "CR54081300210008440287", AccountHolder = "Baltodano Cubillo Ezequiel",        IsActive = true },

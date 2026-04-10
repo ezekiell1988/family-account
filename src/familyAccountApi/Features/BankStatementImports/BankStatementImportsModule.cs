@@ -1,4 +1,5 @@
 using FamilyAccountApi.Features.BankStatementImports.Dtos;
+using FamilyAccountApi.Features.BankStatementImports.Parsers;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ public static class BankStatementImportsModule
     public static IServiceCollection AddBankStatementImportsModule(this IServiceCollection services)
     {
         services.AddScoped<IBankStatementImportService, BankStatementImportService>();
+        services.AddSingleton<BankStatementParserFactory>();
         return services;
     }
 
