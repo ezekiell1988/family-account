@@ -73,7 +73,7 @@ public static class BankStatementImportsModule
     {
         try
         {
-            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdClaim = user.FindFirst("sub")?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
             {
                 return TypedResults.BadRequest(new ProblemDetails
@@ -120,7 +120,7 @@ public static class BankStatementImportsModule
         ClaimsPrincipal user,
         CancellationToken ct)
     {
-        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userIdClaim = user.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
         {
             return TypedResults.BadRequest(new ProblemDetails
