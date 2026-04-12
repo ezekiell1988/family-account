@@ -4,6 +4,7 @@ using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyAccountApi.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260412193000_AddBacXlsTemplate")]
+    partial class AddBacXlsTemplate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2528,7 +2531,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             ColumnMappings = "{}",
                             DateFormat = "dd/MM/yyyy",
                             IsActive = true,
-                            KeywordRules = "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                            \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP_ATM\",\"TATMFULL\",\"DEPOSITO ATM\"],\n                                            \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"TEF DE:\",\"DTR SINPE\",\"SINPE REC\",\"ABONO SINPE\",\"CREDITO SINPE\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COOPEALIANZA\",\"CAJA AHORRO\"],\n                                            \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO \",\"SINPE MOVIL PAGO_TARJETA\"],\n                                            \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DTR:\",\"RETIRO CAJERO\",\"RETIRO ATM\",\"RETIRO EFECTIVO\"],\n                                            \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]",
+                            KeywordRules = "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                            \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP_ATM\",\"TATMFULL\",\"DEPOSITO ATM\"],\n                                            \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"TEF DE:\",\"DTR SINPE\",\"SINPE REC\",\"ABONO SINPE\",\"CREDITO SINPE\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COOPEALIANZA\",\"CAJA AHORRO\"],\n                                            \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO \"],\n                                            \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DTR:\",\"RETIRO CAJERO\",\"RETIRO ATM\",\"RETIRO EFECTIVO\"],\n                                            \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]",
                             NameTemplate = "BAC Credomatic – Cuenta de Ahorro/Débito (XLS)",
                             Notes = "Archivo .xls (BIFF8) exportado desde el portal BAC para cuentas de ahorro y débito. Columnas fijas: Fecha | Referencia | | Código | Descripción | | | Débitos | Créditos | Balance. Usar para cuentas de ahorro BAC (cuenta CR73... en CRC)."
                         });

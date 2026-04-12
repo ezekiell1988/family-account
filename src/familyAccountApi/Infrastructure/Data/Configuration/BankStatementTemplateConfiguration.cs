@@ -265,6 +265,41 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
                                             "idBankMovementType":7,"matchMode":"Any"}
 ]
 """
+        },
+
+        // ── BAC Credomatic – Cuenta de ahorro/débito (XLS) ────────────────────────
+        // Archivo .xls BIFF8 exportado desde el portal BAC para cuentas de ahorro.
+        // IdBankAccount=2 → BAC-AHO-001 (CR73010200009497305680, CRC)
+        // Columnas: 0=Fecha  1=Referencia  3=Código  4=Descripción  7=Débitos  8=Créditos  9=Balance
+        new BankStatementTemplate
+        {
+            IdBankStatementTemplate = 6,
+            CodeTemplate  = "BAC-XLS-V1",
+            NameTemplate  = "BAC Credomatic – Cuenta de Ahorro/Débito (XLS)",
+            BankName      = "BAC Credomatic",
+            DateFormat    = "dd/MM/yyyy",
+            TimeFormat    = null,
+            IsActive      = true,
+            Notes         = "Archivo .xls (BIFF8) exportado desde el portal BAC para cuentas de ahorro y débito. " +
+                            "Columnas fijas: Fecha | Referencia | | Código | Descripción | | | Débitos | Créditos | Balance. " +
+                            "Usar para cuentas de ahorro BAC (cuenta CR73... en CRC).",
+            ColumnMappings = "{}",
+            KeywordRules   = """
+[
+  {"keywords":["SALARIO","ITQS","IT QUEST","NOMINA","PLANILLA"],
+                                            "idBankMovementType":1,"matchMode":"Any"},
+  {"keywords":["DEP_ATM","TATMFULL","DEPOSITO ATM"],
+                                            "idBankMovementType":2,"matchMode":"Any"},
+  {"keywords":["TEF DE:","DTR SINPE","SINPE REC","ABONO SINPE","CREDITO SINPE"],
+                                            "idBankMovementType":3,"matchMode":"Any"},
+  {"keywords":["COOPEALIANZA","CAJA AHORRO"],
+                                            "idBankMovementType":7,"matchMode":"Any"},
+  {"keywords":["PAGO ","SINPE MOVIL PAGO_TARJETA"],
+                                            "idBankMovementType":6,"matchMode":"Any"},
+  {"keywords":["DTR:","RETIRO CAJERO","RETIRO ATM","RETIRO EFECTIVO"],
+                                            "idBankMovementType":8,"matchMode":"Any"}
+]
+"""
         });
     }
 }

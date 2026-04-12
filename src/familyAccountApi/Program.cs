@@ -1,5 +1,8 @@
 using FamilyAccountApi.Infrastructure.Extensions;
 
+// ExcelDataReader requiere el proveedor de codificaciones de páginas de código
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── Infraestructura (Key Vault + Options + EF Core + Redis + Hangfire) ───────
