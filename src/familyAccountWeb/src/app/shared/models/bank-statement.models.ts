@@ -52,3 +52,20 @@ export interface ClassifyTransactionRequest {
   idBankMovementType: number;
   idAccountCounterpart?: number | null;
 }
+
+// ── Bulk classify ─────────────────────────────────────────────────────────────
+export interface BulkClassifyItem {
+  idBankStatementTransaction: number;
+  idBankMovementType: number;
+  idAccountCounterpart?: number | null;
+  learnKeyword?: boolean;
+}
+
+export interface BulkClassifyRequest {
+  items: BulkClassifyItem[];
+}
+
+export interface BulkClassifyResult {
+  classified: number;
+  keywordsAdded: number;
+}

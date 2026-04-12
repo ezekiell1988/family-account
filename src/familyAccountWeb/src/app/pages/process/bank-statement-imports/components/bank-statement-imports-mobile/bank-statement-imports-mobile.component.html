@@ -189,8 +189,8 @@
                             labelPlacement="stacked"
                             fill="outline"
                             size="small"
-                            [value]="getClassifyValue(tx.idBankStatementTransaction, tx.idBankMovementType)"
-                            (ionChange)="setClassifyValue(tx.idBankStatementTransaction, $event.detail.value)">
+                            [value]="getClassifyType(tx.idBankStatementTransaction, tx.idBankMovementType)"
+                            (ionChange)="setClassifyType(tx.idBankStatementTransaction, +$event.detail.value)">
                             <ion-select-option [value]="null">— Sin tipo —</ion-select-option>
                             @for (mt of movementTypes(); track mt.idBankMovementType) {
                               <ion-select-option [value]="mt.idBankMovementType">
@@ -199,9 +199,30 @@
                             }
                           </ion-select>
                         </ion-col>
+                      </ion-row>
+                      <ion-row class="ion-align-items-center">
+                        <ion-col>
+                          <ion-select
+                            interface="alert"
+                            label="Cuenta"
+                            labelPlacement="stacked"
+                            fill="outline"
+                            size="small"
+                            [value]="getClassifyAccount(tx.idBankStatementTransaction, tx.idAccountCounterpart)"
+                            (ionChange)="setClassifyAccount(tx.idBankStatementTransaction, $event.detail.value ? +$event.detail.value : null)">
+                            <ion-select-option [value]="null">— Cuenta —</ion-select-option>
+                            @for (acc of accounts(); track acc.idAccount) {
+                              @if (acc.allowsMovements && acc.isActive) {
+                                <ion-select-option [value]="acc.idAccount">
+                                  {{ acc.codeAccount }} {{ acc.nameAccount }}
+                                </ion-select-option>
+                              }
+                            }
+                          </ion-select>
+                        </ion-col>
                         <ion-col size="auto">
                           <ion-button size="small" color="success"
-                            [disabled]="!getClassifyValue(tx.idBankStatementTransaction, tx.idBankMovementType) || isClassifying()"
+                            [disabled]="!getClassifyType(tx.idBankStatementTransaction, tx.idBankMovementType) || isBulkClassifying()"
                             (click)="submitClassify(tx)">
                             <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
                           </ion-button>
@@ -221,6 +242,22 @@
         }
       }
     </ion-list>
+  }
+
+  <!-- FAB: confirmar todo (cuando hay transacciones cargadas) -->
+  @if (selectedImportId() !== null && transactions().length > 0) {
+    <ion-fab slot="fixed" vertical="bottom" horizontal="start">
+      <ion-fab-button color="success"
+        [disabled]="isBulkClassifying()"
+        (click)="submitBatchClassify()"
+        aria-label="Confirmar todas las clasificaciones">
+        @if (isBulkClassifying()) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+          <ion-icon name="checkmark-outline"></ion-icon>
+        }
+      </ion-fab-button>
+    </ion-fab>
   }
 
   <!-- FAB: nueva carga -->

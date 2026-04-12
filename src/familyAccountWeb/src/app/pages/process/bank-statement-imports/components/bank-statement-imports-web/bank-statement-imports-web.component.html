@@ -235,37 +235,61 @@
           </ng-template>
         </ngx-datatable-column>
 
-        <!-- Tipo de Movimiento (dropdown clasificación) -->
-        <ngx-datatable-column name="Tipo Movimiento" [width]="200" [sortable]="false">
+        <!-- Tipo de Movimiento + Cuenta Contrapartida -->
+        <ngx-datatable-column name="Tipo / Cuenta" [width]="240" [sortable]="false">
           <ng-template let-row="row" ngx-datatable-cell-template>
-            <div class="d-flex align-items-center gap-1">
-              <label [for]="'classType' + row.idBankStatementTransaction" class="visually-hidden">
-                Tipo de movimiento para transacción {{ row.idBankStatementTransaction }}
+            <div class="d-flex flex-column gap-1 py-1">
+
+              <!-- Tipo de movimiento -->
+              <div class="d-flex align-items-center gap-1">
+                <label [for]="'classType' + row.idBankStatementTransaction" class="visually-hidden">
+                  Tipo de movimiento para transacción {{ row.idBankStatementTransaction }}
+                </label>
+                <select
+                  [id]="'classType' + row.idBankStatementTransaction"
+                  class="form-select form-select-sm"
+                  aria-label="Tipo de movimiento"
+                  [ngModel]="getClassifyType(row.idBankStatementTransaction, row.idBankMovementType)"
+                  (ngModelChange)="setClassifyType(row.idBankStatementTransaction, $event ? +$event : 0)"
+                  [attr.title]="'Tipo ' + row.idBankStatementTransaction">
+                  <option [ngValue]="null">— Sin tipo —</option>
+                  @for (mt of movementTypes(); track mt.idBankMovementType) {
+                    <option [ngValue]="mt.idBankMovementType">{{ mt.codeBankMovementType }}</option>
+                  }
+                </select>
+                <button type="button" class="btn btn-xs btn-outline-success"
+                  [disabled]="!getClassifyType(row.idBankStatementTransaction, row.idBankMovementType) || isBulkClassifying()"
+                  (click)="submitClassify(row)"
+                  [attr.aria-label]="'Guardar clasificación ' + row.idBankStatementTransaction"
+                  [attr.title]="'Guardar clasificación ' + row.idBankStatementTransaction">
+                  @if (classifyingId() === row.idBankStatementTransaction) {
+                    <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+                  } @else {
+                    <i class="fa fa-check" aria-hidden="true"></i>
+                  }
+                  <span class="visually-hidden">Guardar {{ row.idBankStatementTransaction }}</span>
+                </button>
+              </div>
+
+              <!-- Cuenta contrapartida -->
+              <label [for]="'classAcc' + row.idBankStatementTransaction" class="visually-hidden">
+                Cuenta contrapartida para transacción {{ row.idBankStatementTransaction }}
               </label>
               <select
-                [id]="'classType' + row.idBankStatementTransaction"
+                [id]="'classAcc' + row.idBankStatementTransaction"
                 class="form-select form-select-sm"
-                aria-label="Tipo de movimiento"
-                [ngModel]="getClassifyValue(row.idBankStatementTransaction, row.idBankMovementType)"
-                (ngModelChange)="setClassifyValue(row.idBankStatementTransaction, $event ? +$event : 0)"
-                [attr.title]="'Tipo de movimiento transacción ' + row.idBankStatementTransaction">
-                <option [ngValue]="null">— Sin tipo —</option>
-                @for (mt of movementTypes(); track mt.idBankMovementType) {
-                  <option [ngValue]="mt.idBankMovementType">{{ mt.codeBankMovementType }}</option>
+                aria-label="Cuenta contrapartida"
+                [ngModel]="getClassifyAccount(row.idBankStatementTransaction, row.idAccountCounterpart)"
+                (ngModelChange)="setClassifyAccount(row.idBankStatementTransaction, $event ? +$event : null)"
+                [attr.title]="row.accountCounterpartName ?? 'Cuenta contrapartida'">
+                <option [ngValue]="null">— Cuenta —</option>
+                @for (acc of accounts(); track acc.idAccount) {
+                  @if (acc.allowsMovements && acc.isActive) {
+                    <option [ngValue]="acc.idAccount">{{ acc.codeAccount }} {{ acc.nameAccount }}</option>
+                  }
                 }
               </select>
-              <button type="button" class="btn btn-xs btn-outline-success"
-                [disabled]="!getClassifyValue(row.idBankStatementTransaction, row.idBankMovementType) || isClassifying()"
-                (click)="submitClassify(row)"
-                [attr.aria-label]="'Guardar clasificación ' + row.idBankStatementTransaction"
-                [attr.title]="'Guardar clasificación ' + row.idBankStatementTransaction">
-                @if (classifyingId() === row.idBankStatementTransaction) {
-                  <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
-                } @else {
-                  <i class="fa fa-check" aria-hidden="true"></i>
-                }
-                <span class="visually-hidden">Guardar {{ row.idBankStatementTransaction }}</span>
-              </button>
+
             </div>
           </ng-template>
         </ngx-datatable-column>
@@ -282,6 +306,21 @@
         </ngx-datatable-column>
 
       </ngx-datatable>
+
+      <!-- Botón Confirmar Todo -->
+      <div class="mt-3 d-flex justify-content-end">
+        <button type="button" class="btn btn-success"
+          [disabled]="isBulkClassifying() || transactions().length === 0"
+          (click)="submitBatchClassify()"
+          aria-label="Clasificar y confirmar todas las transacciones"
+          title="Clasificar y confirmar todas las transacciones">
+          @if (isBulkClassifying()) {
+            <i class="fa fa-spinner fa-spin me-1" aria-hidden="true"></i> Clasificando...
+          } @else {
+            <i class="fa fa-check-double me-1" aria-hidden="true"></i> Confirmar Todo
+          }
+        </button>
+      </div>
     }
 
   </panel>

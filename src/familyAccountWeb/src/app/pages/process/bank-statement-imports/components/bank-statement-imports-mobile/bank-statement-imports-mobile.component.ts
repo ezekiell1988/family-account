@@ -45,11 +45,13 @@ import {
 } from '@ionic/angular/standalone';
 import { HeaderComponent, FooterComponent } from '../../../../../components';
 import {
+  AccountDto,
   BankStatementImportDto,
   BankStatementTransactionDto,
   BankStatementTemplateDto,
   BankAccountDto,
   BankMovementTypeDto,
+  BulkClassifyItem,
   ClassifyTransactionRequest,
 } from '../../../../../shared/models';
 
@@ -90,23 +92,25 @@ import {
 })
 export class BankStatementImportsMobileComponent {
   // ── Inputs ────────────────────────────────────────────────────────
-  isLoading      = input(false);
-  isUploading    = input(false);
-  isClassifying  = input(false);
-  errorMessage   = input('');
-  imports        = input<BankStatementImportDto[]>([]);
-  transactions   = input<BankStatementTransactionDto[]>([]);
-  templates      = input<BankStatementTemplateDto[]>([]);
-  bankAccounts   = input<BankAccountDto[]>([]);
-  movementTypes  = input<BankMovementTypeDto[]>([]);
-  selectedImportId = input<number | null>(null);
+  isLoading         = input(false);
+  isUploading       = input(false);
+  isBulkClassifying = input(false);
+  errorMessage      = input('');
+  imports           = input<BankStatementImportDto[]>([]);
+  transactions      = input<BankStatementTransactionDto[]>([]);
+  templates         = input<BankStatementTemplateDto[]>([]);
+  bankAccounts      = input<BankAccountDto[]>([]);
+  movementTypes     = input<BankMovementTypeDto[]>([]);
+  accounts          = input<AccountDto[]>([]);
+  selectedImportId  = input<number | null>(null);
 
-  // ── Outputs ───────────────────────────────────────────────────────
-  refresh    = output<void>();
-  upload     = output<{ idBankAccount: number; idTemplate: number; file: File }>();
-  expand     = output<BankStatementImportDto>();
-  classify   = output<{ id: number; req: ClassifyTransactionRequest }>();
-  clearError = output<void>();
+  // ── Outputs ─────────────────────────────────────────────
+  refresh       = output<void>();
+  upload        = output<{ idBankAccount: number; idTemplate: number; file: File }>();
+  expand        = output<BankStatementImportDto>();
+  classify      = output<{ id: number; req: ClassifyTransactionRequest }>();
+  batchClassify = output<BulkClassifyItem[]>();
+  clearError    = output<void>();
 
   // ── Estado local ──────────────────────────────────────────────────
   showUploadForm     = signal(false);
@@ -114,7 +118,8 @@ export class BankStatementImportsMobileComponent {
   selectedTemplateId = signal<number | null>(null);
   selectedFile       = signal<File | null>(null);
   selectedFileName   = signal('');
-  classifyMap        = signal<Record<number, number>>({});
+  classifyTypeMap    = signal<Record<number, number>>({});
+  classifyAccMap     = signal<Record<number, number | null>>({})
 
   constructor() {
     addIcons({
@@ -165,27 +170,62 @@ export class BankStatementImportsMobileComponent {
     this.selectedFileName.set('');
   }
 
-  setClassifyValue(idTx: number, value: number): void {
-    this.classifyMap.update(m => ({ ...m, [idTx]: value }));
+  setClassifyType(idTx: number, value: number): void {
+    this.classifyTypeMap.update(m => ({ ...m, [idTx]: value }));
+    const type = this.movementTypes().find(t => t.idBankMovementType === value);
+    this.classifyAccMap.update(m => ({ ...m, [idTx]: type?.idAccountCounterpart ?? null }));
   }
 
-  getClassifyValue(idTx: number, current: number | null): number | null {
-    const m = this.classifyMap();
+  setClassifyAccount(idTx: number, value: number | null): void {
+    this.classifyAccMap.update(m => ({ ...m, [idTx]: value }));
+  }
+
+  getClassifyType(idTx: number, current: number | null): number | null {
+    const m = this.classifyTypeMap();
+    return m[idTx] !== undefined ? m[idTx] : current;
+  }
+
+  getClassifyAccount(idTx: number, current: number | null): number | null {
+    const m = this.classifyAccMap();
     return m[idTx] !== undefined ? m[idTx] : current;
   }
 
   submitClassify(tx: BankStatementTransactionDto): void {
-    const idBankMovementType = this.getClassifyValue(
+    const idBankMovementType = this.getClassifyType(
       tx.idBankStatementTransaction,
       tx.idBankMovementType,
     );
     if (!idBankMovementType) return;
-    this.classify.emit({ id: tx.idBankStatementTransaction, req: { idBankMovementType } });
-    this.classifyMap.update(m => {
-      const updated = { ...m };
-      delete updated[tx.idBankStatementTransaction];
-      return updated;
-    });
+    const idAccountCounterpart = this.getClassifyAccount(
+      tx.idBankStatementTransaction,
+      tx.idAccountCounterpart,
+    );
+    this.classify.emit({ id: tx.idBankStatementTransaction, req: { idBankMovementType, idAccountCounterpart } });
+    this.classifyTypeMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
+    this.classifyAccMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
+  }
+
+  submitBatchClassify(): void {
+    const items = this.transactions()
+      .filter(tx => !tx.idAccountingEntry) // no re-clasificar si ya tiene asiento contable
+      .map(tx => {
+        const idType = this.getClassifyType(tx.idBankStatementTransaction, tx.idBankMovementType);
+        if (!idType) return null;
+        const idAcc    = this.getClassifyAccount(tx.idBankStatementTransaction, tx.idAccountCounterpart);
+        const isManual = this.classifyTypeMap()[tx.idBankStatementTransaction] !== undefined;
+        const item: BulkClassifyItem = {
+          idBankStatementTransaction: tx.idBankStatementTransaction,
+          idBankMovementType:         idType,
+          idAccountCounterpart:       idAcc,
+          learnKeyword:               isManual,
+        };
+        return item;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+    if (items.length === 0) return;
+    this.batchClassify.emit(items);
+    this.classifyTypeMap.set({});
+    this.classifyAccMap.set({});
   }
 
   statusColor(status: string): string {

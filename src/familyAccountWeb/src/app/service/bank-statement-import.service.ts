@@ -7,6 +7,8 @@ import { LoggerService } from './logger.service';
 import {
   BankStatementImportDto,
   BankStatementTransactionDto,
+  BulkClassifyRequest,
+  BulkClassifyResult,
   ClassifyTransactionRequest,
 } from '../shared/models';
 
@@ -23,7 +25,7 @@ export class BankStatementImportService {
   isLoading    = signal<boolean>(false);
   isUploading  = signal<boolean>(false);
   isPolling    = signal<boolean>(false);
-  isClassifying = signal<boolean>(false);
+  isBulkClassifying = signal<boolean>(false);
   error        = signal<string | null>(null);
 
   clearError(): void { this.error.set(null); }
@@ -112,7 +114,7 @@ export class BankStatementImportService {
     id: number,
     req: ClassifyTransactionRequest,
   ): Observable<BankStatementTransactionDto> {
-    this.isClassifying.set(true);
+    this.isBulkClassifying.set(true);
     return this.http
       .patch<BankStatementTransactionDto>(`${this.txBase}/${id}/classify`, req)
       .pipe(
@@ -127,7 +129,26 @@ export class BankStatementImportService {
           this.logger.error('Error clasificando transacción', err);
           return throwError(() => err);
         }),
-        finalize(() => this.isClassifying.set(false)),
+        finalize(() => this.isBulkClassifying.set(false)),
+      );
+  }
+
+  // ── CLASIFICAR masivamente (bulk) ─────────────────────────────────
+  classifyBatch(
+    importId: number,
+    req: BulkClassifyRequest,
+  ): Observable<BulkClassifyResult> {
+    this.isBulkClassifying.set(true);
+    return this.http
+      .post<BulkClassifyResult>(`${this.base}/${importId}/classify-batch`, req)
+      .pipe(
+        catchError(err => {
+          const msg = err?.error ?? 'Error al clasificar transacciones';
+          this.fail(typeof msg === 'string' ? msg : 'Error al clasificar transacciones');
+          this.logger.error('Error en bulk classify', err);
+          return throwError(() => err);
+        }),
+        finalize(() => this.isBulkClassifying.set(false)),
       );
   }
 }

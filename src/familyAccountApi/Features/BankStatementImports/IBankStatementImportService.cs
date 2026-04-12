@@ -20,4 +20,12 @@ public interface IBankStatementImportService
         int       idBankStatementTemplate,
         int       importedBy,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Clasifica masivamente las transacciones de un import y aprende nuevos keywords en el template.
+    /// </summary>
+    Task<BulkClassifyResult> ClassifyBatchAsync(
+        int                importId,
+        BulkClassifyRequest request,
+        CancellationToken  ct = default);
 }

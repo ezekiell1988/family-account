@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import {
+  AccountService,
   AppSettings,
   BankAccountService,
   BankMovementTypeService,
@@ -19,6 +20,7 @@ import { ResponsiveComponent } from '../../../shared';
 import {
   BankStatementImportDto,
   BankStatementTransactionDto,
+  BulkClassifyItem,
   ClassifyTransactionRequest,
 } from '../../../shared/models';
 import { BankStatementImportsWebComponent } from './components/bank-statement-imports-web/bank-statement-imports-web.component';
@@ -38,19 +40,21 @@ export class BankStatementImportsPage
   private readonly importSvc   = inject(BankStatementImportService);
   private readonly templateSvc = inject(BankStatementTemplateService);
   private readonly accountSvc  = inject(BankAccountService);
+  private readonly chartSvc    = inject(AccountService);
   private readonly movTypeSvc  = inject(BankMovementTypeService);
   private readonly logger      = inject(LoggerService).getLogger('BankStatementImportsPage');
 
   // ── Estado del servicio ───────────────────────────────────────────
-  isLoading     = this.importSvc.isLoading;
-  isUploading   = this.importSvc.isUploading;
-  isClassifying = this.importSvc.isClassifying;
-  error         = this.importSvc.error;
-  imports       = this.importSvc.items;
-  transactions  = this.importSvc.transactions;
-  templates     = this.templateSvc.items;
-  bankAccounts  = this.accountSvc.items;
-  movementTypes = this.movTypeSvc.items;
+  isLoading         = this.importSvc.isLoading;
+  isUploading       = this.importSvc.isUploading;
+  isBulkClassifying = this.importSvc.isBulkClassifying;
+  error             = this.importSvc.error;
+  imports           = this.importSvc.items;
+  transactions      = this.importSvc.transactions;
+  templates         = this.templateSvc.items;
+  bankAccounts      = this.accountSvc.items;
+  movementTypes     = this.movTypeSvc.items;
+  chartAccounts     = this.chartSvc.accounts;
 
   // ── Estado local ──────────────────────────────────────────────────
   selectedImportId = signal<number | null>(null);
@@ -74,6 +78,7 @@ export class BankStatementImportsPage
       this.templateSvc.loadList(),
       this.accountSvc.loadList(),
       this.movTypeSvc.loadList(),
+      this.chartSvc.loadList(),
     ]).subscribe({
       error: err => this.logger.error('Error cargando datos iniciales', err),
     });
@@ -108,6 +113,18 @@ export class BankStatementImportsPage
     this.importSvc.classifyTransaction(payload.id, payload.req).subscribe({
       next: () => this.logger.info(`Transacción ${payload.id} clasificada`),
       error: err => this.logger.error('Error clasificando', err),
+    });
+  }
+
+  classifyBatch(items: BulkClassifyItem[]): void {
+    const importId = this.selectedImportId();
+    if (importId === null || items.length === 0) return;
+    this.importSvc.classifyBatch(importId, { items }).subscribe({
+      next: res => {
+        this.logger.info(`Bulk classify OK — clasificadas=${res.classified} keywords=${res.keywordsAdded}`);
+        this.importSvc.loadTransactions(importId).subscribe();
+      },
+      error: err => this.logger.error('Error en bulk classify', err),
     });
   }
 

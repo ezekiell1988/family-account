@@ -6,6 +6,7 @@ using FamilyAccountApi.Infrastructure.Data;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace FamilyAccountApi.Features.BankStatementImports;
 
@@ -257,5 +258,81 @@ public sealed class BankStatementImportService(
             import.TotalTransactions,
             import.ProcessedTransactions,
             import.ErrorMessage);
+    }
+
+    public async Task<BulkClassifyResult> ClassifyBatchAsync(
+        int                 importId,
+        BulkClassifyRequest request,
+        CancellationToken   ct = default)
+    {
+        // ── 1. Cargar el import + template ────────────────────────────────
+        var import = await db.BankStatementImport
+            .Include(i => i.IdBankStatementTemplateNavigation)
+            .FirstOrDefaultAsync(i => i.IdBankStatementImport == importId, ct)
+            ?? throw new InvalidOperationException($"El import {importId} no existe.");
+
+        var template = import.IdBankStatementTemplateNavigation!;
+
+        // ── 2. Cargar las transacciones involucradas ───────────────────────
+        var txIds = request.Items.Select(x => x.IdBankStatementTransaction).ToList();
+        var transactions = await db.BankStatementTransaction
+            .Where(t => txIds.Contains(t.IdBankStatementTransaction))
+            .ToListAsync(ct);
+
+        var txMap = transactions.ToDictionary(t => t.IdBankStatementTransaction);
+
+        // ── 3. Clasificar ─────────────────────────────────────────────────
+        int classified = 0;
+        var newKeywordRules = new List<KeywordRule>();
+
+        foreach (var item in request.Items)
+        {
+            if (!txMap.TryGetValue(item.IdBankStatementTransaction, out var tx)) continue;
+
+            // No re-clasificar transacciones que ya tienen asiento contable generado
+            if (tx.IdAccountingEntry is not null) continue;
+
+            tx.IdBankMovementType   = item.IdBankMovementType;
+            tx.IdAccountCounterpart = item.IdAccountCounterpart;
+            classified++;
+
+            // ── 4. Aprender keyword si se solicita ─────────────────────────
+            if (item.LearnKeyword)
+            {
+                var desc = tx.Description?.Trim();
+                if (!string.IsNullOrWhiteSpace(desc))
+                {
+                    // Solo agregar si no está ya cubierto por un keyword existente
+                    var existingResult = KeywordClassifier.Classify(desc, template.KeywordRules);
+                    if (existingResult is null)
+                    {
+                        newKeywordRules.Add(new KeywordRule
+                        {
+                            Keywords            = [desc],
+                            IdBankMovementType  = item.IdBankMovementType,
+                            IdAccountCounterpart = item.IdAccountCounterpart,
+                            MatchMode           = "Any"
+                        });
+                    }
+                }
+            }
+        }
+
+        // ── 5. Actualizar template con nuevos keywords ────────────────────
+        int keywordsAdded = 0;
+        if (newKeywordRules.Count > 0)
+        {
+            var opts   = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+            var existing = string.IsNullOrWhiteSpace(template.KeywordRules)
+                ? []
+                : JsonSerializer.Deserialize<List<KeywordRule>>(template.KeywordRules, opts) ?? [];
+
+            existing.AddRange(newKeywordRules);
+            template.KeywordRules = JsonSerializer.Serialize(existing, opts);
+            keywordsAdded = newKeywordRules.Count;
+        }
+
+        await db.SaveChangesAsync(ct);
+        return new BulkClassifyResult(classified, keywordsAdded);
     }
 }

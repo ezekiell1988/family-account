@@ -17,11 +17,13 @@ import {
 } from '@swimlane/ngx-datatable';
 import { PanelComponent } from '../../../../../components';
 import {
+  AccountDto,
   BankStatementImportDto,
   BankStatementTransactionDto,
   BankStatementTemplateDto,
   BankAccountDto,
   BankMovementTypeDto,
+  BulkClassifyItem,
   ClassifyTransactionRequest,
 } from '../../../../../shared/models';
 
@@ -38,23 +40,25 @@ export class BankStatementImportsWebComponent {
   private readonly cdr = inject(ChangeDetectorRef);
 
   // ── Inputs ────────────────────────────────────────────────────────
-  isLoading      = input(false);
-  isUploading    = input(false);
-  isClassifying  = input(false);
-  errorMessage   = input('');
-  imports        = input<BankStatementImportDto[]>([]);
-  transactions   = input<BankStatementTransactionDto[]>([]);
-  templates      = input<BankStatementTemplateDto[]>([]);
-  bankAccounts   = input<BankAccountDto[]>([]);
-  movementTypes  = input<BankMovementTypeDto[]>([]);
-  selectedImportId = input<number | null>(null);
+  isLoading         = input(false);
+  isUploading       = input(false);
+  isBulkClassifying = input(false);
+  errorMessage      = input('');
+  imports           = input<BankStatementImportDto[]>([]);
+  transactions      = input<BankStatementTransactionDto[]>([]);
+  templates         = input<BankStatementTemplateDto[]>([]);
+  bankAccounts      = input<BankAccountDto[]>([]);
+  movementTypes     = input<BankMovementTypeDto[]>([]);
+  accounts          = input<AccountDto[]>([]);
+  selectedImportId  = input<number | null>(null);
 
-  // ── Outputs ───────────────────────────────────────────────────────
-  refresh    = output<void>();
-  upload     = output<{ idBankAccount: number; idTemplate: number; file: File }>();
-  expand     = output<BankStatementImportDto>();
-  classify   = output<{ id: number; req: ClassifyTransactionRequest }>();
-  clearError = output<void>();
+  // ── Outputs ─────────────────────────────────────────────
+  refresh       = output<void>();
+  upload        = output<{ idBankAccount: number; idTemplate: number; file: File }>();
+  expand        = output<BankStatementImportDto>();
+  classify      = output<{ id: number; req: ClassifyTransactionRequest }>();
+  batchClassify = output<BulkClassifyItem[]>();
+  clearError    = output<void>();
 
   ColumnMode = ColumnMode;
 
@@ -94,39 +98,81 @@ export class BankStatementImportsWebComponent {
   }
 
   // ── Estado de clasificación en la tabla de transacciones ─────────
-  classifyingId   = signal<number | null>(null);
-  classifyTypeMap = signal<Record<number, number>>({}); // idTx → idBankMovementType (temporal)
+  classifyingId    = signal<number | null>(null);
+  classifyTypeMap  = signal<Record<number, number>>({}); // idTx → idBankMovementType
+  classifyAccMap   = signal<Record<number, number | null>>({}); // idTx → idAccountCounterpart
 
-  setClassifyValue(idTx: number, value: number): void {
+  setClassifyType(idTx: number, value: number): void {
     this.classifyTypeMap.update(m => ({ ...m, [idTx]: value }));
+    // Auto-rellenar cuenta contrapartida del tipo seleccionado
+    const type = this.movementTypes().find(t => t.idBankMovementType === value);
+    const defaultAcc = type?.idAccountCounterpart ?? null;
+    this.classifyAccMap.update(m => ({ ...m, [idTx]: defaultAcc }));
   }
 
-  getClassifyValue(idTx: number, current: number | null): number | null {
+  setClassifyAccount(idTx: number, value: number | null): void {
+    this.classifyAccMap.update(m => ({ ...m, [idTx]: value }));
+  }
+
+  getClassifyType(idTx: number, current: number | null): number | null {
     const m = this.classifyTypeMap();
     return m[idTx] !== undefined ? m[idTx] : current;
   }
 
+  getClassifyAccount(idTx: number, current: number | null): number | null {
+    const m = this.classifyAccMap();
+    return m[idTx] !== undefined ? m[idTx] : current;
+  }
+
   submitClassify(tx: BankStatementTransactionDto): void {
-    const idBankMovementType = this.getClassifyValue(
+    const idBankMovementType = this.getClassifyType(
       tx.idBankStatementTransaction,
       tx.idBankMovementType,
     );
     if (!idBankMovementType) return;
+    const idAccountCounterpart = this.getClassifyAccount(
+      tx.idBankStatementTransaction,
+      tx.idAccountCounterpart,
+    );
     this.classifyingId.set(tx.idBankStatementTransaction);
     this.classify.emit({
       id:  tx.idBankStatementTransaction,
-      req: { idBankMovementType },
+      req: { idBankMovementType, idAccountCounterpart },
     });
-    // Limpiar estado temporal tras emitir
     setTimeout(() => {
       this.classifyingId.set(null);
-      this.classifyTypeMap.update(m => {
-        const updated = { ...m };
-        delete updated[tx.idBankStatementTransaction];
-        return updated;
-      });
+      this.classifyTypeMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
+      this.classifyAccMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
       this.cdr.markForCheck();
     }, 800);
+  }
+
+  submitBatchClassify(): void {
+    const txs = this.transactions();
+    if (txs.length === 0) return;
+    const items = txs
+      .filter(tx => !tx.idAccountingEntry) // no re-clasificar si ya tiene asiento contable
+      .map(tx => {
+        const idType = this.getClassifyType(tx.idBankStatementTransaction, tx.idBankMovementType);
+        if (!idType) return null;
+        const idAcc    = this.getClassifyAccount(tx.idBankStatementTransaction, tx.idAccountCounterpart);
+        const isManual = this.classifyTypeMap()[tx.idBankStatementTransaction] !== undefined;
+        const item: BulkClassifyItem = {
+          idBankStatementTransaction: tx.idBankStatementTransaction,
+          idBankMovementType:         idType,
+          idAccountCounterpart:       idAcc,
+          learnKeyword:               isManual,
+        };
+        return item;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    if (items.length === 0) return;
+    this.batchClassify.emit(items);
+    // Limpiar estado temporal
+    this.classifyTypeMap.set({});
+    this.classifyAccMap.set({});
+    this.cdr.markForCheck();
   }
 
   // ── Helpers de display ────────────────────────────────────────────

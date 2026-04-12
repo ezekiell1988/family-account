@@ -35,13 +35,14 @@
 | Keywords BAC USD | ✅ | Pago recibido, transporte, suscripciones tech, seguros, cuotas |
 | Keywords BNCR | ✅ | Salario, intereses, SINPE, retiros, pago TC, préstamo, débito SINPE; `PAGOSERVICIO` (sin espacios) |
 | Clasificación manual | ✅ | `POST /bank-statement-transactions/{id}/classify` |
-| Clasificación masiva | ❌ | `POST /bank-statement-imports/{id}/classify-all` — pendiente |
+| Clasificación masiva (`classify-batch`) | ✅ | `POST /bank-statement-imports/{id}/classify-batch` — clasifica todas + aprende keywords |
+| Keywords con cuentas contables | ✅ | Migración `EnrichKeywordRulesWithAccounts` — todos los templates tienen `idAccountCounterpart` por keyword |
 | Script prueba BCR | ✅ | `docs/bancos/BCR-carga-test.ps1` |
 | Script prueba BAC TXT | ✅ | `docs/bancos/BAC-carga-test.ps1` — carga 6 archivos (3 CRC + 3 USD) |
 | Script prueba BAC XLS | ✅ | `docs/bancos/BAC-XLS-carga-test.ps1` — cuenta ahorro/débito CR73 |
 | Keywords BAC XLS | ✅ | DEP_ATM → DEP; TEF/SINPE → TRANSF-REC; COOPEALIANZA → PAGO-PREST; PAGO/SINPE MOVIL PAGO_TARJETA → PAGO-TC; DTR: → TRANSF-ENV |
 | Script prueba BNCR | ✅ | `docs/bancos/BNCR-carga-test.ps1` — carga 2 archivos (1 CRC + 1 USD) |
-| Frontend Angular | ❌ | No existe página de carga |
+| Frontend Angular | ✅ | Página `bancos/carga` implementada — web (Color Admin + ngx-datatable + row-detail) + mobile (Ionic) |
 
 ---
 
@@ -186,36 +187,81 @@ El BNCR exporta algunas descripciones sin espacios (`PAGOSERVICIOPROFESIONALSOFT
 
 ---
 
-## Fase 3 — Clasificación masiva
+## Fase 3 — Keywords con cuentas contables + Clasificación masiva ✅ `(completado 2026-04-12)`
 
-**Endpoint:**
-```
-POST /bank-statement-imports/{id}/classify-all
-```
-Re-ejecuta el `KeywordClassifier` sobre todas las transacciones sin `IdBankMovementType` del import. Devuelve conteo clasificadas/sin clasificar.
+### Keywords enriquecidos con `idAccountCounterpart`
 
-**Nuevo método en `IBankStatementImportService`:**
+Migración `EnrichKeywordRulesWithAccounts` aplicada. Todos los templates tienen `idAccountCounterpart` en cada `KeywordRule`:
+
+| Keyword(s) | Tipo | Cuenta contable |
+|---|---|---|
+| `SALARIO`, `ITQS` | SALARIO (1) | 44 — ITQS Salario |
+| `DEP EFECTIVO`, `DEP_ATM` | DEP (2) | 106 — Caja CRC |
+| `UBER`, `LYFT`, `BOLT` | GASTO (4) | 83 — Transporte Actividades |
+| `NETFLIX.COM` | GASTO (4) | 69 — Netflix |
+| `APPLE.COM` | GASTO (4) | 72 — Apple iCloud |
+| `OPENAI`, `CHATGPT` | GASTO (4) | 73 — ChatGPT |
+| `GITHUB`, `MICROSOFT`, `GOOGLE`, `NEOTHEK` | GASTO (4) | 74 — Copilot/Suscripciones |
+| `WALMART`, `MAXIPALI`, `AUTOMERCADO`, `PALI` | GASTO (4) | 61 — Alimentación |
+| `FARMACIA`, `DROGUERIA`, `CLINICA`, `FERRETERIA`, `SEGURO`, `SIMAN` | GASTO (4) | 75 — Gastos en Pareja |
+| `RETIRO ATM`, `CAJERO` | RETIRO (5) | 106 — Caja CRC |
+| `COOPEALIANZA`, `CUOTA:` | PAGO-PREST (7) | 42 — Coopealianza Préstamo |
+| `MOVISTAR`, `KOLBI` | GASTO (4) | 68 — Teléfono Celular |
+
+### Endpoint `classify-batch`
+
+```
+POST /bank-statement-imports/{id}/classify-batch
+```
+
+Recibe la clasificación explícita del usuario para todas las transacciones del import y:
+1. Actualiza `IdBankMovementType` e `IdAccountCounterpart` en cada transacción.
+2. Si `learnKeyword=true`, agrega la descripción como nueva `KeywordRule` al template (solo si no está ya cubierta).
+3. **No modifica** transacciones que ya tienen `IdAccountingEntry` (ya contabilizadas).
+
 ```csharp
-Task<BulkClassifyResult> ClassifyAllAsync(int importId, CancellationToken ct);
+Task<BulkClassifyResult> ClassifyBatchAsync(int importId, BulkClassifyRequest request, CancellationToken ct);
+// Devuelve: BulkClassifyResult(Classified, KeywordsAdded)
+```
+
+**DTOs:**
+```csharp
+record BulkClassifyItem {
+    int    IdBankStatementTransaction;
+    int    IdBankMovementType;
+    int?   IdAccountCounterpart;
+    bool   LearnKeyword;          // true = aprender descripción como keyword nuevo
+}
+record BulkClassifyRequest { IReadOnlyList<BulkClassifyItem> Items; }
+record BulkClassifyResult(int Classified, int KeywordsAdded);
 ```
 
 ---
 
-## Fase 4 — Frontend Angular
+## Fase 4 — Frontend Angular ✅ `(completado 2026-04-12)`
 
-**Nueva página:** `bancos/carga`
+**Página:** `bancos/carga` (`BankStatementImportsPage`)
+
+**Arquitectura:**
+- Page coordinador `BankStatementImportsPage` — extiende `ResponsiveComponent`, estado con signals, `forkJoin` para carga inicial (imports, templates, cuentas bancarias, tipos de movimiento, **plan de cuentas**).
+- `BankStatementImportsWebComponent` — Color Admin + `PanelComponent` + `ngx-datatable`.
+- `BankStatementImportsMobileComponent` — Ionic (FAB upload, `ion-list` de imports, expansión inline de transacciones).
 
 **Vista desktop (Color Admin):**
-- Selector de cuenta bancaria + plantilla + botón upload
-- Tabla `ngx-datatable` de transacciones con columnas: fecha, descripción, débito, crédito, tipo movimiento (dropdown editable), estado clasificación
-- Botón "Clasificar todo" (llama `classify-all`)
-- Indicador de estado del job Hangfire (polling)
+- Formulario de upload: selector de cuenta bancaria + selector de plantilla + input de archivo.
+- Tabla de imports con botón "Ver Tx" por fila.
+- Panel de transacciones del import seleccionado con:
+  - Columna "Tipo / Cuenta": dos `<select>` apilados — tipo de movimiento (auto-clasifica la cuenta del tipo al cambiar) + cuenta contrapartida (editable).
+  - Botón "✓" por fila para guardar clasificación individual.
+  - Botón **"Confirmar Todo"** al pie: envía todas las transacciones no contabilizadas como un solo payload `classify-batch`; si el tipo fue modificado manualmente, activa `learnKeyword=true`.
+- Polling Hangfire: cada 2s hasta `Completado` o `Error`.
 
 **Vista mobile (Ionic):**
-- `ion-list` con transacciones agrupadas por fecha
-- FAB para nuevo upload
-- Card con resumen de la importación (total, clasificadas, sin clasificar)
+- FAB upload (inferior-derecha).
+- FAB **"Confirmar Todo"** (inferior-izquierda) cuando hay transacciones cargadas.
+- Por cada transacción: `ion-select` para tipo + `ion-select` para cuenta contrapartida.
 
 **Servicios Angular:**
-- `BankStatementImportService` — upload + polling de status del job
-- `BankStatementTransactionService` — list by import, classify individual, classify-all
+- `BankStatementImportService` — upload, `pollById`, `loadTransactions`, `classifyTransaction` (individual), **`classifyBatch`** (masivo).
+- `AccountService` — plan de cuentas; filtrado a `allowsMovements && isActive` en los selectores.
+- `BankStatementTemplateService`, `BankAccountService`, `BankMovementTypeService` — catálogos de soporte.

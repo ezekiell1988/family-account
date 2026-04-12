@@ -51,6 +51,11 @@ public static class BankStatementImportsModule
             .RequireAuthorization("Admin")
             .DisableAntiforgery();
 
+        group.MapPost("/{id:int}/classify-batch", ClassifyBatch)
+            .WithName("ClassifyBatchBankStatementImport")
+            .WithSummary("Clasificar masivamente transacciones y aprender nuevos keywords en el template")
+            .RequireAuthorization("Admin");
+
         return app;
     }
 
@@ -153,6 +158,23 @@ public static class BankStatementImportsModule
                 Title  = "Error de importación",
                 Detail = $"{ex.GetType().Name}: {ex.Message}",
                 Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
+    private static async Task<Results<Ok<BulkClassifyResult>, NotFound, ValidationProblem>> ClassifyBatch(
+        int id, BulkClassifyRequest request, IBankStatementImportService service, CancellationToken ct)
+    {
+        try
+        {
+            var result = await service.ClassifyBatchAsync(id, request, ct);
+            return TypedResults.Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["import"] = [ex.Message]
             });
         }
     }
