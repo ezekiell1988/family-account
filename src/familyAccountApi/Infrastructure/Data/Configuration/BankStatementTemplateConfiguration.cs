@@ -185,6 +185,86 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
                                             "idBankMovementType":8,"matchMode":"Any"}
 ]
 """
+        },
+
+        // ── BAC Credomatic – Tarjeta crédito CRC ───────────────────────────────────
+        // Archivo TXT pipe-delimitado. Se usa SÓLO la columna Local (CRC).
+        // Cuentas seed CRC: IdBankAccount 3 (AMEX), 4 (MC-6515), 5 (MC-8608), 6 (VISA-1593)
+        new BankStatementTemplate
+        {
+            IdBankStatementTemplate = 4,
+            CodeTemplate  = "BAC-TXT-CRC-V1",
+            NameTemplate  = "BAC Credomatic – Tarjeta Crédito CRC (TXT)",
+            BankName      = "BAC Credomatic",
+            DateFormat    = "dd/MM/yyyy",
+            TimeFormat    = null,
+            IsActive      = true,
+            Notes         = "Archivo .txt pipe-delimitado exportado desde el portal BAC. " +
+                            "Sólo se procesa la columna Local (CRC). " +
+                            "Usar para archivos *-CRC.txt de tarjetas de crédito en colones.",
+            ColumnMappings = """{"currency":"CRC"}""",
+            KeywordRules   = """
+[
+  {"keywords":["SU PAGO RECIBIDO GRACIAS"],
+                                            "idBankMovementType":3,"matchMode":"Any"},
+  {"keywords":["UBER","DLC*UBER","DLC*LYFT","BOLT"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["APPLE.COM","NETFLIX.COM","GITHUB","SPOTIFY","YOUTUBE","AMAZON"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["WALMART","MAXIPALI","MXM ","SUPER SALON","AUTOMERCADO","PALI ","SIMAN","ALMACENES"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["FARMACIA","DROGUERIA","CLINICA ","HOSPITAL","OPTICA ","LABORATORIO"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["FERRETERIA","DEPOSITO FERR","CONSTRUPLAZA"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["GOOGLE","MICROSOFT","2CO.COM","OPENAI","CHATGPT","DIGITALOCEAN","NEOTHEK"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["SEGURO PROTECCION","SEGURO DE VIDA","PRIMA SEGURO","INS "],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["IVA -"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["TRASLADO SALDO REVOLUTIVO","CUOTA:"],
+                                            "idBankMovementType":7,"matchMode":"Any"}
+]
+"""
+        },
+
+        // ── BAC Credomatic – Tarjeta crédito USD ───────────────────────────────────
+        // Archivo TXT pipe-delimitado. Se usa SÓLO la columna Dollars (USD).
+        // Cuentas seed USD: IdBankAccount 12 (AMEX), 13 (MC-6515), 14 (MC-8608)
+        new BankStatementTemplate
+        {
+            IdBankStatementTemplate = 5,
+            CodeTemplate  = "BAC-TXT-USD-V1",
+            NameTemplate  = "BAC Credomatic – Tarjeta Crédito USD (TXT)",
+            BankName      = "BAC Credomatic",
+            DateFormat    = "dd/MM/yyyy",
+            TimeFormat    = null,
+            IsActive      = true,
+            Notes         = "Archivo .txt pipe-delimitado exportado desde el portal BAC. " +
+                            "Sólo se procesa la columna Dollars (USD). " +
+                            "Usar para archivos *-USD.txt de tarjetas de crédito en dólares.",
+            ColumnMappings = """{"currency":"USD"}""",
+            KeywordRules   = """
+[
+  {"keywords":["SU PAGO RECIBIDO GRACIAS"],
+                                            "idBankMovementType":3,"matchMode":"Any"},
+  {"keywords":["UBER","DLC*UBER","DLC*LYFT","BOLT"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["APPLE.COM","NETFLIX.COM","GITHUB","SPOTIFY","YOUTUBE","AMAZON","JETBRAINS","GOOGLE"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["GAMMA.APP","OPENAI","CHATGPT","MICROSOFT","DIGITALOCEAN","2CO.COM","NEOTHEK"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["ICON CC RETAIL","WALMART","AMAZON","SIMAN"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["SEGURO PROTECCION","SEGURO DE VIDA","PRIMA SEGURO"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["IVA -"],
+                                            "idBankMovementType":4,"matchMode":"Any"},
+  {"keywords":["TRASLADO SALDO REVOLUTIVO","CUOTA:"],
+                                            "idBankMovementType":7,"matchMode":"Any"}
+]
+"""
         });
     }
 }

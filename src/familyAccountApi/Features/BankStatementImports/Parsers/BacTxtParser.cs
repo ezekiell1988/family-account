@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 
 namespace FamilyAccountApi.Features.BankStatementImports.Parsers;
 
@@ -16,17 +17,29 @@ namespace FamilyAccountApi.Features.BankStatementImports.Parsers;
 /// </list>
 /// </para>
 /// Montos positivos = cargo (DebitAmount); negativos = pago recibido (CreditAmount).
-/// Se prioriza monto local; si es cero, se usa monto USD.
+/// La columna a usar se controla con <c>columnMappingsJson</c>:
+///   <c>{"currency":"CRC"}</c> → sólo columna Local;
+///   <c>{"currency":"USD"}</c> → sólo columna Dollars;
+///   <c>{}</c>                → prioriza Local; si cero, usa Dollars (retrocompat).
 /// </summary>
 public sealed class BacTxtParser : IBankStatementParser
 {
+    private sealed record BacColumnMapping(string? Currency = null);
+
+    private static readonly JsonSerializerOptions JsonOpts =
+        new(JsonSerializerDefaults.Web);
+
     public IReadOnlyList<ParsedTransaction> Parse(
         Stream  fileStream,
         string  columnMappingsJson,
         string? dateFormat = null,
         string? timeFormat = null)
     {
-        var dateFmt = dateFormat ?? "dd/MM/yyyy";
+        var dateFmt  = dateFormat ?? "dd/MM/yyyy";
+        var mapping  = JsonSerializer.Deserialize<BacColumnMapping>(columnMappingsJson, JsonOpts)
+                       ?? new BacColumnMapping();
+        var currency = mapping.Currency; // "CRC" | "USD" | null (retrocompat)
+
         var transactions = new List<ParsedTransaction>();
 
         // BAC exporta en codificación compatible con Latin-1/Windows-1252.
@@ -69,19 +82,20 @@ public sealed class BacTxtParser : IBankStatementParser
             var description = cols.Length > 1 ? cols[1].Trim() : string.Empty;
             if (string.IsNullOrWhiteSpace(description)) continue;
 
-            // ── Leer montos (Local CRC | Dólares USD) ───────────────────────
-            var localStr = cols.Length > 2 ? cols[2].Trim() : string.Empty;
-            var usdStr   = cols.Length > 3 ? cols[3].Trim() : string.Empty;
+            // ── Leer monto según moneda configurada ──────────────────────────
+            decimal? amount = currency switch
+            {
+                "CRC" => ParseAmount(cols.Length > 2 ? cols[2].Trim() : string.Empty),
+                "USD" => ParseAmount(cols.Length > 3 ? cols[3].Trim() : string.Empty),
+                _     => LocalOrUsd(
+                             cols.Length > 2 ? cols[2].Trim() : string.Empty,
+                             cols.Length > 3 ? cols[3].Trim() : string.Empty)
+            };
 
-            var localAmt = ParseAmount(localStr);
-            var usdAmt   = ParseAmount(usdStr);
-
-            // Priorizar monto local; si es cero usar USD.
-            var amount = (localAmt.HasValue && localAmt.Value != 0m) ? localAmt : usdAmt;
             if (amount is null || amount == 0m) continue;
 
             // Cargo (+) → DebitAmount  |  Pago recibido (−) → CreditAmount.
-            decimal? debitAmount  = amount > 0m ? amount        : null;
+            decimal? debitAmount  = amount > 0m ? amount                 : null;
             decimal? creditAmount = amount < 0m ? Math.Abs(amount.Value) : null;
 
             transactions.Add(new ParsedTransaction(
@@ -96,6 +110,13 @@ public sealed class BacTxtParser : IBankStatementParser
         }
 
         return transactions;
+    }
+
+    /// <summary>Prioriza el monto local; si es cero o nulo usa el USD (retrocompat).</summary>
+    private static decimal? LocalOrUsd(string localStr, string usdStr)
+    {
+        var local = ParseAmount(localStr);
+        return (local.HasValue && local.Value != 0m) ? local : ParseAmount(usdStr);
     }
 
     /// <summary>

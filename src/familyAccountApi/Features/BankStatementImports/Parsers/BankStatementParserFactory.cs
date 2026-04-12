@@ -15,9 +15,11 @@ public sealed class BankStatementParserFactory
     public IBankStatementParser GetParser(string codeTemplate) =>
         codeTemplate switch
         {
-            "BCR-HTML-XLS-V1" => new BcrXlsParser(),
-            "BAC-TXT-V1"      => new BacTxtParser(),
-            "BNCR-CSV-V1"     => new BncrCsvParser(),
+            "BCR-HTML-XLS-V1"  => new BcrXlsParser(),
+            "BAC-TXT-V1"       => new BacTxtParser(),
+            "BAC-TXT-CRC-V1"   => new BacTxtParser(),
+            "BAC-TXT-USD-V1"   => new BacTxtParser(),
+            "BNCR-CSV-V1"      => new BncrCsvParser(),
             _ => throw new NotSupportedException(
                 $"No hay parser registrado para la plantilla '{codeTemplate}'. " +
                 "Verifique el campo CodeTemplate en BankStatementTemplate.")
