@@ -173,7 +173,7 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
                                             "idBankMovementType":1,"matchMode":"Any"},
   {"keywords":["INTERESES GANADOS"],
                                             "idBankMovementType":2,"matchMode":"Any"},
-  {"keywords":["TRANSFERENCIA SINPE","SINPE MOVIL","PAGO TARJETA BAC","PAGOTARJETABAC","SEMANA MAXIPAL","PAGO SERVICIO PROFESIONAL"],
+  {"keywords":["TRANSFERENCIA SINPE","SINPE MOVIL","PAGO TARJETA BAC","PAGOTARJETABAC","SEMANA MAXIPAL","PAGO SERVICIO PROFESIONAL","PAGOSERVICIO"],
                                             "idBankMovementType":3,"matchMode":"Any"},
   {"keywords":["RETIRO ATM","RETIRO CAJERO","RETIRO EFECTIVO"],
                                             "idBankMovementType":5,"matchMode":"Any"},

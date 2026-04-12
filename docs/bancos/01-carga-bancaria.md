@@ -33,13 +33,14 @@
 | Keywords BCR | ✅ | 8 reglas: salario, depósito, SINPE, compras, retiro, pago TC, préstamo, transferencia enviada |
 | Keywords BAC CRC | ✅ | Pago recibido, transporte, digital/streaming, supermercados, farmacias, ferreterías, seguros, cuotas |
 | Keywords BAC USD | ✅ | Pago recibido, transporte, suscripciones tech, seguros, cuotas |
-| Keywords BNCR | ✅ | Salario, intereses, SINPE, retiros, pago TC, préstamo, débito SINPE |
+| Keywords BNCR | ✅ | Salario, intereses, SINPE, retiros, pago TC, préstamo, débito SINPE; `PAGOSERVICIO` (sin espacios) |
 | Clasificación manual | ✅ | `POST /bank-statement-transactions/{id}/classify` |
 | Clasificación masiva | ❌ | `POST /bank-statement-imports/{id}/classify-all` — pendiente |
 | Script prueba BCR | ✅ | `docs/bancos/BCR-carga-test.ps1` |
 | Script prueba BAC TXT | ✅ | `docs/bancos/BAC-carga-test.ps1` — carga 6 archivos (3 CRC + 3 USD) |
 | Script prueba BAC XLS | ✅ | `docs/bancos/BAC-XLS-carga-test.ps1` — cuenta ahorro/débito CR73 |
 | Keywords BAC XLS | ✅ | DEP_ATM → DEP; TEF/SINPE → TRANSF-REC; COOPEALIANZA → PAGO-PREST; PAGO/SINPE MOVIL PAGO_TARJETA → PAGO-TC; DTR: → TRANSF-ENV |
+| Script prueba BNCR | ✅ | `docs/bancos/BNCR-carga-test.ps1` — carga 2 archivos (1 CRC + 1 USD) |
 | Frontend Angular | ❌ | No existe página de carga |
 
 ---
@@ -148,6 +149,40 @@ Soporte para el archivo `.xls` BIFF8 que exporta el portal BAC para cuentas de a
 | Cuenta | Import | Tx | Clasificadas | Débitos | Créditos |
 |---|---|---|---|---|---|
 | BAC-AHO-001 | 8 | 33 | 33/33 | ₡801,558.71 | ₡800,893.00 |
+
+---
+
+## Fase 2d — Scripts y keywords BNCR ✅ `(completado 2026-04-12)`
+
+Soporte de carga y validación end-to-end para las dos cuentas del Banco Nacional de Costa Rica.
+
+**Cuentas seed BNCR:**
+
+| ID | CodeBankAccount | Número | Moneda |
+|---|---|---|---|
+| 7 | `BNCR-AHO-CRC-001` | CR86015100020019688637 | CRC |
+| 8 | `BNCR-AHO-USD-001` | CR06015107220020012339 | USD |
+
+**Plantilla:** `BNCR-CSV-V1` (id=3) — CSV punto-y-coma, codificación Latin-1, formato fecha `dd/MM/yyyy`.
+
+**Fix de keyword — migración `UpdateBncrKeywords`:**
+
+El BNCR exporta algunas descripciones sin espacios (`PAGOSERVICIOPROFESIONALSOFTWARE`). Se agregó `PAGOSERVICIO` a la regla `TRANSF-REC` para cubrir esta variante.
+
+**Script de prueba:** `docs/bancos/BNCR-carga-test.ps1`
+- Carga 2 archivos: 1 CRC + 1 USD
+- Verifica plantilla (id=3) y cuentas (id=7, 8) en BD antes de subir
+- Polling de status Hangfire por archivo
+- Consulta BD con totales, clasificadas sin clasificar y detalle TOP 20
+
+**Resultado validado 2026-04-12:**
+
+| Cuenta | Import | Tx | Clasificadas | Débitos | Créditos |
+|---|---|---|---|---|---|
+| BNCR-AHO-CRC-001 | 11 | 38 | 25/38 | ₡1,486,490.00 | ₡1,510,449.95 |
+| BNCR-AHO-USD-001 | 12 | 2 | 1/2 | 1,453.00 | 1,453.00 |
+
+> 13 transacciones CRC sin clasificar corresponden a descripciones personales (`DINERO PAPA`, `MAMI PLATA`, etc.) — se clasifican manualmente.
 
 ---
 
