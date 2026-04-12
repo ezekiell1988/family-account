@@ -1,0 +1,238 @@
+<header pageTitle="Cargas Bancarias" color="theme" [translucent]="true"></header>
+
+<ion-content class="ion-padding">
+  <!-- Pull-to-refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Error -->
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="clearError.emit()">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
+
+  <!-- Spinner de carga -->
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  <!-- ─── Formulario de upload ──────────────────────────────────── -->
+  @if (showUploadForm()) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="cloud-upload-outline"></ion-icon>
+          Nueva Carga
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+
+        <!-- Cuenta bancaria -->
+        <ion-select
+          interface="action-sheet"
+          labelPlacement="floating"
+          label="Cuenta Bancaria"
+          fill="outline"
+          [value]="selectedAccountId()"
+          (ionChange)="selectedAccountId.set($event.detail.value)">
+          @for (acc of bankAccounts(); track acc.idBankAccount) {
+            <ion-select-option [value]="acc.idBankAccount">
+              {{ acc.codeBankAccount }}
+            </ion-select-option>
+          }
+        </ion-select>
+
+        <!-- Plantilla -->
+        <div class="ion-margin-top">
+          <ion-select
+            interface="action-sheet"
+            labelPlacement="floating"
+            label="Plantilla"
+            fill="outline"
+            [value]="selectedTemplateId()"
+            (ionChange)="selectedTemplateId.set($event.detail.value)">
+            @for (tpl of templates(); track tpl.idBankStatementTemplate) {
+              <ion-select-option [value]="tpl.idBankStatementTemplate">
+                {{ tpl.codeTemplate }}
+              </ion-select-option>
+            }
+          </ion-select>
+        </div>
+
+        <!-- Archivo -->
+        <div class="ion-margin-top">
+          <ion-item lines="none">
+            <ion-label>
+              <p>Archivo del Extracto</p>
+              @if (selectedFileName()) {
+                <p><small>{{ selectedFileName() }}</small></p>
+              }
+            </ion-label>
+            <input type="file" accept=".txt,.xls,.xlsx,.csv"
+              (change)="onFileChange($event)"
+              aria-label="Seleccionar archivo del extracto bancario"
+              style="display:none" #fileInput>
+            <ion-button slot="end" fill="outline" size="small" (click)="fileInput.click()">
+              <ion-icon slot="start" name="document-text-outline"></ion-icon>
+              Elegir
+            </ion-button>
+          </ion-item>
+        </div>
+
+        <!-- Botones -->
+        <ion-grid class="ion-margin-top">
+          <ion-row>
+            <ion-col>
+              <ion-button expand="block" color="success"
+                [disabled]="!canUpload()"
+                (click)="submitUpload()">
+                @if (isUploading()) {
+                  <ion-spinner slot="start" name="crescent"></ion-spinner>
+                  Cargando...
+                } @else {
+                  <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
+                  Cargar
+                }
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button expand="block" fill="outline" color="medium"
+                (click)="showUploadForm.set(false)">
+                <ion-icon slot="start" name="close-outline"></ion-icon>
+                Cancelar
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+      </ion-card-content>
+    </ion-card>
+  }
+
+  <!-- ─── Lista de importaciones ───────────────────────────────── -->
+  @if (imports().length === 0 && !isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-icon name="list-outline" size="large"></ion-icon>
+      <ion-text color="medium">
+        <p>No hay importaciones registradas</p>
+      </ion-text>
+    </div>
+  } @else {
+    <ion-list>
+      @for (imp of imports(); track imp.idBankStatementImport) {
+        <ion-item [button]="true" [detail]="false"
+          (click)="imp.status === 'Completado' ? expand.emit(imp) : null">
+          <ion-icon slot="start"
+            [name]="selectedImportId() === imp.idBankStatementImport ? 'chevron-down-outline' : 'chevron-forward-outline'"
+            color="medium">
+          </ion-icon>
+          <ion-label>
+            <h2>{{ imp.bankAccountCode }}</h2>
+            <p>{{ imp.templateCode }} · {{ formatDate(imp.importDate) }}</p>
+            <p class="small">{{ imp.fileName }}</p>
+          </ion-label>
+          <ion-badge slot="end" [color]="statusColor(imp.status)">
+            {{ imp.status }}
+          </ion-badge>
+        </ion-item>
+
+        <!-- Transacciones del import expandido -->
+        @if (selectedImportId() === imp.idBankStatementImport && transactions().length > 0) {
+          <div class="ion-padding-horizontal ion-padding-bottom">
+            @if (isLoading()) {
+              <div class="ion-text-center">
+                <ion-spinner name="crescent"></ion-spinner>
+              </div>
+            } @else {
+              @for (tx of transactions(); track tx.idBankStatementTransaction) {
+                <ion-card>
+                  <ion-card-content>
+                    <ion-grid>
+                      <ion-row>
+                        <ion-col>
+                          <ion-text color="medium">
+                            <p class="small">{{ formatDate(tx.transactionDate) }}</p>
+                          </ion-text>
+                          <p>{{ tx.description }}</p>
+                        </ion-col>
+                        <ion-col size="auto">
+                          @if (tx.debitAmount) {
+                            <ion-text color="danger"><p>-{{ formatAmount(tx.debitAmount) }}</p></ion-text>
+                          }
+                          @if (tx.creditAmount) {
+                            <ion-text color="success"><p>+{{ formatAmount(tx.creditAmount) }}</p></ion-text>
+                          }
+                        </ion-col>
+                      </ion-row>
+                      <!-- Clasificación -->
+                      <ion-row class="ion-align-items-center ion-margin-top">
+                        <ion-col>
+                          <ion-select
+                            interface="alert"
+                            label="Tipo"
+                            labelPlacement="stacked"
+                            fill="outline"
+                            size="small"
+                            [value]="getClassifyValue(tx.idBankStatementTransaction, tx.idBankMovementType)"
+                            (ionChange)="setClassifyValue(tx.idBankStatementTransaction, $event.detail.value)">
+                            <ion-select-option [value]="null">— Sin tipo —</ion-select-option>
+                            @for (mt of movementTypes(); track mt.idBankMovementType) {
+                              <ion-select-option [value]="mt.idBankMovementType">
+                                {{ mt.codeBankMovementType }}
+                              </ion-select-option>
+                            }
+                          </ion-select>
+                        </ion-col>
+                        <ion-col size="auto">
+                          <ion-button size="small" color="success"
+                            [disabled]="!getClassifyValue(tx.idBankStatementTransaction, tx.idBankMovementType) || isClassifying()"
+                            (click)="submitClassify(tx)">
+                            <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
+                          </ion-button>
+                        </ion-col>
+                        <ion-col size="auto">
+                          <ion-badge [color]="tx.idBankMovementType ? 'success' : 'warning'">
+                            {{ tx.idBankMovementType ? 'Clasificado' : 'Pendiente' }}
+                          </ion-badge>
+                        </ion-col>
+                      </ion-row>
+                    </ion-grid>
+                  </ion-card-content>
+                </ion-card>
+              }
+            }
+          </div>
+        }
+      }
+    </ion-list>
+  }
+
+  <!-- FAB: nueva carga -->
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button color="success"
+      (click)="showUploadForm.set(true)"
+      [disabled]="showUploadForm()"
+      [attr.aria-label]="'Nueva carga bancaria'">
+      <ion-icon name="cloud-upload-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+</ion-content>
+
+<app-footer></app-footer>

@@ -1,0 +1,288 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Home</a></li>
+  <li class="breadcrumb-item"><a href="javascript:;">Procesos</a></li>
+  <li class="breadcrumb-item active">Cargas Bancarias</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Cargas Bancarias
+  <small>Importar extractos de cuentas bancarias</small>
+</h1>
+
+<!-- Error global -->
+@if (errorMessage()) {
+  <div class="alert alert-danger mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i>
+    {{ errorMessage() }}
+    <button type="button" class="btn-close float-end" aria-label="Cerrar error"
+      (click)="clearError.emit()">
+    </button>
+  </div>
+}
+
+<!-- ─── Panel de Upload ────────────────────────────────────────── -->
+<panel title="Nueva Carga" variant="inverse">
+
+  <div class="row g-3 align-items-end">
+
+    <!-- Cuenta bancaria -->
+    <div class="col-md-4">
+      <label for="uploadAccount" class="form-label">Cuenta Bancaria</label>
+      <select id="uploadAccount" class="form-select"
+        [ngModel]="selectedAccountId()"
+        (ngModelChange)="selectedAccountId.set($event ? +$event : null)">
+        <option [ngValue]="null">— Selecciona cuenta —</option>
+        @for (acc of bankAccounts(); track acc.idBankAccount) {
+          <option [ngValue]="acc.idBankAccount">
+            {{ acc.codeBankAccount }} — {{ acc.accountNumber }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <!-- Plantilla -->
+    <div class="col-md-3">
+      <label for="uploadTemplate" class="form-label">Plantilla</label>
+      <select id="uploadTemplate" class="form-select"
+        [ngModel]="selectedTemplateId()"
+        (ngModelChange)="selectedTemplateId.set($event ? +$event : null)">
+        <option [ngValue]="null">— Selecciona plantilla —</option>
+        @for (tpl of templates(); track tpl.idBankStatementTemplate) {
+          <option [ngValue]="tpl.idBankStatementTemplate">
+            {{ tpl.codeTemplate }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <!-- Archivo -->
+    <div class="col-md-4">
+      <label for="uploadFile" class="form-label">Archivo del Extracto</label>
+      <div class="input-group">
+        <label class="input-group-text" for="uploadFile">
+          <i class="fa fa-upload" aria-hidden="true"></i>
+        </label>
+        <input id="uploadFile" type="file" class="form-control"
+          accept=".txt,.xls,.xlsx,.csv"
+          (change)="onFileChange($event)">
+      </div>
+      @if (selectedFileName()) {
+        <small class="text-muted">{{ selectedFileName() }}</small>
+      }
+    </div>
+
+    <!-- Botón enviar -->
+    <div class="col-md-1">
+      <button type="button" class="btn btn-success w-100"
+        [disabled]="!canUpload()"
+        (click)="submitUpload()"
+        aria-label="Cargar extracto bancario"
+        [attr.title]="'Cargar extracto bancario'">
+        @if (isUploading()) {
+          <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+        } @else {
+          <i class="fa fa-cloud-upload" aria-hidden="true"></i>
+        }
+      </button>
+    </div>
+
+  </div>
+</panel>
+
+<!-- ─── Panel de Importaciones ────────────────────────────────── -->
+<panel title="Historial de Importaciones"
+  variant="inverse"
+  [showReloadButton]="true"
+  [reload]="isLoading()"
+  (onReload)="refresh.emit()">
+
+  <ngx-datatable
+    class="bootstrap"
+    [rows]="imports()"
+    [columnMode]="ColumnMode.force"
+    [headerHeight]="40"
+    [footerHeight]="50"
+    [rowHeight]="'auto'"
+    [limit]="20"
+    [loadingIndicator]="isLoading()">
+
+    <!-- Fecha -->
+    <ngx-datatable-column name="Fecha" prop="importDate" [width]="110" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        {{ formatDate(value) }}
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Cuenta -->
+    <ngx-datatable-column name="Cuenta" prop="bankAccountCode" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        {{ value }}
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Plantilla -->
+    <ngx-datatable-column name="Plantilla" prop="templateCode" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        {{ value }}
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Archivo -->
+    <ngx-datatable-column name="Archivo" prop="fileName" [sortable]="false">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        <span class="text-muted small">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Estado -->
+    <ngx-datatable-column name="Estado" prop="status" [width]="120" [sortable]="true">
+      <ng-template let-value="value" ngx-datatable-cell-template>
+        <span [class]="statusBadge(value)">{{ value }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Transacciones -->
+    <ngx-datatable-column name="Tx" prop="totalTransactions" [width]="60" [sortable]="false">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        <span class="badge bg-secondary">{{ row.processedTransactions }} / {{ row.totalTransactions }}</span>
+      </ng-template>
+    </ngx-datatable-column>
+
+    <!-- Acción expandir -->
+    <ngx-datatable-column name="" [width]="130" [sortable]="false">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        @if (row.status === 'Completado') {
+          <button type="button" class="btn btn-xs btn-primary"
+            (click)="expand.emit(row)"
+            [attr.aria-label]="'Ver transacciones del import ' + row.idBankStatementImport"
+            [attr.title]="'Ver transacciones del import ' + row.idBankStatementImport">
+            <i class="fa fa-list" aria-hidden="true"></i>
+            <span class="ms-1">
+              {{ selectedImportId() === row.idBankStatementImport ? 'Ocultar' : 'Ver Tx' }}
+            </span>
+          </button>
+        }
+      </ng-template>
+    </ngx-datatable-column>
+
+  </ngx-datatable>
+
+</panel>
+
+<!-- ─── Panel de Transacciones (cuando hay import seleccionado) ── -->
+@if (selectedImportId() !== null) {
+  <panel [title]="'Transacciones — Import #' + selectedImportId()"
+    variant="default"
+    [showReloadButton]="true"
+    [reload]="isLoading()"
+    (onReload)="expand.emit(imports()[0])">
+
+    @if (isLoading()) {
+      <div class="text-center py-4">
+        <i class="fa fa-spinner fa-spin fa-2x text-muted" aria-hidden="true"></i>
+      </div>
+    } @else if (transactions().length === 0) {
+      <div class="text-center py-4 text-muted">
+        <i class="fa fa-inbox fa-2x" aria-hidden="true"></i>
+        <p class="mt-2">Sin transacciones</p>
+      </div>
+    } @else {
+      <ngx-datatable
+        class="bootstrap"
+        [rows]="transactions()"
+        [columnMode]="ColumnMode.force"
+        [headerHeight]="40"
+        [footerHeight]="50"
+        [rowHeight]="'auto'"
+        [limit]="50"
+        [loadingIndicator]="isLoading()">
+
+        <!-- Fecha -->
+        <ngx-datatable-column name="Fecha" prop="transactionDate" [width]="100" [sortable]="true">
+          <ng-template let-value="value" ngx-datatable-cell-template>
+            {{ formatDate(value) }}
+          </ng-template>
+        </ngx-datatable-column>
+
+        <!-- Descripción -->
+        <ngx-datatable-column name="Descripción" prop="description" [sortable]="false">
+          <ng-template let-value="value" ngx-datatable-cell-template>
+            <span class="small">{{ value }}</span>
+          </ng-template>
+        </ngx-datatable-column>
+
+        <!-- Débito -->
+        <ngx-datatable-column name="Débito" prop="debitAmount" [width]="110" [sortable]="true">
+          <ng-template let-value="value" ngx-datatable-cell-template>
+            @if (value) {
+              <span class="text-danger">{{ formatAmount(value) }}</span>
+            } @else {
+              <span class="text-muted">—</span>
+            }
+          </ng-template>
+        </ngx-datatable-column>
+
+        <!-- Crédito -->
+        <ngx-datatable-column name="Crédito" prop="creditAmount" [width]="110" [sortable]="true">
+          <ng-template let-value="value" ngx-datatable-cell-template>
+            @if (value) {
+              <span class="text-success">{{ formatAmount(value) }}</span>
+            } @else {
+              <span class="text-muted">—</span>
+            }
+          </ng-template>
+        </ngx-datatable-column>
+
+        <!-- Tipo de Movimiento (dropdown clasificación) -->
+        <ngx-datatable-column name="Tipo Movimiento" [width]="200" [sortable]="false">
+          <ng-template let-row="row" ngx-datatable-cell-template>
+            <div class="d-flex align-items-center gap-1">
+              <label [for]="'classType' + row.idBankStatementTransaction" class="visually-hidden">
+                Tipo de movimiento para transacción {{ row.idBankStatementTransaction }}
+              </label>
+              <select
+                [id]="'classType' + row.idBankStatementTransaction"
+                class="form-select form-select-sm"
+                aria-label="Tipo de movimiento"
+                [ngModel]="getClassifyValue(row.idBankStatementTransaction, row.idBankMovementType)"
+                (ngModelChange)="setClassifyValue(row.idBankStatementTransaction, $event ? +$event : 0)"
+                [attr.title]="'Tipo de movimiento transacción ' + row.idBankStatementTransaction">
+                <option [ngValue]="null">— Sin tipo —</option>
+                @for (mt of movementTypes(); track mt.idBankMovementType) {
+                  <option [ngValue]="mt.idBankMovementType">{{ mt.codeBankMovementType }}</option>
+                }
+              </select>
+              <button type="button" class="btn btn-xs btn-outline-success"
+                [disabled]="!getClassifyValue(row.idBankStatementTransaction, row.idBankMovementType) || isClassifying()"
+                (click)="submitClassify(row)"
+                [attr.aria-label]="'Guardar clasificación ' + row.idBankStatementTransaction"
+                [attr.title]="'Guardar clasificación ' + row.idBankStatementTransaction">
+                @if (classifyingId() === row.idBankStatementTransaction) {
+                  <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+                } @else {
+                  <i class="fa fa-check" aria-hidden="true"></i>
+                }
+                <span class="visually-hidden">Guardar {{ row.idBankStatementTransaction }}</span>
+              </button>
+            </div>
+          </ng-template>
+        </ngx-datatable-column>
+
+        <!-- Estado clasificación -->
+        <ngx-datatable-column name="Clasificado" [width]="100" [sortable]="false">
+          <ng-template let-row="row" ngx-datatable-cell-template>
+            @if (row.idBankMovementType) {
+              <span class="badge bg-success">Sí</span>
+            } @else {
+              <span class="badge bg-warning text-dark">No</span>
+            }
+          </ng-template>
+        </ngx-datatable-column>
+
+      </ngx-datatable>
+    }
+
+  </panel>
+}

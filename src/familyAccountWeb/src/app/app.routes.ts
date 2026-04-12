@@ -7,6 +7,7 @@ import {
   ProductsPage,
   AccountingEntriesPage,
   BankMovementsPage,
+  BankStatementImportsPage,
   PurchaseInvoicesPage,
   ErrorPage,
   LoginPage,
@@ -64,6 +65,12 @@ export const routes: Routes = [
     path: "process/bank-movements",
     component: BankMovementsPage,
     data: { title: "Movimientos Bancarios" },
+    canActivate: [AuthGuard],
+  },
+  {
+    path: "process/bank-statement-imports",
+    component: BankStatementImportsPage,
+    data: { title: "Cargas Bancarias" },
     canActivate: [AuthGuard],
   },
   {

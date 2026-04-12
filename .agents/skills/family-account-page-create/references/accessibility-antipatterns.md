@@ -92,26 +92,22 @@ comunes a evitar.
 
 > Omitir `alt` por completo es siempre un error (WCAG 2.1 AA, regla axe `image-alt`).
 
-### Controles dentro de celdas de tabla (`@for` loop)
+### Controles dentro de celdas de tabla (`@for` loop / `ngx-datatable-cell-template`)
 
 Los encabezados `<th>` **no** proveen nombre accesible a los controles de la fila — axe lo reporta como `axe/forms`.
-Cada `<input>` o `<select>` dentro de `<td>` debe tener su propio `aria-label`.
+Elegir el patrón según si el nombre accesible es genérico (igual en todas las filas) o único por fila.
+
+**Variante A — nombre genérico (mismo en todas las filas):** usar `aria-label` estático.
 
 ```html
-<!-- ❌ Incorrecto: el <th>Débito</th> no le da nombre accesible al input -->
-<td>
-  <input type="number" class="form-control form-control-sm"
-    [value]="line.debitAmount" />
-</td>
-
-<!-- ✅ Correcto -->
+<!-- ✅ Input con nombre genérico -->
 <td>
   <input type="number" class="form-control form-control-sm"
     aria-label="Débito"
     [value]="line.debitAmount" />
 </td>
 
-<!-- ✅ Select en celda -->
+<!-- ✅ Select con nombre genérico -->
 <td>
   <select class="form-select form-select-sm"
     aria-label="Cuenta contable"
@@ -121,8 +117,36 @@ Cada `<input>` o `<select>` dentro de `<td>` debe tener su propio `aria-label`.
 </td>
 ```
 
-> Aplica a **todos** los controles repetidos en `@for` dentro de `<tbody>`.
-> El índice `$index` nunca debe usarse en `aria-label` — el tipo de campo sí ("Débito", "Proveedor", etc.).
+**Variante B — nombre único por fila dentro de `ngx-datatable-cell-template`:** patrón doble obligatorio — `<label class="visually-hidden" [for]>` para lectores de pantalla en runtime **+** `aria-label` estático como fallback de timing para axe. Angular puede no haber materializado el binding dinámico `for/id` cuando axe escanea el DOM dentro del template de datatable (el mismo problema que obliga a usar `<span class="visually-hidden">` en botones icon-only).
+
+```html
+<!-- ✅ Correcto — label visually-hidden + for/id + aria-label estático como fallback -->
+<ng-template let-row="row" ngx-datatable-cell-template>
+  <label [for]="'classType' + row.idBankStatementTransaction" class="visually-hidden">
+    Tipo de movimiento para transacción {{ row.idBankStatementTransaction }}
+  </label>
+  <select
+    [id]="'classType' + row.idBankStatementTransaction"
+    class="form-select form-select-sm"
+    aria-label="Tipo de movimiento"
+    [attr.title]="'Tipo de movimiento transacción ' + row.idBankStatementTransaction"
+    [ngModel]="getClassifyValue(row.idBankStatementTransaction, row.idBankMovementType)"
+    (ngModelChange)="setClassifyValue(row.idBankStatementTransaction, $event ? +$event : 0)">
+    ...
+  </select>
+</ng-template>
+
+<!-- ❌ Incorrecto — solo label[for] sin aria-label: axe falla si el binding for/id no está resuelto al escanear -->
+<select
+  [id]="'classType' + row.idBankStatementTransaction"
+  ...
+  <!-- sin aria-label -->
+  >
+</select>
+```
+
+> Aplica a **todos** los controles repetidos en `@for` dentro de `<tbody>` o en `ngx-datatable-cell-template`.
+> El índice `$index` nunca debe usarse en `aria-label` ni en el texto del label — el tipo de campo sí ("Débito", "Proveedor", etc.).
 
 ### Inputs `readonly` sin `id` cuando tienen `<label>`
 
@@ -177,7 +201,7 @@ Cada `<input>` o `<select>` dentro de `<td>` debe tener su propio `aria-label`.
 | `handleRefresh` síncrono | Usar `async/await` con `setTimeout(800)` antes de `.complete()` |
 | Helpers de display en el coordinador page | Los helpers (`formatDate`, `getStatusBadgeClass`) van en los **sub-components** |
 | `.subscribe()` sin callbacks ni finalize | Usar `{ next, error }` + `finalize()` siempre |
-| `<select>` / `<input>` sin `aria-label` cuando no hay label | Siempre `aria-label` cuando no hay `<label>` visible |
+| `<select>` / `<input>` sin `aria-label` en `ngx-datatable-cell-template` | Agregar siempre `aria-label` estático como fallback de timing — axe puede escanear antes de que Angular resuelva el binding `for/id` |
 | `<label>` sin `for` / control sin `id` | Emparejar siempre: `<label for="fCode">` + `<input id="fCode">` |
 | `placeholder` como único nombre accesible | `aria-label` **además** del placeholder |
 | Botón de icono sin texto accesible | Agregar `aria-label` o `title` al botón |

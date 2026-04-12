@@ -222,7 +222,10 @@ import {
 } from '@angular/core';
 import { AppSettings, LoggerService } from '../../../service';
 import { ResponsiveComponent } from '../../../shared';
-import { MiPaginaWebComponent, MiPaginaMobileComponent } from './components'; // ← import corto desde barrel
+// ⚠️ Los sub-componentes del page se importan SIEMPRE desde su ruta directa, NUNCA desde el barrel.
+// El compilador Ivy no puede resolver estáticamente componentes en imports[] que vienen de re-exports de barrel.
+import { MiPaginaWebComponent } from './components/mi-pagina-web/mi-pagina-web.component';
+import { MiPaginaMobileComponent } from './components/mi-pagina-mobile/mi-pagina-mobile.component';
 
 @Component({
   selector: 'app-mi-pagina',
@@ -268,7 +271,12 @@ export class MiPaginaPage extends ResponsiveComponent implements OnInit, OnDestr
 - Estado como `signal()`, nunca propiedades planas mutables para estado reactivo.
 - `ngOnDestroy()` **SIEMPRE** llama `super.ngOnDestroy()` y restaura `AppSettings` si se modificó en el constructor.
 - Importa únicamente `MiPaginaWebComponent` y `MiPaginaMobileComponent` (ni Ionic ni Bootstrap directamente).
-- **Siempre usar el import corto desde el barrel:** `import { MiPaginaWebComponent, MiPaginaMobileComponent } from './components';` — nunca rutas largas hasta los archivos internos.
+- **⚠️ Importar los sub-componentes SIEMPRE desde su ruta directa**, nunca desde el barrel `./components`:
+  ```typescript
+  import { MiPaginaWebComponent }    from './components/mi-pagina-web/mi-pagina-web.component';
+  import { MiPaginaMobileComponent } from './components/mi-pagina-mobile/mi-pagina-mobile.component';
+  ```
+  El barrel (`index.ts`) provoca el error `-991010 Value could not be determined statically` porque Ivy analiza el array `imports[]` de forma estática y no puede seguir re-exports de barrel para localizar componentes. El barrel sigue siendo válido para importar en cualquier otro contexto (servicios, modelos, pipes).
 - Los helpers de display (`formatDate`, `getBadgeClass`) van en los sub-componentes, NO aquí.
 
 ---
@@ -867,7 +875,7 @@ del sub-componente).
 | Clase CSS custom en SCSS del componente | No mantenible, viola la regla sin-scss | Usar utility classes Bootstrap/Color Admin |
 | `style="z-index: N"` inline en el HTML | Valor hardcodeado, no reutilizable | Usar `.z-10/.z-20/.z-30/.z-100` (ver skill `color-admin`) |
 | `role="grid"` en `<ngx-datatable>` | axe viola `aria-required-children`: ngx-datatable renderiza `<a tabindex>`, `<button tabindex>`, `<table tabindex>` como hijos directos, invalidando el rol | Eliminar `role="grid"` — ngx-datatable gestiona su propia estructura ARIA internamente |
-| Inputs/selects de tablas inline sin `aria-label` | axe viola `forms`: las celdas `<td>` no son `<label>` — los controles quedan sin nombre accesible | Agregar `aria-label="..."` descriptivo a cada `<input>` y `<select>` dentro de `<td>` |
+| Inputs/selects de tablas inline sin nombre accesible | axe viola `forms`: las celdas `<td>` no son `<label>` — los controles quedan sin nombre accesible | **Patrón doble obligatorio dentro de `ngx-datatable-cell-template`:** `<label class="visually-hidden" [for]="'controlId' + row.id">` + `[id]` en el control **+** `aria-label="Tipo"` estático como fallback. El `aria-label` estático garantiza que axe encuentre un nombre aunque el binding dinámico `for/id` aún no esté resuelto al momento del escaneo (mismo problema de timing que afecta a botones icon-only en datatable) |
 | Botones icon-only sin `aria-label` + `title` | axe viola `name-role-value`: `<button>` con solo `<i class="fa...">` no tiene texto discernible | Agregar `[attr.aria-label]="'Acción ' + row.id"` y `[attr.title]="'Acción ' + row.id"` al `<button>`. **Usar siempre `[attr.title]`, nunca `[title]`** — `[title]` enlaza a la propiedad DOM y axe no lo reconoce como atributo HTML; `[attr.title]` emite el atributo real en el DOM |
 | `<i class="fa ...">` sin `aria-hidden="true"` en botón icon-only | Screen readers anuncian el contenido unicode del icono Font Awesome encima del `aria-label`, duplicando o contaminando la lectura | Agregar siempre `aria-hidden="true"` al `<i>` cuando el botón padre ya tiene `aria-label`: `<i class="fa fa-pencil" aria-hidden="true"></i>` |
 | Botón icon-only dentro de `ngx-datatable-cell-template` sigue reportado por axe aunque tenga `[attr.aria-label]` y `[attr.title]` | Angular puede no materializar atributos dinámicos antes de que axe escanee el DOM en ese contexto de template | Agregar además `<span class="visually-hidden">Acción {{ row.numberMovement }}</span>` como hijo del botón — texto real en el DOM, siempre disponible para el scanner sin depender del timing de Angular |

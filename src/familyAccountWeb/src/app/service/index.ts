@@ -28,3 +28,5 @@ export { ProductCategoryService } from './product-category.service';
 export { UnitOfMeasureService } from './unit-of-measure.service';
 export { CostCenterService } from './cost-center.service';
 export { ContactService } from './contact.service';
+export { BankStatementTemplateService } from './bank-statement-template.service';
+export { BankStatementImportService } from './bank-statement-import.service';

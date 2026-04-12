@@ -61,6 +61,13 @@ export class AppMenuService {
           roles: [1, 2],
         },
         {
+          icon: "fa fa-upload",
+          iconMobile: "cloud-upload-outline",
+          title: "Cargas Bancarias",
+          url: "/process/bank-statement-imports",
+          roles: [1, 2],
+        },
+        {
           icon: "fa fa-file-text",
           iconMobile: "receipt-outline",
           title: "Facturas de Compra",

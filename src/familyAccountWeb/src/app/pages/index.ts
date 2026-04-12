@@ -5,6 +5,7 @@ export { ProductCategoriesPage } from './maintenance/product-categories';
 export { ProductsPage } from './maintenance/products';
 export { AccountingEntriesPage } from './process/accounting-entries';
 export { BankMovementsPage } from './process/bank-movements';
+export { BankStatementImportsPage } from './process/bank-statement-imports';
 export { PurchaseInvoicesPage } from './process/purchase-invoices';
 export { ErrorPage } from './error';
 export { LoginPage } from './login';

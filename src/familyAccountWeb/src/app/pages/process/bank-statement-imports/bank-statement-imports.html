@@ -1,0 +1,37 @@
+@if (isMobile()) {
+  <app-bank-statement-imports-mobile
+    [isLoading]="isLoading()"
+    [isUploading]="isUploading()"
+    [isClassifying]="isClassifying()"
+    [errorMessage]="error() ?? ''"
+    [imports]="imports()"
+    [transactions]="transactions()"
+    [templates]="templates()"
+    [bankAccounts]="bankAccounts()"
+    [movementTypes]="movementTypes()"
+    [selectedImportId]="selectedImportId()"
+    (refresh)="load()"
+    (upload)="uploadFile($event)"
+    (expand)="expandImport($event)"
+    (classify)="classify($event)"
+    (clearError)="error.set(null)"
+  />
+} @else {
+  <app-bank-statement-imports-web
+    [isLoading]="isLoading()"
+    [isUploading]="isUploading()"
+    [isClassifying]="isClassifying()"
+    [errorMessage]="error() ?? ''"
+    [imports]="imports()"
+    [transactions]="transactions()"
+    [templates]="templates()"
+    [bankAccounts]="bankAccounts()"
+    [movementTypes]="movementTypes()"
+    [selectedImportId]="selectedImportId()"
+    (refresh)="load()"
+    (upload)="uploadFile($event)"
+    (expand)="expandImport($event)"
+    (classify)="classify($event)"
+    (clearError)="error.set(null)"
+  />
+}
