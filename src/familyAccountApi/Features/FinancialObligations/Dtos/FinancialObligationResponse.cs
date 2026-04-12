@@ -1,0 +1,27 @@
+namespace FamilyAccountApi.Features.FinancialObligations.Dtos;
+
+public sealed record FinancialObligationResponse(
+    int      IdFinancialObligation,
+    string   NameObligation,
+    int      IdCurrency,
+    string   CodeCurrency,
+    decimal  OriginalAmount,
+    decimal  InterestRate,
+    DateOnly StartDate,
+    int      TermMonths,
+    int?     IdBankAccountPayment,
+    string?  CodeBankAccountPayment,
+    int      IdAccountLongTerm,
+    string   CodeAccountLongTerm,
+    int      IdAccountShortTerm,
+    string   CodeAccountShortTerm,
+    int      IdAccountInterest,
+    string   CodeAccountInterest,
+    int?     IdAccountLateFee,
+    string?  CodeAccountLateFee,
+    int?     IdAccountOther,
+    string?  CodeAccountOther,
+    string   MatchKeyword,
+    string   StatusObligation,
+    string?  Notes,
+    IReadOnlyList<FinancialObligationInstallmentResponse> Installments);

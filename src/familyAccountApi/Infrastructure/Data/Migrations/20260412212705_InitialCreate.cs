@@ -829,6 +829,77 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 comment: "Registro de importaciones de extractos bancarios");
 
             migrationBuilder.CreateTable(
+                name: "financialObligation",
+                columns: table => new
+                {
+                    idFinancialObligation = table.Column<int>(type: "int", nullable: false, comment: "Identificador único del préstamo u obligación financiera")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    nameObligation = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, comment: "Nombre descriptivo. Ej: Préstamo COOPEALIANZA CRC"),
+                    idCurrency = table.Column<int>(type: "int", nullable: false, comment: "FK a la moneda del préstamo"),
+                    originalAmount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Monto original desembolsado"),
+                    interestRate = table.Column<decimal>(type: "decimal(8,4)", precision: 8, scale: 4, nullable: false, comment: "Tasa de interés anual. Ej: 18.5000 = 18.5%"),
+                    startDate = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha de primer desembolso o primer vencimiento"),
+                    termMonths = table.Column<int>(type: "int", nullable: false, comment: "Plazo total del préstamo en meses"),
+                    idBankAccountPayment = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta bancaria BAC desde la que se pagan las cuotas. Null si aún no está configurada"),
+                    idAccountLongTerm = table.Column<int>(type: "int", nullable: false, comment: "FK a la cuenta de Pasivo No Corriente del préstamo. Ej: 2.2.01.01"),
+                    idAccountShortTerm = table.Column<int>(type: "int", nullable: false, comment: "FK a la cuenta de Pasivo Corriente — porción corriente del préstamo. Ej: 2.1.02.01"),
+                    idAccountInterest = table.Column<int>(type: "int", nullable: false, comment: "FK a la cuenta de Gasto Intereses. Ej: 5.5.05"),
+                    idAccountLateFee = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta de Gasto Mora. Null usa la misma de intereses"),
+                    idAccountOther = table.Column<int>(type: "int", nullable: true, comment: "FK a la cuenta de Gasto Otros cargos. Null usa la misma de intereses"),
+                    matchKeyword = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: false, comment: "Keyword para buscar el movimiento BAC correspondiente. Ej: COOPEALIANZA"),
+                    statusObligation = table.Column<string>(type: "varchar(10)", unicode: false, maxLength: 10, nullable: false, defaultValue: "Activo", comment: "Estado del préstamo: Activo | Liquidado"),
+                    notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true, comment: "Observaciones adicionales del préstamo")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_financialObligation", x => x.idFinancialObligation);
+                    table.CheckConstraint("CK_financialObligation_statusObligation", "statusObligation IN ('Activo', 'Liquidado')");
+                    table.ForeignKey(
+                        name: "FK_financialObligation_account_idAccountInterest",
+                        column: x => x.idAccountInterest,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_financialObligation_account_idAccountLateFee",
+                        column: x => x.idAccountLateFee,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_financialObligation_account_idAccountLongTerm",
+                        column: x => x.idAccountLongTerm,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_financialObligation_account_idAccountOther",
+                        column: x => x.idAccountOther,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_financialObligation_account_idAccountShortTerm",
+                        column: x => x.idAccountShortTerm,
+                        principalTable: "account",
+                        principalColumn: "idAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_financialObligation_bankAccount_idBankAccountPayment",
+                        column: x => x.idBankAccountPayment,
+                        principalTable: "bankAccount",
+                        principalColumn: "idBankAccount",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_financialObligation_currency_idCurrency",
+                        column: x => x.idCurrency,
+                        principalTable: "currency",
+                        principalColumn: "idCurrency",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "Cabecera de préstamos y créditos bancarios. Contiene parámetros contables para generación automática de asientos al sincronizar el Excel del banco.");
+
+            migrationBuilder.CreateTable(
                 name: "accountingEntryLine",
                 columns: table => new
                 {
@@ -1183,6 +1254,37 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         onDelete: ReferentialAction.Cascade);
                 },
                 comment: "Transacciones individuales importadas de extractos bancarios");
+
+            migrationBuilder.CreateTable(
+                name: "financialObligationInstallment",
+                columns: table => new
+                {
+                    idFinancialObligationInstallment = table.Column<int>(type: "int", nullable: false, comment: "Identificador único de la cuota")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idFinancialObligation = table.Column<int>(type: "int", nullable: false, comment: "FK al préstamo al que pertenece esta cuota"),
+                    numberInstallment = table.Column<int>(type: "int", nullable: false, comment: "Número de cuota según el Excel del banco. Clave natural para upsert. Ej: 1, 2 … 36"),
+                    dueDate = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha de vencimiento de la cuota según el banco"),
+                    balanceAfter = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Saldo del préstamo después de pagar esta cuota"),
+                    amountCapital = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Porción de capital que amortiza el principal"),
+                    amountInterest = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Gasto financiero del período"),
+                    amountLateFee = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m, comment: "Mora por pago tardío. Default 0"),
+                    amountOther = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m, comment: "Otros cargos adicionales del banco. Default 0"),
+                    amountTotal = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Total de la cuota: Capital + Interés + Mora + Otros"),
+                    statusInstallment = table.Column<string>(type: "varchar(10)", unicode: false, maxLength: 10, nullable: false, defaultValue: "Pendiente", comment: "Estado según el Excel: Pendiente | Vigente | Pagada | Vencida"),
+                    syncedAt = table.Column<DateTime>(type: "datetime2", nullable: true, comment: "Fecha y hora UTC en que el Excel actualizó por última vez esta fila")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_financialObligationInstallment", x => x.idFinancialObligationInstallment);
+                    table.CheckConstraint("CK_financialObligationInstallment_status", "statusInstallment IN ('Pendiente', 'Vigente', 'Pagada', 'Vencida')");
+                    table.ForeignKey(
+                        name: "FK_financialObligationInstallment_financialObligation_idFinancialObligation",
+                        column: x => x.idFinancialObligation,
+                        principalTable: "financialObligation",
+                        principalColumn: "idFinancialObligation",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "Tabla de amortización del préstamo. Una fila por cuota. Se sincroniza automáticamente al cargar el Excel del banco.");
 
             migrationBuilder.CreateTable(
                 name: "inventoryAdjustment",
@@ -1606,6 +1708,48 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         onDelete: ReferentialAction.Cascade);
                 },
                 comment: "Tabla pivot N:M salesInvoice ↔ accountingEntry.");
+
+            migrationBuilder.CreateTable(
+                name: "financialObligationPayment",
+                columns: table => new
+                {
+                    idFinancialObligationPayment = table.Column<int>(type: "int", nullable: false, comment: "Identificador único del pago")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    idFinancialObligationInstallment = table.Column<int>(type: "int", nullable: false, comment: "FK a la cuota pagada. Índice único: una cuota solo puede tener un pago"),
+                    idBankMovement = table.Column<int>(type: "int", nullable: true, comment: "FK al movimiento bancario BAC que originó el pago. Null si no se encuentra el match automático"),
+                    datePayment = table.Column<DateOnly>(type: "date", nullable: false, comment: "Fecha en que se realizó el pago al banco"),
+                    amountPaid = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Monto total efectivamente pagado"),
+                    amountCapitalPaid = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Porción de capital pagada — tomada del Excel"),
+                    amountInterestPaid = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, comment: "Interés pagado — tomado del Excel"),
+                    amountLatePaid = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m, comment: "Mora pagada — tomada del Excel. Default 0"),
+                    amountOtherPaid = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false, defaultValue: 0m, comment: "Otros cargos pagados — tomados del Excel. Default 0"),
+                    idAccountingEntry = table.Column<int>(type: "int", nullable: true, comment: "FK al asiento contable generado en Borrador. Null hasta que se genera"),
+                    isAutoProcessed = table.Column<bool>(type: "bit", nullable: false, defaultValue: false, comment: "True = pago detectado y generado automáticamente por sync-excel"),
+                    notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true, comment: "Observaciones del pago")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_financialObligationPayment", x => x.idFinancialObligationPayment);
+                    table.ForeignKey(
+                        name: "FK_financialObligationPayment_accountingEntry_idAccountingEntry",
+                        column: x => x.idAccountingEntry,
+                        principalTable: "accountingEntry",
+                        principalColumn: "idAccountingEntry",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_financialObligationPayment_bankMovement_idBankMovement",
+                        column: x => x.idBankMovement,
+                        principalTable: "bankMovement",
+                        principalColumn: "idBankMovement",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_financialObligationPayment_financialObligationInstallment_idFinancialObligationInstallment",
+                        column: x => x.idFinancialObligationInstallment,
+                        principalTable: "financialObligationInstallment",
+                        principalColumn: "idFinancialObligationInstallment",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "Pago real registrado contra una cuota del préstamo. Contiene el movimiento BAC vinculado y el asiento contable generado en Borrador.");
 
             migrationBuilder.CreateTable(
                 name: "inventoryAdjustmentEntry",
@@ -2535,7 +2679,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 {
                     { 1, "Banco de Costa Rica", "BCR-HTML-XLS-V1", "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                                                        \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\n                                                                        \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\",\"DB AH TELEF\",\"MOVISTAR\",\"KOLBI\",\"PG AH TIEMPO AIRE TD\"],\n                                                                        \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\n                                                                        \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\",\"TRANSFERENC BANCOBCR\"],\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                                                        \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\",\"MONEDERO SINPE MOVIL\"],\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]", "BCR – Movimientos de Cuenta (HTML-XLS)", "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.", "HH:mm:ss" },
                     { 2, "BAC Credomatic", "BAC-TXT-V1", "{}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SU PAGO RECIBIDO GRACIAS\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"UBER\",\"DLC*UBER\",\"DLC*LYFT\",\"BOLT\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"APPLE.COM\",\"NETFLIX.COM\",\"GITHUB\",\"SPOTIFY\",\"YOUTUBE\",\"AMAZON\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"WALMART\",\"MAXIPALI\",\"MXM \",\"SUPER SALON\",\"AUTOMERCADO\",\"PALI \"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"IVA -\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"}\n]", "BAC Credomatic – Estado de Cuenta Tarjeta (TXT)", "Archivo .txt pipe-delimitado exportado desde el portal BAC. Aplica para estados de cuenta de tarjetas de crédito (AMEX, Visa, Mastercard). La columna Local contiene montos en CRC y Dollars en USD; se usa el no-cero.", null },
-                    { 3, "Banco Nacional de Costa Rica", "BNCR-CSV-V1", "{}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                            \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERESES GANADOS\"],\n                                            \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"TRANSFERENCIA SINPE\",\"SINPE MOVIL\",\"PAGO TARJETA BAC\",\"PAGOTARJETABAC\",\"SEMANA MAXIPAL\",\"PAGO SERVICIO PROFESIONAL\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\"],\n                                            \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TARJET\",\"PAGO TC\",\"TARJETA CRED\"],\n                                            \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                            \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL DEB\",\"DEB SINPE\",\"CARGO SINPE\",\"TRANSF DEB\"],\n                                            \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]", "BNCR – Movimientos de Cuenta (CSV)", "Archivo .csv punto-y-coma exportado desde BN en línea. Codificación Latin-1/Windows-1252. Aplica para cuentas de ahorros en colones y dólares.", null }
+                    { 3, "Banco Nacional de Costa Rica", "BNCR-CSV-V1", "{}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                            \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERESES GANADOS\"],\n                                            \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"TRANSFERENCIA SINPE\",\"SINPE MOVIL\",\"PAGO TARJETA BAC\",\"PAGOTARJETABAC\",\"SEMANA MAXIPAL\",\"PAGO SERVICIO PROFESIONAL\",\"PAGOSERVICIO\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\"],\n                                            \"idBankMovementType\":5,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TARJET\",\"PAGO TC\",\"TARJETA CRED\"],\n                                            \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                            \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL DEB\",\"DEB SINPE\",\"CARGO SINPE\",\"TRANSF DEB\"],\n                                            \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]", "BNCR – Movimientos de Cuenta (CSV)", "Archivo .csv punto-y-coma exportado desde BN en línea. Codificación Latin-1/Windows-1252. Aplica para cuentas de ahorros en colones y dólares.", null },
+                    { 4, "BAC Credomatic", "BAC-TXT-CRC-V1", "{\"currency\":\"CRC\"}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SU PAGO RECIBIDO GRACIAS\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"UBER\",\"DLC*UBER\",\"DLC*LYFT\",\"BOLT\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"APPLE.COM\",\"NETFLIX.COM\",\"GITHUB\",\"SPOTIFY\",\"YOUTUBE\",\"AMAZON\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"WALMART\",\"MAXIPALI\",\"MXM \",\"SUPER SALON\",\"AUTOMERCADO\",\"PALI \",\"SIMAN\",\"ALMACENES\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"FARMACIA\",\"DROGUERIA\",\"CLINICA \",\"HOSPITAL\",\"OPTICA \",\"LABORATORIO\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"FERRETERIA\",\"DEPOSITO FERR\",\"CONSTRUPLAZA\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"GOOGLE\",\"MICROSOFT\",\"2CO.COM\",\"OPENAI\",\"CHATGPT\",\"DIGITALOCEAN\",\"NEOTHEK\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SEGURO PROTECCION\",\"SEGURO DE VIDA\",\"PRIMA SEGURO\",\"INS \"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"IVA -\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"TRASLADO SALDO REVOLUTIVO\",\"CUOTA:\"],\n                                            \"idBankMovementType\":7,\"matchMode\":\"Any\"}\n]", "BAC Credomatic – Tarjeta Crédito CRC (TXT)", "Archivo .txt pipe-delimitado exportado desde el portal BAC. Sólo se procesa la columna Local (CRC). Usar para archivos *-CRC.txt de tarjetas de crédito en colones.", null },
+                    { 5, "BAC Credomatic", "BAC-TXT-USD-V1", "{\"currency\":\"USD\"}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SU PAGO RECIBIDO GRACIAS\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"UBER\",\"DLC*UBER\",\"DLC*LYFT\",\"BOLT\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"APPLE.COM\",\"NETFLIX.COM\",\"GITHUB\",\"SPOTIFY\",\"YOUTUBE\",\"AMAZON\",\"JETBRAINS\",\"GOOGLE\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"GAMMA.APP\",\"OPENAI\",\"CHATGPT\",\"MICROSOFT\",\"DIGITALOCEAN\",\"2CO.COM\",\"NEOTHEK\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"ICON CC RETAIL\",\"WALMART\",\"AMAZON\",\"SIMAN\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SEGURO PROTECCION\",\"SEGURO DE VIDA\",\"PRIMA SEGURO\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"IVA -\"],\n                                            \"idBankMovementType\":4,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"TRASLADO SALDO REVOLUTIVO\",\"CUOTA:\"],\n                                            \"idBankMovementType\":7,\"matchMode\":\"Any\"}\n]", "BAC Credomatic – Tarjeta Crédito USD (TXT)", "Archivo .txt pipe-delimitado exportado desde el portal BAC. Sólo se procesa la columna Dollars (USD). Usar para archivos *-USD.txt de tarjetas de crédito en dólares.", null },
+                    { 6, "BAC Credomatic", "BAC-XLS-V1", "{}", "dd/MM/yyyy", true, "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                            \"idBankMovementType\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP_ATM\",\"TATMFULL\",\"DEPOSITO ATM\"],\n                                            \"idBankMovementType\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"TEF DE:\",\"DTR SINPE\",\"SINPE REC\",\"ABONO SINPE\",\"CREDITO SINPE\"],\n                                            \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COOPEALIANZA\",\"CAJA AHORRO\"],\n                                            \"idBankMovementType\":7,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO \",\"SINPE MOVIL PAGO_TARJETA\"],\n                                            \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DTR:\",\"RETIRO CAJERO\",\"RETIRO ATM\",\"RETIRO EFECTIVO\"],\n                                            \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]", "BAC Credomatic – Cuenta de Ahorro/Débito (XLS)", "Archivo .xls (BIFF8) exportado desde el portal BAC para cuentas de ahorro y débito. Columnas fijas: Fecha | Referencia | | Código | Descripción | | | Débitos | Créditos | Balance. Usar para cuentas de ahorro BAC (cuenta CR73... en CRC).", null }
                 });
 
             migrationBuilder.InsertData(
@@ -2785,7 +2932,10 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 119, true, "5.15.01", 118, true, 3, "Costo de Ventas — Mercadería", "Gasto" },
                     { 120, false, "1.1.08", 7, true, 3, "Cuentas por Cobrar", "Activo" },
                     { 123, false, "1.1.09", 7, true, 3, "IVA Acreditable", "Activo" },
-                    { 126, false, "2.1.04", 9, true, 3, "IVA por Pagar", "Pasivo" }
+                    { 126, false, "2.1.04", 9, true, 3, "IVA por Pagar", "Pasivo" },
+                    { 135, false, "2.1.05", 9, true, 3, "Intereses por Pagar", "Pasivo" },
+                    { 137, true, "5.5.05", 92, true, 3, "Intereses Coopealianza", "Gasto" },
+                    { 138, true, "5.5.06", 92, true, 3, "Mora Coopealianza", "Gasto" }
                 });
 
             migrationBuilder.InsertData(
@@ -2892,7 +3042,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     { 130, true, "5.14.01.02", 113, true, 4, "Merma Anormal", "Gasto" },
                     { 131, true, "2.1.01.02", 28, true, 4, "BAC - AMEX  CR13010202321157328803 ($) - Baltodano Cubillo Ezequiel", "Pasivo" },
                     { 132, true, "2.1.01.04", 28, true, 4, "BAC - MCARD CR17010202526537778556 ($) - Baltodano Cubillo Ezequiel", "Pasivo" },
-                    { 133, true, "2.1.01.06", 28, true, 4, "BAC - MCARD CR18010202522447454214 ($) - Baltodano Cubillo Ezequiel", "Pasivo" }
+                    { 133, true, "2.1.01.06", 28, true, 4, "BAC - MCARD CR18010202522447454214 ($) - Baltodano Cubillo Ezequiel", "Pasivo" },
+                    { 134, true, "2.1.02.01", 40, true, 4, "Coopealianza - Porción Corriente CR05081302810003488995 (₡) - Baltodano Cubillo Ezequiel", "Pasivo" },
+                    { 136, true, "2.1.05.01", 135, true, 4, "Intereses por Pagar - Coopealianza (₡)", "Pasivo" }
                 });
 
             migrationBuilder.InsertData(
@@ -3432,6 +3584,63 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "UQ_exchangeRate_idCurrency_rateDate",
                 table: "exchangeRate",
                 columns: new[] { "idCurrency", "rateDate" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financialObligation_idAccountInterest",
+                table: "financialObligation",
+                column: "idAccountInterest");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financialObligation_idAccountLateFee",
+                table: "financialObligation",
+                column: "idAccountLateFee");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financialObligation_idAccountLongTerm",
+                table: "financialObligation",
+                column: "idAccountLongTerm");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financialObligation_idAccountOther",
+                table: "financialObligation",
+                column: "idAccountOther");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financialObligation_idAccountShortTerm",
+                table: "financialObligation",
+                column: "idAccountShortTerm");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financialObligation_idBankAccountPayment",
+                table: "financialObligation",
+                column: "idBankAccountPayment");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financialObligation_idCurrency",
+                table: "financialObligation",
+                column: "idCurrency");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_financialObligationInstallment_idObligation_number",
+                table: "financialObligationInstallment",
+                columns: new[] { "idFinancialObligation", "numberInstallment" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financialObligationPayment_idAccountingEntry",
+                table: "financialObligationPayment",
+                column: "idAccountingEntry");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_financialObligationPayment_idBankMovement",
+                table: "financialObligationPayment",
+                column: "idBankMovement");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_financialObligationPayment_idInstallment",
+                table: "financialObligationPayment",
+                column: "idFinancialObligationInstallment",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -4299,6 +4508,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "exchangeRate");
 
             migrationBuilder.DropTable(
+                name: "financialObligationPayment");
+
+            migrationBuilder.DropTable(
                 name: "inventoryAdjustmentEntry");
 
             migrationBuilder.DropTable(
@@ -4368,9 +4580,6 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                 name: "userRole");
 
             migrationBuilder.DropTable(
-                name: "bankMovement");
-
-            migrationBuilder.DropTable(
                 name: "bankStatementImport");
 
             migrationBuilder.DropTable(
@@ -4378,6 +4587,12 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "contactType");
+
+            migrationBuilder.DropTable(
+                name: "bankMovement");
+
+            migrationBuilder.DropTable(
+                name: "financialObligationInstallment");
 
             migrationBuilder.DropTable(
                 name: "productionSnapshot");
@@ -4414,6 +4629,9 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "user");
+
+            migrationBuilder.DropTable(
+                name: "financialObligation");
 
             migrationBuilder.DropTable(
                 name: "productAttribute");

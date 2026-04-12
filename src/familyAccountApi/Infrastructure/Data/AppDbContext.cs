@@ -81,6 +81,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<SalesInvoiceLineSlotOption>              SalesInvoiceLineSlotOption              => Set<SalesInvoiceLineSlotOption>();
     public DbSet<SalesInvoiceEntry>           SalesInvoiceEntry           => Set<SalesInvoiceEntry>();
     public DbSet<SalesInvoiceLineEntry>       SalesInvoiceLineEntry       => Set<SalesInvoiceLineEntry>();
+    public DbSet<FinancialObligation>             FinancialObligation             => Set<FinancialObligation>();
+    public DbSet<FinancialObligationInstallment>  FinancialObligationInstallment  => Set<FinancialObligationInstallment>();
+    public DbSet<FinancialObligationPayment>      FinancialObligationPayment      => Set<FinancialObligationPayment>();
     public DbSet<Company>                  Company                  => Set<Company>();
     public DbSet<CompanyDomain>            CompanyDomain            => Set<CompanyDomain>();
     public DbSet<CompanyWhatsapp>          CompanyWhatsapp          => Set<CompanyWhatsapp>();

@@ -38,6 +38,7 @@ using FamilyAccountApi.Features.SalesInvoices;
 using FamilyAccountApi.Features.PriceLists;
 using FamilyAccountApi.Features.SalesOrders;
 using FamilyAccountApi.Features.ProductionOrders;
+using FamilyAccountApi.Features.FinancialObligations;
 
 namespace FamilyAccountApi.Infrastructure.Extensions;
 
@@ -83,7 +84,8 @@ public static class FeaturesExtensions
             .AddSalesInvoicesModule()
             .AddPriceListsModule()
             .AddSalesOrdersModule()
-            .AddProductionOrdersModule();
+            .AddProductionOrdersModule()
+            .AddFinancialObligationsModule();
 
     public static WebApplication MapAllEndpoints(this WebApplication app)
     {
@@ -131,6 +133,7 @@ public static class FeaturesExtensions
         v1.MapPriceListsEndpoints();
         v1.MapSalesOrdersEndpoints();
         v1.MapProductionOrdersEndpoints();
+        v1.MapFinancialObligationsEndpoints();
 
         return app;
     }

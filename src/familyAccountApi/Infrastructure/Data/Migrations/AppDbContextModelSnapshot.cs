@@ -1382,6 +1382,61 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             LevelAccount = 4,
                             NameAccount = "IVA por Pagar USD ($)",
                             TypeAccount = "Pasivo"
+                        },
+                        new
+                        {
+                            IdAccount = 134,
+                            AllowsMovements = true,
+                            CodeAccount = "2.1.02.01",
+                            IdAccountParent = 40,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "Coopealianza - Porción Corriente CR05081302810003488995 (₡) - Baltodano Cubillo Ezequiel",
+                            TypeAccount = "Pasivo"
+                        },
+                        new
+                        {
+                            IdAccount = 135,
+                            AllowsMovements = false,
+                            CodeAccount = "2.1.05",
+                            IdAccountParent = 9,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Intereses por Pagar",
+                            TypeAccount = "Pasivo"
+                        },
+                        new
+                        {
+                            IdAccount = 136,
+                            AllowsMovements = true,
+                            CodeAccount = "2.1.05.01",
+                            IdAccountParent = 135,
+                            IsActive = true,
+                            LevelAccount = 4,
+                            NameAccount = "Intereses por Pagar - Coopealianza (₡)",
+                            TypeAccount = "Pasivo"
+                        },
+                        new
+                        {
+                            IdAccount = 137,
+                            AllowsMovements = true,
+                            CodeAccount = "5.5.05",
+                            IdAccountParent = 92,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Intereses Coopealianza",
+                            TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 138,
+                            AllowsMovements = true,
+                            CodeAccount = "5.5.06",
+                            IdAccountParent = 92,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Mora Coopealianza",
+                            TypeAccount = "Gasto"
                         });
                 });
 
@@ -3196,6 +3251,316 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             t.HasComment("Tipos de cambio por moneda y fecha para soportar operaciones multi-moneda en el sistema contable.");
 
                             t.HasCheckConstraint("CK_exchangeRate_rateValue_positive", "rateValue > 0");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FinancialObligation", b =>
+                {
+                    b.Property<int>("IdFinancialObligation")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idFinancialObligation")
+                        .HasComment("Identificador único del préstamo u obligación financiera");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdFinancialObligation"));
+
+                    b.Property<int>("IdAccountInterest")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountInterest")
+                        .HasComment("FK a la cuenta de Gasto Intereses. Ej: 5.5.05");
+
+                    b.Property<int?>("IdAccountLateFee")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountLateFee")
+                        .HasComment("FK a la cuenta de Gasto Mora. Null usa la misma de intereses");
+
+                    b.Property<int>("IdAccountLongTerm")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountLongTerm")
+                        .HasComment("FK a la cuenta de Pasivo No Corriente del préstamo. Ej: 2.2.01.01");
+
+                    b.Property<int?>("IdAccountOther")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountOther")
+                        .HasComment("FK a la cuenta de Gasto Otros cargos. Null usa la misma de intereses");
+
+                    b.Property<int>("IdAccountShortTerm")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountShortTerm")
+                        .HasComment("FK a la cuenta de Pasivo Corriente — porción corriente del préstamo. Ej: 2.1.02.01");
+
+                    b.Property<int?>("IdBankAccountPayment")
+                        .HasColumnType("int")
+                        .HasColumnName("idBankAccountPayment")
+                        .HasComment("FK a la cuenta bancaria BAC desde la que se pagan las cuotas. Null si aún no está configurada");
+
+                    b.Property<int>("IdCurrency")
+                        .HasColumnType("int")
+                        .HasColumnName("idCurrency")
+                        .HasComment("FK a la moneda del préstamo");
+
+                    b.Property<decimal>("InterestRate")
+                        .HasPrecision(8, 4)
+                        .HasColumnType("decimal(8,4)")
+                        .HasColumnName("interestRate")
+                        .HasComment("Tasa de interés anual. Ej: 18.5000 = 18.5%");
+
+                    b.Property<string>("MatchKeyword")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("matchKeyword")
+                        .HasComment("Keyword para buscar el movimiento BAC correspondiente. Ej: COOPEALIANZA");
+
+                    b.Property<string>("NameObligation")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("nameObligation")
+                        .HasComment("Nombre descriptivo. Ej: Préstamo COOPEALIANZA CRC");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("notes")
+                        .HasComment("Observaciones adicionales del préstamo");
+
+                    b.Property<decimal>("OriginalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("originalAmount")
+                        .HasComment("Monto original desembolsado");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("startDate")
+                        .HasComment("Fecha de primer desembolso o primer vencimiento");
+
+                    b.Property<string>("StatusObligation")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasDefaultValue("Activo")
+                        .HasColumnName("statusObligation")
+                        .HasComment("Estado del préstamo: Activo | Liquidado");
+
+                    b.Property<int>("TermMonths")
+                        .HasColumnType("int")
+                        .HasColumnName("termMonths")
+                        .HasComment("Plazo total del préstamo en meses");
+
+                    b.HasKey("IdFinancialObligation");
+
+                    b.HasIndex("IdAccountInterest");
+
+                    b.HasIndex("IdAccountLateFee");
+
+                    b.HasIndex("IdAccountLongTerm");
+
+                    b.HasIndex("IdAccountOther");
+
+                    b.HasIndex("IdAccountShortTerm");
+
+                    b.HasIndex("IdBankAccountPayment");
+
+                    b.HasIndex("IdCurrency")
+                        .HasDatabaseName("IX_financialObligation_idCurrency");
+
+                    b.ToTable("financialObligation", t =>
+                        {
+                            t.HasComment("Cabecera de préstamos y créditos bancarios. Contiene parámetros contables para generación automática de asientos al sincronizar el Excel del banco.");
+
+                            t.HasCheckConstraint("CK_financialObligation_statusObligation", "statusObligation IN ('Activo', 'Liquidado')");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FinancialObligationInstallment", b =>
+                {
+                    b.Property<int>("IdFinancialObligationInstallment")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idFinancialObligationInstallment")
+                        .HasComment("Identificador único de la cuota");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdFinancialObligationInstallment"));
+
+                    b.Property<decimal>("AmountCapital")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amountCapital")
+                        .HasComment("Porción de capital que amortiza el principal");
+
+                    b.Property<decimal>("AmountInterest")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amountInterest")
+                        .HasComment("Gasto financiero del período");
+
+                    b.Property<decimal>("AmountLateFee")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("amountLateFee")
+                        .HasComment("Mora por pago tardío. Default 0");
+
+                    b.Property<decimal>("AmountOther")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("amountOther")
+                        .HasComment("Otros cargos adicionales del banco. Default 0");
+
+                    b.Property<decimal>("AmountTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amountTotal")
+                        .HasComment("Total de la cuota: Capital + Interés + Mora + Otros");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("balanceAfter")
+                        .HasComment("Saldo del préstamo después de pagar esta cuota");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("dueDate")
+                        .HasComment("Fecha de vencimiento de la cuota según el banco");
+
+                    b.Property<int>("IdFinancialObligation")
+                        .HasColumnType("int")
+                        .HasColumnName("idFinancialObligation")
+                        .HasComment("FK al préstamo al que pertenece esta cuota");
+
+                    b.Property<int>("NumberInstallment")
+                        .HasColumnType("int")
+                        .HasColumnName("numberInstallment")
+                        .HasComment("Número de cuota según el Excel del banco. Clave natural para upsert. Ej: 1, 2 … 36");
+
+                    b.Property<string>("StatusInstallment")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasDefaultValue("Pendiente")
+                        .HasColumnName("statusInstallment")
+                        .HasComment("Estado según el Excel: Pendiente | Vigente | Pagada | Vencida");
+
+                    b.Property<DateTime?>("SyncedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("syncedAt")
+                        .HasComment("Fecha y hora UTC en que el Excel actualizó por última vez esta fila");
+
+                    b.HasKey("IdFinancialObligationInstallment");
+
+                    b.HasIndex("IdFinancialObligation", "NumberInstallment")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_financialObligationInstallment_idObligation_number");
+
+                    b.ToTable("financialObligationInstallment", t =>
+                        {
+                            t.HasComment("Tabla de amortización del préstamo. Una fila por cuota. Se sincroniza automáticamente al cargar el Excel del banco.");
+
+                            t.HasCheckConstraint("CK_financialObligationInstallment_status", "statusInstallment IN ('Pendiente', 'Vigente', 'Pagada', 'Vencida')");
+                        });
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FinancialObligationPayment", b =>
+                {
+                    b.Property<int>("IdFinancialObligationPayment")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("idFinancialObligationPayment")
+                        .HasComment("Identificador único del pago");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdFinancialObligationPayment"));
+
+                    b.Property<decimal>("AmountCapitalPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amountCapitalPaid")
+                        .HasComment("Porción de capital pagada — tomada del Excel");
+
+                    b.Property<decimal>("AmountInterestPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amountInterestPaid")
+                        .HasComment("Interés pagado — tomado del Excel");
+
+                    b.Property<decimal>("AmountLatePaid")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("amountLatePaid")
+                        .HasComment("Mora pagada — tomada del Excel. Default 0");
+
+                    b.Property<decimal>("AmountOtherPaid")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("amountOtherPaid")
+                        .HasComment("Otros cargos pagados — tomados del Excel. Default 0");
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("amountPaid")
+                        .HasComment("Monto total efectivamente pagado");
+
+                    b.Property<DateOnly>("DatePayment")
+                        .HasColumnType("date")
+                        .HasColumnName("datePayment")
+                        .HasComment("Fecha en que se realizó el pago al banco");
+
+                    b.Property<int?>("IdAccountingEntry")
+                        .HasColumnType("int")
+                        .HasColumnName("idAccountingEntry")
+                        .HasComment("FK al asiento contable generado en Borrador. Null hasta que se genera");
+
+                    b.Property<int?>("IdBankMovement")
+                        .HasColumnType("int")
+                        .HasColumnName("idBankMovement")
+                        .HasComment("FK al movimiento bancario BAC que originó el pago. Null si no se encuentra el match automático");
+
+                    b.Property<int>("IdFinancialObligationInstallment")
+                        .HasColumnType("int")
+                        .HasColumnName("idFinancialObligationInstallment")
+                        .HasComment("FK a la cuota pagada. Índice único: una cuota solo puede tener un pago");
+
+                    b.Property<bool>("IsAutoProcessed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("isAutoProcessed")
+                        .HasComment("True = pago detectado y generado automáticamente por sync-excel");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("notes")
+                        .HasComment("Observaciones del pago");
+
+                    b.HasKey("IdFinancialObligationPayment");
+
+                    b.HasIndex("IdAccountingEntry");
+
+                    b.HasIndex("IdBankMovement");
+
+                    b.HasIndex("IdFinancialObligationInstallment")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_financialObligationPayment_idInstallment");
+
+                    b.ToTable("financialObligationPayment", t =>
+                        {
+                            t.HasComment("Pago real registrado contra una cuota del préstamo. Contiene el movimiento BAC vinculado y el asiento contable generado en Borrador.");
                         });
                 });
 
@@ -8263,6 +8628,98 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdCurrencyNavigation");
                 });
 
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FinancialObligation", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountInterestNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountInterest")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountLateFeeNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountLateFee")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountLongTermNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountLongTerm")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountOtherNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountOther")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Account", "IdAccountShortTermNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountShortTerm")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.BankAccount", "IdBankAccountPaymentNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdBankAccountPayment")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.Currency", "IdCurrencyNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdCurrency")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdAccountInterestNavigation");
+
+                    b.Navigation("IdAccountLateFeeNavigation");
+
+                    b.Navigation("IdAccountLongTermNavigation");
+
+                    b.Navigation("IdAccountOtherNavigation");
+
+                    b.Navigation("IdAccountShortTermNavigation");
+
+                    b.Navigation("IdBankAccountPaymentNavigation");
+
+                    b.Navigation("IdCurrencyNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FinancialObligationInstallment", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.FinancialObligation", "IdFinancialObligationNavigation")
+                        .WithMany("FinancialObligationInstallments")
+                        .HasForeignKey("IdFinancialObligation")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdFinancialObligationNavigation");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FinancialObligationPayment", b =>
+                {
+                    b.HasOne("FamilyAccountApi.Domain.Entities.AccountingEntry", "IdAccountingEntryNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdAccountingEntry")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.BankMovement", "IdBankMovementNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdBankMovement")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FamilyAccountApi.Domain.Entities.FinancialObligationInstallment", "IdFinancialObligationInstallmentNavigation")
+                        .WithOne("FinancialObligationPayment")
+                        .HasForeignKey("FamilyAccountApi.Domain.Entities.FinancialObligationPayment", "IdFinancialObligationInstallment")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IdAccountingEntryNavigation");
+
+                    b.Navigation("IdBankMovementNavigation");
+
+                    b.Navigation("IdFinancialObligationInstallmentNavigation");
+                });
+
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.InventoryAdjustment", b =>
                 {
                     b.HasOne("FamilyAccountApi.Domain.Entities.Currency", "IdCurrencyNavigation")
@@ -9513,6 +9970,16 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("BankAccounts");
 
                     b.Navigation("ExchangeRates");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FinancialObligation", b =>
+                {
+                    b.Navigation("FinancialObligationInstallments");
+                });
+
+            modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FinancialObligationInstallment", b =>
+                {
+                    b.Navigation("FinancialObligationPayment");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.FiscalPeriod", b =>

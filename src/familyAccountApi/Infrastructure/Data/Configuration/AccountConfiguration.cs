@@ -287,7 +287,22 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             // ── 2.1.04 IVA por Pagar (débito fiscal de ventas) ────────────────
             new Account { IdAccount = 126, CodeAccount = "2.1.04",    NameAccount = "IVA por Pagar",         TypeAccount = "Pasivo", LevelAccount = 3, IdAccountParent = 9,   AllowsMovements = false, IsActive = true },
             new Account { IdAccount = 127, CodeAccount = "2.1.04.01", NameAccount = "IVA por Pagar CRC (₡)", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 126, AllowsMovements = true,  IsActive = true },
-            new Account { IdAccount = 128, CodeAccount = "2.1.04.02", NameAccount = "IVA por Pagar USD ($)", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 126, AllowsMovements = true,  IsActive = true }
+            new Account { IdAccount = 128, CodeAccount = "2.1.04.02", NameAccount = "IVA por Pagar USD ($)", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 126, AllowsMovements = true,  IsActive = true },
+
+            // ── 2.1.02.01 Porción corriente del préstamo Coopealianza ─────────
+            //  Recibe el asiento de reclasificación: DR 2.2.01.01 / CR 2.1.02.01
+            //  Saldo: capital que vence en los próximos 12 meses.
+            new Account { IdAccount = 134, CodeAccount = "2.1.02.01", NameAccount = "Coopealianza - Porción Corriente CR05081302810003488995 (₡) - Baltodano Cubillo Ezequiel", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 40,  AllowsMovements = true,  IsActive = true },
+
+            // ── 2.1.05 Intereses por Pagar (Pasivo Corriente) ─────────────────
+            //  Devengado: DR 5.5.05 / CR 2.1.05.01
+            //  Pago efectivo: DR 2.1.05.01 / CR 1.1.02.01 (BAC)
+            new Account { IdAccount = 135, CodeAccount = "2.1.05",    NameAccount = "Intereses por Pagar",                         TypeAccount = "Pasivo", LevelAccount = 3, IdAccountParent = 9,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 136, CodeAccount = "2.1.05.01", NameAccount = "Intereses por Pagar - Coopealianza (₡)",      TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 135, AllowsMovements = true,  IsActive = true },
+
+            // ── 5.5.05 / 5.5.06 Gastos financieros Coopealianza ──────────────
+            new Account { IdAccount = 137, CodeAccount = "5.5.05", NameAccount = "Intereses Coopealianza",  TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92, AllowsMovements = true, IsActive = true },
+            new Account { IdAccount = 138, CodeAccount = "5.5.06", NameAccount = "Mora Coopealianza",       TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92, AllowsMovements = true, IsActive = true }
         );
     }
 }
