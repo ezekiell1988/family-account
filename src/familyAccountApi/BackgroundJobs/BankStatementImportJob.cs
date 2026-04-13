@@ -101,7 +101,8 @@ public sealed class BankStatementImportJob(
                         Balance               = p.Balance,
                         IsReconciled          = false,
                         IdBankMovementType    = cls?.IdBankMovementType,
-                        IdAccountCounterpart  = cls?.IdAccountCounterpart
+                        IdAccountCounterpart  = cls?.IdAccountCounterpart,
+                        IdCostCenter          = cls?.IdCostCenter
                     };
                 })
                 .ToList();

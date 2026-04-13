@@ -16,6 +16,8 @@ public sealed record KeywordRule
     public int IdBankMovementType { get; init; }
     /// <summary>Cuenta contable contrapartida que sobreescribe la del tipo (opcional).</summary>
     public int? IdAccountCounterpart { get; init; }
+    /// <summary>Centro de costo que sobreescribe el del tipo de movimiento (opcional).</summary>
+    public int? IdCostCenter { get; init; }
     /// <summary>
     /// Modo de coincidencia: "Any" (basta con una palabra) o "All" (deben estar todas).
     /// Por defecto "Any".
@@ -28,7 +30,8 @@ public sealed record KeywordRule
 /// </summary>
 public sealed record ClassificationResult(
     int  IdBankMovementType,
-    int? IdAccountCounterpart);
+    int? IdAccountCounterpart,
+    int? IdCostCenter = null);
 
 /// <summary>
 /// Clasifica transacciones según palabras clave definidas en la plantilla de extracto.
@@ -70,7 +73,7 @@ public static class KeywordClassifier
                 : normalizedKeywords.Any(k => normalizedDescription.Contains(k, StringComparison.Ordinal));
 
             if (matches)
-                return new ClassificationResult(rule.IdBankMovementType, rule.IdAccountCounterpart);
+                return new ClassificationResult(rule.IdBankMovementType, rule.IdAccountCounterpart, rule.IdCostCenter);
         }
 
         return null;

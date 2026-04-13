@@ -103,6 +103,10 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
                                                                         "idBankMovementType":3,"matchMode":"Any"},
   {"keywords":["MOVISTAR","KOLBI","DB AH TELEF","PG AH TIEMPO AIRE TD"],
                                                                         "idBankMovementType":4,"idAccountCounterpart":68,"matchMode":"Any"},
+  {"keywords":["83681485"],
+                                                                        "idBankMovementType":4,"idAccountCounterpart":68,"idCostCenter":1,"matchMode":"Any"},
+  {"keywords":["22703332"],
+                                                                        "idBankMovementType":4,"idAccountCounterpart":82,"idCostCenter":2,"matchMode":"Any"},
   {"keywords":["COMPRAS EN COMERCIOS","COMPRA EN COMERCIO","COMPRAS COMERC","COMPRA COMERC"],
                                                                         "idBankMovementType":4,"idAccountCounterpart":61,"matchMode":"Any"},
   {"keywords":["RETIRO ATM","RETIRO CAJERO","RETIRO EFECTIVO","CAJERO AUTOMATICO"],
@@ -147,11 +151,9 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
   {"keywords":["APPLE.COM"],
                                             "idBankMovementType":4,"idAccountCounterpart":72,"matchMode":"Any"},
   {"keywords":["GITHUB","SPOTIFY","YOUTUBE","AMAZON"],
-                                            "idBankMovementType":4,"matchMode":"Any"},
+                                            "idBankMovementType":4,"idAccountCounterpart":140,"matchMode":"Any"},
   {"keywords":["WALMART","MAXIPALI","MXM ","SUPER SALON","AUTOMERCADO","PALI "],
-                                            "idBankMovementType":4,"idAccountCounterpart":61,"matchMode":"Any"},
-  {"keywords":["IVA -"],
-                                            "idBankMovementType":4,"matchMode":"Any"}
+                                            "idBankMovementType":4,"idAccountCounterpart":61,"matchMode":"Any"}
 ]
 """
         },
@@ -222,7 +224,7 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
   {"keywords":["GITHUB","MICROSOFT","2CO.COM","DIGITALOCEAN","NEOTHEK","GOOGLE"],
                                             "idBankMovementType":4,"idAccountCounterpart":74,"matchMode":"Any"},
   {"keywords":["SPOTIFY","YOUTUBE","AMAZON"],
-                                            "idBankMovementType":4,"matchMode":"Any"},
+                                            "idBankMovementType":4,"idAccountCounterpart":140,"matchMode":"Any"},
   {"keywords":["WALMART","MAXIPALI","MXM ","SUPER SALON","AUTOMERCADO","PALI ","SIMAN","ALMACENES"],
                                             "idBankMovementType":4,"idAccountCounterpart":61,"matchMode":"Any"},
   {"keywords":["FARMACIA","DROGUERIA","CLINICA ","HOSPITAL","OPTICA ","LABORATORIO"],
@@ -230,9 +232,7 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
   {"keywords":["FERRETERIA","DEPOSITO FERR","CONSTRUPLAZA"],
                                             "idBankMovementType":4,"idAccountCounterpart":75,"matchMode":"Any"},
   {"keywords":["SEGURO PROTECCION","SEGURO DE VIDA","PRIMA SEGURO","INS "],
-                                            "idBankMovementType":4,"idAccountCounterpart":75,"matchMode":"Any"},
-  {"keywords":["IVA -"],
-                                            "idBankMovementType":4,"matchMode":"Any"},
+                                            "idBankMovementType":4,"idAccountCounterpart":139,"matchMode":"Any"},
   {"keywords":["TRASLADO SALDO REVOLUTIVO","CUOTA:"],
                                             "idBankMovementType":7,"idAccountCounterpart":42,"matchMode":"Any"}
 ]
@@ -270,13 +270,13 @@ public sealed class BankStatementTemplateConfiguration : IEntityTypeConfiguratio
   {"keywords":["GITHUB","JETBRAINS","MICROSOFT","DIGITALOCEAN","2CO.COM","NEOTHEK","GOOGLE"],
                                             "idBankMovementType":4,"idAccountCounterpart":74,"matchMode":"Any"},
   {"keywords":["SPOTIFY","YOUTUBE","AMAZON"],
-                                            "idBankMovementType":4,"matchMode":"Any"},
-  {"keywords":["ICON CC RETAIL","WALMART","SIMAN"],
+                                            "idBankMovementType":4,"idAccountCounterpart":140,"matchMode":"Any"},
+  {"keywords":["ICON CC RETAIL"],
+                                            "idBankMovementType":4,"idAccountCounterpart":142,"matchMode":"Any"},
+  {"keywords":["WALMART","SIMAN"],
                                             "idBankMovementType":4,"idAccountCounterpart":61,"matchMode":"Any"},
   {"keywords":["SEGURO PROTECCION","SEGURO DE VIDA","PRIMA SEGURO"],
-                                            "idBankMovementType":4,"idAccountCounterpart":75,"matchMode":"Any"},
-  {"keywords":["IVA -"],
-                                            "idBankMovementType":4,"matchMode":"Any"},
+                                            "idBankMovementType":4,"idAccountCounterpart":139,"matchMode":"Any"},
   {"keywords":["TRASLADO SALDO REVOLUTIVO","CUOTA:"],
                                             "idBankMovementType":7,"idAccountCounterpart":42,"matchMode":"Any"}
 ]

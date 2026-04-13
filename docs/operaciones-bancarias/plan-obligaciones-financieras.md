@@ -28,6 +28,83 @@ El ciclo completo se dispara **subiendo el Excel del banco**: el sistema compara
 
 ---
 
+## Análisis del XLS — BAC Financiamientos (Tasa Cero)
+
+Los archivos `BAC-XXXX-Financiamientos.xls` exportados desde el portal BAC no contienen una tabla de amortización histórica. Presentan un **listado de planes activos** con el estado actual a la fecha de descarga. Cada fila = un plan de financiamiento Tasa cero activo en esa tarjeta.
+
+### Estructura del archivo (7 columnas, datos desde fila 8)
+
+| Col | Nombre en XLS | Campo BD / Derivado | Notas |
+|---|---|---|---|
+| B | Fecha | `startDate` | Fecha de compra/inicio del plan |
+| C | Concepto | `nameObligation` / `matchKeyword` | Nombre del comercio o "TRASLADO SALDO REVOLUTIVO" |
+| D | Cuotas | `currentInstallment` / `termMonths` | Formato `"009/012"` → pagada=9, total=12 |
+| E | Monto de cuota | `amountCapital` (= `amountTotal`) | Incluye moneda al final: `"29,472.00 CRC"` o `"9.20 USD"` |
+| F | Saldo inicial | `originalAmount` | Monto total del financiamiento |
+| G | Saldo faltante | — | Verifica: `remainingInstallments × montoCuota ≈ saldoFaltante` |
+
+> Las filas con `Concepto = "Total"` son filas de subtotales por moneda — se ignoran en el parser.
+
+### Datos reales (extracto 08/04/2026)
+
+**Tarjeta 5466-37\*\*-\*\*\*\*-8608**
+
+| Fecha | Concepto | Cuotas | Monto cuota | Saldo inicial | Saldo faltante |
+|---|---|---|---|---|---|
+| 15/07/2025 | AUTOPITS DESAMPARADOS | 009/012 | ₡29,472.00 | ₡353,664.79 | ₡88,416.79 |
+| 09/02/2026 | VERDUGO 406 TC 24M | 003/024 | ₡4,995.80 | ₡119,899.99 | ₡104,912.59 |
+| 14/02/2026 | IMPORT.MONGE EXPRESSO DES TC24 | 002/024 | ₡2,495.80 | ₡59,900.00 | ₡54,908.40 |
+| 16/03/2026 | CACHOS MULTICENTRO DESAMPARADO | 001/003 | ₡16,300.00 | ₡48,900.00 | ₡32,600.00 |
+| 17/06/2025 | ICON CC RETAIL CT | 010/018 | $9.20 | $167.35 | $75.35 |
+
+**Tarjeta 5491-94\*\*-\*\*\*\*-6515**
+
+| Fecha | Concepto | Cuotas | Monto cuota | Saldo inicial | Saldo faltante |
+|---|---|---|---|---|---|
+| 21/11/2022 | TRASLADO SALDO REVOLUTIVO | 040/060 | ₡17,875.80 | ₡409,883.04 | ₡275,966.36 |
+| 09/08/2023 | TRASLADO SALDO REVOLUTIVO | 031/060 | ₡72,206.60 | ₡2,096,154.99 | ₡1,464,278.23 |
+| 16/02/2026 | CLINICA ITA | 002/003 | ₡56,666.60 | ₡170,000.00 | ₡56,666.80 |
+
+### Reconstrucción de la tabla de amortización
+
+Como el XLS solo entrega el estado actual (no el histórico cuota a cuota), la tabla se reconstruye programáticamente:
+
+```
+cuotaActual = int("009")   # de "009/012"
+termMonths  = int("012")
+
+para n = 1..termMonths:
+  dueDate[n]      = startDate.AddMonths(n)
+  amountCapital   = montoCuota       # Tasa cero → capital = cuota completa
+  amountInterest  = 0
+  amountTotal     = montoCuota
+  balanceAfter[n] = max(0, originalAmount - n × montoCuota)
+  status[n] = 'Pagada'    si n < cuotaActual
+            | 'Vigente'   si n == cuotaActual
+            | 'Pendiente' si n > cuotaActual
+```
+
+> **Nota:** `saldoFaltante / montoCuota ≈ (termMonths - cuotaActual)` — usar esta relación para validar coherencia.
+
+### Diferencias clave vs COOPEALIANZA
+
+| Aspecto | COOPEALIANZA (Tipo A) | BAC Tasa Cero (Tipo B) |
+|---|---|---|
+| Formato fuente | XLSX — tabla completa cuota a cuota | XLS — resumen por plan activo |
+| Interés | 18.5% anual | **0%** (Tasa cero) |
+| Mora | Sí (columna Excel) | No (Tasa cero) |
+| Columnas de montos | Capital / Interés / Mora / Otros / Total | Solo monto de cuota uniforme |
+| Tabla generada | Usa datos reales del Excel | **Se reconstruye** desde el resumen |
+| Moneda | CRC | CRC y/o USD (mixto en misma tarjeta) |
+| Pasivo | Largo plazo (2.2) | Corriente o largo plazo según plazo restante |
+| Matching en extracto | Keyword `COOPEALIANZA` en cuenta débito | Keyword en extracto tarjeta de crédito |
+
+### Keywords en extracto TC — ajuste pendiente (01a-keywords.md)
+
+Las keywords `TRASLADO SALDO REVOLUTIVO` y `CUOTA:` en Templates 4 y 5 actualmente apuntan a cuenta **42** (Coopealianza). Deben ajustarse a las cuentas específicas de cada tarjeta una vez que se creen las cuentas contables de Tipo B.
+
+---
+
 ## Cuentas contables involucradas
 
 > ✅ Todas las cuentas están creadas en BD (migraciones `AddFinancialObligations` + `AddFinancialObligationAccounts`).
@@ -44,7 +121,7 @@ El ciclo completo se dispara **subiendo el Excel del banco**: el sistema compara
 
 > La configuración exacta de cuentas se almacena en `FinancialObligation` (FK por cuenta), no hardcodeada.
 
-### IDs a usar al crear la obligación COOPEALIANZA
+### IDs a usar al crear la obligación COOPEALIANZA (Tipo A)
 
 | Campo `FinancialObligation` | IdAccount |
 |---|---|
@@ -54,6 +131,21 @@ El ciclo completo se dispara **subiendo el Excel del banco**: el sistema compara
 | `IdAccountLateFee` | **138** |
 | `IdAccountOther` | null (no aplica) |
 | `IdBankAccountPayment` | id de la cuenta BAC CR73 en `bankAccount` |
+
+### IDs a usar al crear obligaciones BAC Tasa Cero (Tipo B)
+
+> ⚠️ Las cuentas contables específicas por tarjeta **aún no existen** en BD. Requieren una migración `AddBacCreditCardObligationAccounts` antes de poder crear estas obligaciones vía API.
+
+| Campo `FinancialObligation` | Tarjeta 8608 (CRC) | Tarjeta 8608 (USD) | Tarjeta 6515 (CRC) | Notas |
+|---|---|---|---|---|
+| `IdAccountLongTerm` | ⏳ nueva cuenta 2.1.01.01 | ⏳ nueva cuenta 2.1.01.02 | ⏳ nueva cuenta 2.1.01.03 | Pasivo TC Tasa Cero |
+| `IdAccountShortTerm` | ⏳ misma o cuenta porción corriente | ⏳ idem | ⏳ idem | Si plazo > 12m, separar |
+| `IdAccountInterest` | N/A — usar 28 como placeholder | idem | idem | Tasa cero → no genera asiento |
+| `IdAccountLateFee` | null | null | null | Tasa cero sin mora |
+| `IdBankAccountPayment` | idBankAccount de la TC en `bankAccount` | idem | idem | Pago dentro del extracto TC |
+| `InterestRate` | **0.01** \* | 0.01 \* | 0.01 \* | \*Workaround — validación API min=0.01 |
+
+> **Pendiente backend:** Relajar validación `InterestRate` de `min=0.01` a `min=0` en `CreateFinancialObligationRequest` para soportar Tasa cero correctamente.
 
 ---
 
@@ -292,6 +384,7 @@ Features/
 | 4 | **Reclasificación automática** | Cálculo porción corriente desde `BalanceAfter`, integrado en sync y endpoint manual | ✅ Completado |
 | 5 | **Cuentas contables completas** | 5 cuentas nuevas: 134, 135, 136, 137, 138 — migración `AddFinancialObligationAccounts` | ✅ Completado |
 | 6 | **Frontend Angular** | Página de obligaciones | ⏳ Pendiente |
+| 7 | **Tipo B — BAC Tasa Cero** | `FinancialObligationBacFinanciamientosParser`, nuevo endpoint `sync-bac-financiamientos`, migración cuentas TC, relajar `InterestRate ≥ 0`, ajustar keywords 01a | ⏳ Pendiente |
 
 ### Última ejecución validada (2026-04-12 — BD `20260412212705_InitialCreate`)
 

@@ -300,9 +300,17 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             new Account { IdAccount = 135, CodeAccount = "2.1.05",    NameAccount = "Intereses por Pagar",                         TypeAccount = "Pasivo", LevelAccount = 3, IdAccountParent = 9,   AllowsMovements = false, IsActive = true },
             new Account { IdAccount = 136, CodeAccount = "2.1.05.01", NameAccount = "Intereses por Pagar - Coopealianza (₡)",      TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 135, AllowsMovements = true,  IsActive = true },
 
-            // ── 5.5.05 / 5.5.06 Gastos financieros Coopealianza ──────────────
-            new Account { IdAccount = 137, CodeAccount = "5.5.05", NameAccount = "Intereses Coopealianza",  TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92, AllowsMovements = true, IsActive = true },
-            new Account { IdAccount = 138, CodeAccount = "5.5.06", NameAccount = "Mora Coopealianza",       TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92, AllowsMovements = true, IsActive = true }
+            // ── 5.5.05 / 5.5.06 / 5.5.07 Gastos financieros Coopealianza / BAC ──
+            new Account { IdAccount = 137, CodeAccount = "5.5.05", NameAccount = "Intereses Coopealianza",    TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92, AllowsMovements = true, IsActive = true },
+            new Account { IdAccount = 138, CodeAccount = "5.5.06", NameAccount = "Mora Coopealianza",         TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92, AllowsMovements = true, IsActive = true },
+            new Account { IdAccount = 139, CodeAccount = "5.5.07", NameAccount = "Seguro Protección BAC",     TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 92, AllowsMovements = true, IsActive = true },
+
+            // ── 5.8.07 Suscripciones Varias (Spotify, YouTube, Amazon, etc.) ──────
+            new Account { IdAccount = 140, CodeAccount = "5.8.07", NameAccount = "Suscripciones Varias",      TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 95, AllowsMovements = true, IsActive = true },
+
+            // ── 5.16 Tecnología (hardware y compras tecnológicas) ─────────────────
+            new Account { IdAccount = 141, CodeAccount = "5.16",    NameAccount = "Tecnología",                TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
+            new Account { IdAccount = 142, CodeAccount = "5.16.01", NameAccount = "Compras Tecnología (ICON / Apple)", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 141, AllowsMovements = true, IsActive = true }
         );
     }
 }

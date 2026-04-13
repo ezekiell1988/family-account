@@ -311,10 +311,11 @@ public sealed class BankStatementImportService(
                     {
                         newKeywordRules.Add(new KeywordRule
                         {
-                            Keywords            = [desc],
-                            IdBankMovementType  = item.IdBankMovementType,
+                            Keywords             = [desc],
+                            IdBankMovementType   = item.IdBankMovementType,
                             IdAccountCounterpart = item.IdAccountCounterpart,
-                            MatchMode           = "Any"
+                            IdCostCenter         = item.IdCostCenter,
+                            MatchMode            = "Any"
                         });
                     }
                 }
