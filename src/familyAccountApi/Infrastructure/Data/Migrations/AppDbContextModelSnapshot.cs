@@ -626,6 +626,28 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         },
                         new
                         {
+                            IdAccount = 146,
+                            AllowsMovements = true,
+                            CodeAccount = "4.4.02",
+                            IdAccountParent = 101,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Intereses Ganados - Sobres BCR",
+                            TypeAccount = "Ingreso"
+                        },
+                        new
+                        {
+                            IdAccount = 147,
+                            AllowsMovements = true,
+                            CodeAccount = "4.4.03",
+                            IdAccountParent = 101,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Intereses Ganados - Ahorros BCR",
+                            TypeAccount = "Ingreso"
+                        },
+                        new
+                        {
                             IdAccount = 45,
                             AllowsMovements = false,
                             CodeAccount = "5.1",
@@ -1051,6 +1073,17 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             IsActive = true,
                             LevelAccount = 3,
                             NameAccount = "Campo Santo Mantenimiento",
+                            TypeAccount = "Gasto"
+                        },
+                        new
+                        {
+                            IdAccount = 89,
+                            AllowsMovements = true,
+                            CodeAccount = "5.11.04",
+                            IdAccountParent = 100,
+                            IsActive = true,
+                            LevelAccount = 3,
+                            NameAccount = "Gastos Administrativos BCR",
                             TypeAccount = "Gasto"
                         },
                         new
@@ -2599,7 +2632,7 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                             ColumnMappings = "{\"accountingDate\":0,\"transactionDate\":1,\"transactionTime\":2,\"documentNumber\":3,\"description\":4,\"debitAmount\":5,\"creditAmount\":6,\"balance\":7,\"skipHeaderRows\":1}",
                             DateFormat = "dd/MM/yyyy",
                             IsActive = true,
-                            KeywordRules = "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                                                        \"idBankMovementType\":1,\"idAccountCounterpart\":44,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\n                                                                        \"idBankMovementType\":2,\"idAccountCounterpart\":106,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"MOVISTAR\",\"KOLBI\",\"DB AH TELEF\",\"PG AH TIEMPO AIRE TD\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":68,\"idCostCenter\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"83681485\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":68,\"idCostCenter\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"22703332\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":82,\"idCostCenter\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":61,\"idCostCenter\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\n                                                                        \"idBankMovementType\":5,\"idAccountCounterpart\":106,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\",\"TRANSFERENC BANCOBCR\"],\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                                                        \"idBankMovementType\":7,\"idAccountCounterpart\":42,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\",\"MONEDERO SINPE MOVIL\"],\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]",
+                            KeywordRules = "[\n  {\"keywords\":[\"SALARIO\",\"ITQS\",\"IT QUEST\",\"NOMINA\",\"PLANILLA\"],\n                                                                        \"idBankMovementType\":1,\"idAccountCounterpart\":44,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DEP EFECTIVO\",\"DEPOSITO EFECTIVO\",\"DEPOSITO EN CAJA\"],\n                                                                        \"idBankMovementType\":2,\"idAccountCounterpart\":106,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTS GANADOS SOBRES\"],\n                                                                        \"idBankMovementType\":2,\"idAccountCounterpart\":146,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTS GANADOS AHORROS\"],\n                                                                        \"idBankMovementType\":2,\"idAccountCounterpart\":147,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"INTERNET DTR SINPE\",\"DTR SINPE\",\"SINPE CR\",\"TRANSF CREDIT\",\"CREDITO SINPE\",\"SINPE MOVIL CR\",\"ABONO SINPE\",\"RECIBO SINPE\"],\n                                                                        \"idBankMovementType\":3,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"MOVISTAR\",\"KOLBI\",\"DB AH TELEF\",\"PG AH TIEMPO AIRE TD\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":68,\"idCostCenter\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"83681485\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":68,\"idCostCenter\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"22703332\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":82,\"idCostCenter\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"287355\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":79,\"idCostCenter\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"CNFL\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":81,\"idCostCenter\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"DESAMPA600981440\",\"DESAMPA501320596\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":86,\"idCostCenter\":2,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"AYA\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":80,\"idCostCenter\":2,\"matchMode\":\"Any\"},\n    {\"keywords\":[\"SERV ADMIN\"],\n                                                                                                                                                \"idBankMovementType\":4,\"idAccountCounterpart\":89,\"idCostCenter\":2,\"matchMode\":\"Any\",\"regex\":true},\n  {\"keywords\":[\"COMPRAS EN COMERCIOS\",\"COMPRA EN COMERCIO\",\"COMPRAS COMERC\",\"COMPRA COMERC\"],\n                                                                        \"idBankMovementType\":4,\"idAccountCounterpart\":61,\"idCostCenter\":1,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"RETIRO ATM\",\"RETIRO CAJERO\",\"RETIRO EFECTIVO\",\"CAJERO AUTOMATICO\"],\n                                                                        \"idBankMovementType\":5,\"idAccountCounterpart\":106,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO TC\",\"PAGO TARJETA\",\"TRJ CRED\",\"PAGO TARJETA CREDITO\",\"PAGO TRJ\",\"PAGO TARJETAS\",\"TRANSFERENC BANCOBCR\"],\n                                                                        \"idBankMovementType\":6,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"PAGO PREST\",\"CUOTA PREST\",\"PAGO PRESTAMO\",\"CUOTA PRESTAMO\"],\n                                                                        \"idBankMovementType\":7,\"idAccountCounterpart\":42,\"matchMode\":\"Any\"},\n  {\"keywords\":[\"SINPE MOVIL OTRA ENT\",\"OTRA ENT\",\"TRANSF DEB\",\"SINPE DEB\",\"DEB SINPE\",\"SINPE MOVIL DEB\",\"DEBITO SINPE\",\"TRANSFERENCIA SINPE DEB\",\"CARGO SINPE\",\"MONEDERO SINPE MOVIL\"],\n                                                                        \"idBankMovementType\":8,\"matchMode\":\"Any\"}\n]",
                             NameTemplate = "BCR – Movimientos de Cuenta (HTML-XLS)",
                             Notes = "Archivo exportado como .xls desde el portal BCR. El contenido real es HTML con una tabla id='t1'. Aplica para cuentas de ahorros y cuentas corrientes en colones y dólares.",
                             TimeFormat = "HH:mm:ss"

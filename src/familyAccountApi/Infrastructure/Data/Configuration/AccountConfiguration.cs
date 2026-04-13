@@ -159,6 +159,8 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             // ── 4.4 Ingresos Financieros ──────────────────────────────────────
             new Account { IdAccount = 101, CodeAccount = "4.4",    NameAccount = "Ingresos Financieros",               TypeAccount = "Ingreso", LevelAccount = 2, IdAccountParent = 4,   AllowsMovements = false, IsActive = true },
             new Account { IdAccount = 102, CodeAccount = "4.4.01", NameAccount = "Diferencial Cambiario Favorable",     TypeAccount = "Ingreso", LevelAccount = 3, IdAccountParent = 101, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 146, CodeAccount = "4.4.02", NameAccount = "Intereses Ganados - Sobres BCR",      TypeAccount = "Ingreso", LevelAccount = 3, IdAccountParent = 101, AllowsMovements = true,  IsActive = true },
+            new Account { IdAccount = 147, CodeAccount = "4.4.03", NameAccount = "Intereses Ganados - Ahorros BCR",     TypeAccount = "Ingreso", LevelAccount = 3, IdAccountParent = 101, AllowsMovements = true,  IsActive = true },
 
             // ── 5.1 Cargas Sociales e Impuestos ──────────────────────────────
             new Account { IdAccount = 45, CodeAccount = "5.1",    NameAccount = "Cargas Sociales e Impuestos", TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,  AllowsMovements = false, IsActive = true },
@@ -220,6 +222,9 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             new Account { IdAccount = 86,  CodeAccount = "5.11.01", NameAccount = "Municipalidad",                      TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
             new Account { IdAccount = 87,  CodeAccount = "5.11.02", NameAccount = "Campo Santo",                        TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
             new Account { IdAccount = 88,  CodeAccount = "5.11.03", NameAccount = "Campo Santo Mantenimiento",          TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
+
+            // ── Gastos Administrativos BCR ──
+            new Account { IdAccount = 89,  CodeAccount = "5.11.04", NameAccount = "Gastos Administrativos BCR",          TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 100, AllowsMovements = true,  IsActive = true },
 
             // ── 5.12 Otros ────────────────────────────────────────────────────
             new Account { IdAccount = 96,  CodeAccount = "5.12",    NameAccount = "Otros",                              TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
