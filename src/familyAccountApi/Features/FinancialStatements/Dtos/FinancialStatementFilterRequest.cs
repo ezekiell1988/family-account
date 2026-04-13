@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace FamilyAccountApi.Features.Reports.Dtos;
+namespace FamilyAccountApi.Features.FinancialStatements.Dtos;
 
 /// <summary>
 /// Filtro de período para los reportes financieros.
@@ -10,7 +10,7 @@ namespace FamilyAccountApi.Features.Reports.Dtos;
 ///   - year + month : un mes específico.
 ///   - year : año completo.
 /// </summary>
-public sealed record ReportFilterRequest
+public sealed record FinancialStatementFilterRequest
 {
     [Description("ID del período fiscal. Si se proporciona, ignora las demás fechas.")]
     public int? IdFiscalPeriod { get; init; }

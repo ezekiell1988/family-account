@@ -1,4 +1,4 @@
-namespace FamilyAccountApi.Features.Reports.Dtos;
+namespace FamilyAccountApi.Features.FinancialStatements.Dtos;
 
 /// <summary>
 /// Línea de cuenta del Estado de Situación Financiera.

@@ -1,4 +1,4 @@
-namespace FamilyAccountApi.Features.Reports.Dtos;
+namespace FamilyAccountApi.Features.FinancialStatements.Dtos;
 
 /// <summary>
 /// Estado de Resultado para un período o rango de meses.

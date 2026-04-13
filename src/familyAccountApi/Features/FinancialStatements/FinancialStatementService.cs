@@ -1,10 +1,10 @@
-using FamilyAccountApi.Features.Reports.Dtos;
+using FamilyAccountApi.Features.FinancialStatements.Dtos;
 using FamilyAccountApi.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace FamilyAccountApi.Features.Reports;
+namespace FamilyAccountApi.Features.FinancialStatements;
 
-public sealed class ReportService(AppDbContext db) : IReportService
+public sealed class FinancialStatementService(AppDbContext db) : IFinancialStatementService
 {
     // ─── Tipos de cuenta por estado financiero ────────────────────────────────
     private static readonly string[] IncomeStatementTypes = ["Ingreso", "Gasto"];
@@ -26,7 +26,7 @@ public sealed class ReportService(AppDbContext db) : IReportService
     // ── Estado de Resultado ───────────────────────────────────────────────────
 
     public async Task<IncomeStatementResponse> GetIncomeStatementAsync(
-        ReportFilterRequest filter,
+        FinancialStatementFilterRequest filter,
         CancellationToken ct = default)
     {
         var (dateFrom, dateTo) = await ResolveDateRangeAsync(filter, ct);
@@ -71,7 +71,7 @@ public sealed class ReportService(AppDbContext db) : IReportService
     // ── Estado de Situación Financiera ────────────────────────────────────────
 
     public async Task<BalanceSheetResponse> GetBalanceSheetAsync(
-        ReportFilterRequest filter,
+        FinancialStatementFilterRequest filter,
         CancellationToken ct = default)
     {
         var (_, dateTo) = await ResolveDateRangeAsync(filter, ct);
@@ -128,7 +128,7 @@ public sealed class ReportService(AppDbContext db) : IReportService
     // ── Estado de Flujo de Efectivo ───────────────────────────────────────────
 
     public async Task<CashFlowStatementResponse> GetCashFlowStatementAsync(
-        ReportFilterRequest filter,
+        FinancialStatementFilterRequest filter,
         CancellationToken ct = default)
     {
         var (dateFrom, dateTo) = await ResolveDateRangeAsync(filter, ct);
@@ -213,7 +213,7 @@ public sealed class ReportService(AppDbContext db) : IReportService
     // ── Estado de Cambios en el Patrimonio ────────────────────────────────────
 
     public async Task<EquityStatementResponse> GetEquityStatementAsync(
-        ReportFilterRequest filter,
+        FinancialStatementFilterRequest filter,
         CancellationToken ct = default)
     {
         var (dateFrom, dateTo) = await ResolveDateRangeAsync(filter, ct);
@@ -276,7 +276,7 @@ public sealed class ReportService(AppDbContext db) : IReportService
     // ── Helpers privados ──────────────────────────────────────────────────────
 
     private async Task<(DateOnly DateFrom, DateOnly DateTo)> ResolveDateRangeAsync(
-        ReportFilterRequest filter,
+        FinancialStatementFilterRequest filter,
         CancellationToken ct)
     {
         // 1. Período fiscal explícito

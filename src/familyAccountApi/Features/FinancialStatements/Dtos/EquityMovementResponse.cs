@@ -1,4 +1,4 @@
-namespace FamilyAccountApi.Features.Reports.Dtos;
+namespace FamilyAccountApi.Features.FinancialStatements.Dtos;
 
 /// <summary>
 /// Movimiento de una cuenta de Capital durante el período.

@@ -1,15 +1,15 @@
-using FamilyAccountApi.Features.Reports.Dtos;
+using FamilyAccountApi.Features.FinancialStatements.Dtos;
 
-namespace FamilyAccountApi.Features.Reports;
+namespace FamilyAccountApi.Features.FinancialStatements;
 
-public interface IReportService
+public interface IFinancialStatementService
 {
     /// <summary>
     /// Estado de Resultado para el período indicado.
     /// Solo incluye asientos publicados. Cuentas tipo Ingreso y Gasto.
     /// </summary>
     Task<IncomeStatementResponse> GetIncomeStatementAsync(
-        ReportFilterRequest filter,
+        FinancialStatementFilterRequest filter,
         CancellationToken ct = default);
 
     /// <summary>
@@ -17,7 +17,7 @@ public interface IReportService
     /// Solo incluye asientos publicados. Cuentas tipo Activo, Pasivo y Capital.
     /// </summary>
     Task<BalanceSheetResponse> GetBalanceSheetAsync(
-        ReportFilterRequest filter,
+        FinancialStatementFilterRequest filter,
         CancellationToken ct = default);
 
     /// <summary>
@@ -27,7 +27,7 @@ public interface IReportService
     /// AssetMovements para calcular el cambio real de efectivo.
     /// </summary>
     Task<CashFlowStatementResponse> GetCashFlowStatementAsync(
-        ReportFilterRequest filter,
+        FinancialStatementFilterRequest filter,
         CancellationToken ct = default);
 
     /// <summary>
@@ -36,6 +36,6 @@ public interface IReportService
     /// período, más el resultado del ejercicio aún no transferido.
     /// </summary>
     Task<EquityStatementResponse> GetEquityStatementAsync(
-        ReportFilterRequest filter,
+        FinancialStatementFilterRequest filter,
         CancellationToken ct = default);
 }

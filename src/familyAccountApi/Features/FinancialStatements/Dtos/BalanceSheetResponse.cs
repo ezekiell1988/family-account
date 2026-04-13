@@ -1,4 +1,4 @@
-namespace FamilyAccountApi.Features.Reports.Dtos;
+namespace FamilyAccountApi.Features.FinancialStatements.Dtos;
 
 /// <summary>
 /// Estado de Situación Financiera acumulado hasta 'DateTo'.

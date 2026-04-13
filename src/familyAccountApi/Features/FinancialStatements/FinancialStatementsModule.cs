@@ -1,21 +1,21 @@
-using FamilyAccountApi.Features.Reports.Dtos;
+using FamilyAccountApi.Features.FinancialStatements.Dtos;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FamilyAccountApi.Features.Reports;
+namespace FamilyAccountApi.Features.FinancialStatements;
 
-public static class ReportsModule
+public static class FinancialStatementsModule
 {
-    public static IServiceCollection AddReportsModule(this IServiceCollection services)
+    public static IServiceCollection AddFinancialStatementsModule(this IServiceCollection services)
     {
-        services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IFinancialStatementService, FinancialStatementService>();
         return services;
     }
 
-    public static IEndpointRouteBuilder MapReportsEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapFinancialStatementsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/reports")
-            .WithTags("Reports")
+        var group = app.MapGroup("/financial-statements")
+            .WithTags("Financial Statements")
             .RequireAuthorization();
 
         group.MapGet("/income-statement.json", GetIncomeStatement)
@@ -56,8 +56,8 @@ public static class ReportsModule
     // ── Handlers ──────────────────────────────────────────────────────────────
 
     private static async Task<Results<Ok<IncomeStatementResponse>, BadRequest<ProblemDetails>, NotFound<ProblemDetails>>> GetIncomeStatement(
-        [AsParameters] ReportFilterRequest filter,
-        IReportService service,
+        [AsParameters] FinancialStatementFilterRequest filter,
+        IFinancialStatementService service,
         CancellationToken ct)
     {
         try
@@ -86,8 +86,8 @@ public static class ReportsModule
     }
 
     private static async Task<Results<Ok<BalanceSheetResponse>, BadRequest<ProblemDetails>, NotFound<ProblemDetails>>> GetBalanceSheet(
-        [AsParameters] ReportFilterRequest filter,
-        IReportService service,
+        [AsParameters] FinancialStatementFilterRequest filter,
+        IFinancialStatementService service,
         CancellationToken ct)
     {
         try
@@ -116,8 +116,8 @@ public static class ReportsModule
     }
 
     private static async Task<Results<Ok<CashFlowStatementResponse>, BadRequest<ProblemDetails>, NotFound<ProblemDetails>>> GetCashFlowStatement(
-        [AsParameters] ReportFilterRequest filter,
-        IReportService service,
+        [AsParameters] FinancialStatementFilterRequest filter,
+        IFinancialStatementService service,
         CancellationToken ct)
     {
         try
@@ -146,8 +146,8 @@ public static class ReportsModule
     }
 
     private static async Task<Results<Ok<EquityStatementResponse>, BadRequest<ProblemDetails>, NotFound<ProblemDetails>>> GetEquityStatement(
-        [AsParameters] ReportFilterRequest filter,
-        IReportService service,
+        [AsParameters] FinancialStatementFilterRequest filter,
+        IFinancialStatementService service,
         CancellationToken ct)
     {
         try
