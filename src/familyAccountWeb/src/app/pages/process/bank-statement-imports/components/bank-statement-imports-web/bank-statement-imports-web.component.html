@@ -292,13 +292,22 @@
                 <button type="button" class="btn btn-xs ms-1"
                   [class.btn-outline-secondary]="!getLearnKeyword(row.idBankStatementTransaction)"
                   [class.btn-primary]="getLearnKeyword(row.idBankStatementTransaction)"
-                  (click)="toggleLearnKeyword(row.idBankStatementTransaction)"
+                  (click)="toggleLearnKeyword(row.idBankStatementTransaction, row.description)"
                   [attr.aria-label]="'Guardar como regla transacción ' + row.idBankStatementTransaction"
                   [attr.title]="getLearnKeyword(row.idBankStatementTransaction) ? 'Guardar como regla (activo)' : 'No guardar como regla'">
                   <i class="fa fa-tag" aria-hidden="true"></i>
                   <span class="visually-hidden">Regla {{ row.idBankStatementTransaction }}</span>
                 </button>
               </div>
+
+              <!-- Keyword personalizado -->
+              @if (getLearnKeyword(row.idBankStatementTransaction)) {
+                <input type="text" class="form-control form-control-sm"
+                  [ngModel]="getLearnKeywordText(row.idBankStatementTransaction)"
+                  (ngModelChange)="setLearnKeywordText(row.idBankStatementTransaction, $event)"
+                  placeholder="Keyword a guardar..."
+                  [attr.aria-label]="'Keyword para regla de transacción ' + row.idBankStatementTransaction">
+              }
 
               <!-- Cuenta contrapartida -->
               <label [for]="'classAcc' + row.idBankStatementTransaction" class="visually-hidden">

@@ -131,12 +131,40 @@ export class BankStatementImportsPage
   classifyBatch(items: BulkClassifyItem[]): void {
     const importId = this.selectedImportId();
     if (importId === null || items.length === 0) return;
+
+    // Snapshot de las filas afectadas para revertir en caso de error
+    const affected = new Set(items.map(i => i.idBankStatementTransaction));
+    const snapshot = new Map(
+      this.transactions()
+        .filter(t => affected.has(t.idBankStatementTransaction))
+        .map(t => [t.idBankStatementTransaction, { ...t }]),
+    );
+
     this.importSvc.classifyBatch(importId, { items }).subscribe({
       next: res => {
         this.logger.info(`Bulk classify OK — clasificadas=${res.classified} keywords=${res.keywordsAdded}`);
-        this.importSvc.loadTransactions(importId).subscribe();
+        // Parchear el signal en memoria — sin recargar del API
+        const itemMap = new Map(items.map(i => [i.idBankStatementTransaction, i]));
+        this.importSvc.transactions.update(txs =>
+          txs.map(t => {
+            const patch = itemMap.get(t.idBankStatementTransaction);
+            if (!patch) return t;
+            return {
+              ...t,
+              idBankMovementType:   patch.idBankMovementType,
+              idAccountCounterpart: patch.idAccountCounterpart ?? t.idAccountCounterpart,
+              idCostCenter:         patch.idCostCenter ?? t.idCostCenter,
+            };
+          }),
+        );
       },
-      error: err => this.logger.error('Error en bulk classify', err),
+      error: err => {
+        this.logger.error('Error en bulk classify', err);
+        // Revertir las filas afectadas al estado original
+        this.importSvc.transactions.update(txs =>
+          txs.map(t => snapshot.get(t.idBankStatementTransaction) ?? t),
+        );
+      },
     });
   }
 

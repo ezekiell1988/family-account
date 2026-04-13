@@ -300,7 +300,9 @@ public sealed class BankStatementImportService(
             // ── 4. Aprender keyword si se solicita ─────────────────────────
             if (item.LearnKeyword)
             {
-                var desc = tx.Description?.Trim();
+                var desc = !string.IsNullOrWhiteSpace(item.KeywordText)
+                    ? item.KeywordText.Trim()
+                    : tx.Description?.Trim();
                 if (!string.IsNullOrWhiteSpace(desc))
                 {
                     // Solo agregar si no está ya cubierto por un keyword existente

@@ -233,7 +233,7 @@ POST /bank-statement-imports/{id}/classify-batch
 Clasifica una o más transacciones. Soporta `learnKeyword` por ítem. El frontend lo usa tanto para el botón ✓ por fila como para «Confirmar Todo».
 
 1. Actualiza `IdBankMovementType` e `IdAccountCounterpart` en cada transacción.
-2. Si `learnKeyword=true`, agrega la descripción como nueva `KeywordRule` al template (solo si no está ya cubierta).
+2. Si `learnKeyword=true`, agrega el keyword al template (usa `keywordText` si se provee; si no, usa la descripción completa). Solo si no está ya cubierto por una regla existente.
 3. **No modifica** transacciones que ya tienen `IdAccountingEntry` (ya contabilizadas).
 
 ```csharp
@@ -244,11 +244,12 @@ Task<BulkClassifyResult> ClassifyBatchAsync(int importId, BulkClassifyRequest re
 **DTOs:**
 ```csharp
 record BulkClassifyItem {
-    int    IdBankStatementTransaction;
-    int    IdBankMovementType;
-    int?   IdAccountCounterpart;  // opcional — null usa la cuenta del tipo de movimiento
-    int?   IdCostCenter;          // opcional — centro de costo para el asiento contable
-    bool   LearnKeyword;          // true = aprender descripción como keyword nuevo
+    int     IdBankStatementTransaction;
+    int     IdBankMovementType;
+    int?    IdAccountCounterpart;  // opcional — null usa la cuenta del tipo de movimiento
+    int?    IdCostCenter;          // opcional — centro de costo para el asiento contable
+    bool    LearnKeyword;          // true = aprender como keyword nuevo
+    string? KeywordText;           // texto del keyword (si null/vacío, usa la descripción completa)
 }
 record BulkClassifyRequest { IReadOnlyList<BulkClassifyItem> Items; }
 record BulkClassifyResult(int Classified, int KeywordsAdded);
@@ -274,7 +275,7 @@ record BulkClassifyResult(int Classified, int KeywordsAdded);
 - Tabla de imports con botón «Ver Tx» por fila.
 - Panel de transacciones del import seleccionado con:
   - Columna "Tipo / Cuenta / CC": tres `<select>` apilados — tipo de movimiento (auto-clasifica la cuenta del tipo al cambiar) + cuenta contrapartida (editable) + centro de costo (opcional).
-  - Botón **✓** por fila: llama a `classify-batch` con un solo ítem. Al lado, botón **🏷️** (toggle): azul = guarda descripción como regla (`learnKeyword=true`); gris = no guarda. Default gris — el usuario decide explícitamente. `idAccountCounterpart` e `idCostCenter` son opcionales.
+  - Botón **✓** por fila: llama a `classify-batch` con un solo ítem. Al lado, botón **🏷️** (toggle): azul = guardar como regla (`learnKeyword=true`); gris = no guardar. Al activar 🏷️, aparece un input de texto pre-relleno con la descripción de la transacción — el usuario puede editarlo para guardar un keyword más corto o genérico (ej. `ICETEL` en lugar de `ND AH ICETEL BANCOBC/ICETEL 83681485`). Default gris. `idAccountCounterpart` e `idCostCenter` son opcionales.
   - Botón **«Confirmar Todo»** al pie: envía todas las transacciones pendientes como un solo payload `classify-batch`, respetando el estado del 🏷️ y el CC por fila. Muestra badge **"N pendientes"** cuando hay transacciones sin clasificar.
   - Selects de cuenta bancaria y plantilla muestran spinner `fa-spin` y quedan `[disabled]` mientras `isLoadingCatalogs` es `true`.
 - Polling Hangfire: cada 2s hasta `Completado` o `Error`.
@@ -302,3 +303,7 @@ Se mantienen dos endpoints:
 | `POST /bank-statement-imports/{id}/classify-batch` | Frontend Angular (fila individual + confirmar todo) | ✅ Sí |
 
 El frontend **siempre usa `classify-batch`** — tanto para el botón ✓ por fila como para «Confirmar Todo». La diferencia es el payload: un ítem o todos. No se creó un tercer endpoint porque `classify-batch` ya cubre ambos casos.
+
+**Comportamiento de éxito/error en el coordinador (`classifyBatch`):**
+- **Éxito**: parchea `idBankMovementType`, `idAccountCounterpart` e `idCostCenter` directamente en el signal `transactions` — sin recargar del API.
+- **Error**: toma snapshot de las filas afectadas antes de enviar; si falla, las revierte al estado original. El mensaje de error del servicio se muestra automáticamente.

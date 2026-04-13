@@ -63,6 +63,7 @@ export interface BulkClassifyItem {
   idAccountCounterpart?: number | null;
   idCostCenter?: number | null;
   learnKeyword?: boolean;
+  keywordText?: string | null;
 }
 
 export interface BulkClassifyRequest {

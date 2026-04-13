@@ -24,6 +24,9 @@ public sealed record BulkClassifyItem
 
     [Description("Si true, la descripción de la transacción se agrega como keyword al template para uso futuro.")]
     public bool LearnKeyword { get; init; } = false;
+
+    [Description("Texto personalizado del keyword a guardar (si LearnKeyword=true). Si null o vacío, se usa la descripción completa de la transacción.")]
+    public string? KeywordText { get; init; }
 }
 
 /// <summary>

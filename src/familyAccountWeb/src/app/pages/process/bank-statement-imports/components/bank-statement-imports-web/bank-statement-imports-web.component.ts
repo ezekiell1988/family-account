@@ -105,6 +105,7 @@ export class BankStatementImportsWebComponent {
   classifyAccMap      = signal<Record<number, number | null>>({}); // idTx → idAccountCounterpart
   classifyCostCenterMap = signal<Record<number, number | null>>({}); // idTx → idCostCenter
   learnKeywordMap     = signal<Record<number, boolean>>({}); // idTx → guardar como regla
+  learnKeywordTextMap  = signal<Record<number, string>>({}); // idTx → texto del keyword personalizado
 
   setClassifyType(idTx: number, value: number): void {
     this.classifyTypeMap.update(m => ({ ...m, [idTx]: value }));
@@ -141,8 +142,20 @@ export class BankStatementImportsWebComponent {
     return this.learnKeywordMap()[idTx] ?? false;
   }
 
-  toggleLearnKeyword(idTx: number): void {
-    this.learnKeywordMap.update(m => ({ ...m, [idTx]: !this.getLearnKeyword(idTx) }));
+  getLearnKeywordText(idTx: number): string {
+    return this.learnKeywordTextMap()[idTx] ?? '';
+  }
+
+  setLearnKeywordText(idTx: number, value: string): void {
+    this.learnKeywordTextMap.update(m => ({ ...m, [idTx]: value }));
+  }
+
+  toggleLearnKeyword(idTx: number, description?: string): void {
+    const current = this.getLearnKeyword(idTx);
+    this.learnKeywordMap.update(m => ({ ...m, [idTx]: !current }));
+    if (!current && description) {
+      this.learnKeywordTextMap.update(m => ({ ...m, [idTx]: description }));
+    }
   }
 
   submitClassify(tx: BankStatementTransactionDto): void {
@@ -160,6 +173,7 @@ export class BankStatementImportsWebComponent {
       tx.idCostCenter,
     );
     const learnKeyword = this.getLearnKeyword(tx.idBankStatementTransaction);
+    const keywordText  = learnKeyword ? this.getLearnKeywordText(tx.idBankStatementTransaction) || undefined : undefined;
     this.classifyingId.set(tx.idBankStatementTransaction);
     this.batchClassify.emit([{
       idBankStatementTransaction: tx.idBankStatementTransaction,
@@ -167,6 +181,7 @@ export class BankStatementImportsWebComponent {
       idAccountCounterpart,
       idCostCenter,
       learnKeyword,
+      keywordText,
     }]);
     setTimeout(() => {
       this.classifyingId.set(null);
@@ -174,6 +189,7 @@ export class BankStatementImportsWebComponent {
       this.classifyAccMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
       this.classifyCostCenterMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
       this.learnKeywordMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
+      this.learnKeywordTextMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
       this.cdr.markForCheck();
     }, 800);
   }
@@ -189,12 +205,14 @@ export class BankStatementImportsWebComponent {
         const idAcc    = this.getClassifyAccount(tx.idBankStatementTransaction, tx.idAccountCounterpart);
         const idCostCenter = this.getClassifyCostCenter(tx.idBankStatementTransaction, tx.idCostCenter);
         const learnKeyword = this.getLearnKeyword(tx.idBankStatementTransaction);
+        const keywordText  = learnKeyword ? this.getLearnKeywordText(tx.idBankStatementTransaction) || undefined : undefined;
         const item: BulkClassifyItem = {
           idBankStatementTransaction: tx.idBankStatementTransaction,
           idBankMovementType:         idType,
           idAccountCounterpart:       idAcc,
           idCostCenter,
           learnKeyword,
+          keywordText,
         };
         return item;
       })
@@ -207,6 +225,7 @@ export class BankStatementImportsWebComponent {
     this.classifyAccMap.set({});
     this.classifyCostCenterMap.set({});
     this.learnKeywordMap.set({});
+    this.learnKeywordTextMap.set({});
     this.cdr.markForCheck();
   }
 

@@ -254,7 +254,7 @@
                           <ion-button size="small"
                             [color]="getLearnKeyword(tx.idBankStatementTransaction) ? 'primary' : 'medium'"
                             fill="outline"
-                            (click)="toggleLearnKeyword(tx.idBankStatementTransaction)"
+                            (click)="toggleLearnKeyword(tx.idBankStatementTransaction, tx.description)"
                             [attr.aria-label]="getLearnKeyword(tx.idBankStatementTransaction) ? 'No guardar como regla' : 'Guardar como regla'">
                             <ion-icon slot="icon-only" name="pricetag-outline"></ion-icon>
                           </ion-button>
@@ -272,6 +272,19 @@
                           </ion-badge>
                         </ion-col>
                       </ion-row>
+                      @if (getLearnKeyword(tx.idBankStatementTransaction)) {
+                        <ion-row>
+                          <ion-col>
+                            <ion-input
+                              fill="outline"
+                              label="Keyword a guardar"
+                              labelPlacement="stacked"
+                              [value]="getLearnKeywordText(tx.idBankStatementTransaction)"
+                              (ionInput)="setLearnKeywordText(tx.idBankStatementTransaction, $event.detail.value ?? '')">
+                            </ion-input>
+                          </ion-col>
+                        </ion-row>
+                      }
                     </ion-grid>
                   </ion-card-content>
                 </ion-card>
