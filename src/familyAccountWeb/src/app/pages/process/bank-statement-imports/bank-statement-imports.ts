@@ -61,10 +61,18 @@ export class BankStatementImportsPage
 
   // ── Estado local ───────────────────────────────────────────
   selectedImportId = signal<number | null>(null);
+  showOnlyPending  = signal(false);
 
   // ── Derivados ──────────────────────────────────────────
   pendingCount = computed(() =>
     this.transactions().filter(t => !t.idBankMovementType && !t.idAccountingEntry).length
+  );
+
+  /** Transacciones visibles según el modo de filtrado activo */
+  visibleTransactions = computed(() =>
+    this.showOnlyPending()
+      ? this.transactions().filter(t => !t.idBankMovementType && !t.idAccountingEntry)
+      : this.transactions()
   );
 
   /** true mientras cuentas bancarias o plantillas siguen cargando */
@@ -112,14 +120,31 @@ export class BankStatementImportsPage
 
   expandImport(imp: BankStatementImportDto): void {
     const id = imp.idBankStatementImport;
-    if (this.selectedImportId() === id) {
+    if (this.selectedImportId() === id && !this.showOnlyPending()) {
       this.selectedImportId.set(null);
+      this.showOnlyPending.set(false);
       this.importSvc.transactions.set([]);
       return;
     }
+    this.showOnlyPending.set(false);
     this.selectedImportId.set(id);
     this.importSvc.loadTransactions(id).subscribe({
       error: err => this.logger.error('Error cargando transacciones', err),
+    });
+  }
+
+  expandPendingImport(imp: BankStatementImportDto): void {
+    const id = imp.idBankStatementImport;
+    if (this.selectedImportId() === id && this.showOnlyPending()) {
+      this.selectedImportId.set(null);
+      this.showOnlyPending.set(false);
+      this.importSvc.transactions.set([]);
+      return;
+    }
+    this.showOnlyPending.set(true);
+    this.selectedImportId.set(id);
+    this.importSvc.loadTransactions(id).subscribe({
+      error: err => this.logger.error('Error cargando transacciones (pendientes)', err),
     });
   }
 

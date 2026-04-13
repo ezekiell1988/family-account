@@ -138,7 +138,7 @@
   } @else {
     <ion-list>
       @for (imp of imports(); track imp.idBankStatementImport) {
-        <ion-item [button]="true" [detail]="false"
+        <ion-item [button]="imp.status === 'Completado'" [detail]="false"
           (click)="imp.status === 'Completado' ? expand.emit(imp) : null">
           <ion-icon slot="start"
             [name]="selectedImportId() === imp.idBankStatementImport ? 'chevron-down-outline' : 'chevron-forward-outline'"
@@ -152,6 +152,16 @@
           <ion-badge slot="end" [color]="statusColor(imp.status)">
             {{ imp.status }}
           </ion-badge>
+          @if (imp.status === 'Completado') {
+            <ion-button slot="end" fill="clear" size="small" color="warning"
+              (click)="$event.stopPropagation(); expandPending.emit(imp)"
+              [attr.aria-label]="'Ver solo pendientes del import ' + imp.idBankStatementImport">
+              <ion-icon
+                [name]="selectedImportId() === imp.idBankStatementImport && showOnlyPending() ? 'close-outline' : 'warning-outline'"
+                slot="icon-only">
+              </ion-icon>
+            </ion-button>
+          }
         </ion-item>
 
         <!-- Transacciones del import expandido -->

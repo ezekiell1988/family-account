@@ -42,7 +42,7 @@
 | Script prueba BAC XLS | ✅ | `docs/bancos/BAC-XLS-carga-test.ps1` — cuenta ahorro/débito CR73 |
 | Keywords BAC XLS | ✅ | DEP_ATM → DEP; TEF/SINPE → TRANSF-REC; COOPEALIANZA → PAGO-PREST; PAGO/SINPE MOVIL PAGO_TARJETA → PAGO-TC; DTR: → TRANSF-ENV |
 | Script prueba BNCR | ✅ | `docs/bancos/BNCR-carga-test.ps1` — carga 2 archivos (1 CRC + 1 USD) |
-| Frontend Angular | ✅ | Página `bancos/carga` implementada — web (Color Admin + ngx-datatable) + mobile (Ionic) |
+| Frontend Angular | ✅ | Página `bancos/carga` implementada — web (Color Admin + ngx-datatable) + mobile (Ionic). Botón «Pendientes» para ver solo no clasificadas por import |
 
 ---
 
@@ -272,7 +272,7 @@ record BulkClassifyResult(int Classified, int KeywordsAdded);
 
 **Vista desktop (Color Admin):**
 - Formulario de upload: selector de cuenta bancaria + selector de plantilla + input de archivo.
-- Tabla de imports con botón «Ver Tx» por fila.
+- Tabla de imports con dos botones por fila (estado `Completado`): «Ver Tx» (todas las transacciones) y «Pendientes» (solo las sin clasificar — sin `idBankMovementType`).
 - Panel de transacciones del import seleccionado con:
   - Columna "Tipo / Cuenta / CC": tres `<select>` apilados — tipo de movimiento (auto-clasifica la cuenta del tipo al cambiar) + cuenta contrapartida (editable) + centro de costo (opcional).
   - Botón **✓** por fila: llama a `classify-batch` con un solo ítem. Al lado, botón **🏷️** (toggle): azul = guardar como regla (`learnKeyword=true`); gris = no guardar. Al activar 🏷️, aparece un input de texto pre-relleno con la descripción de la transacción — el usuario puede editarlo para guardar un keyword más corto o genérico (ej. `ICETEL` en lugar de `ND AH ICETEL BANCOBC/ICETEL 83681485`). Default gris. `idAccountCounterpart` e `idCostCenter` son opcionales.
@@ -292,6 +292,29 @@ record BulkClassifyResult(int Classified, int KeywordsAdded);
 - `AccountService` — plan de cuentas; filtrado a `allowsMovements && isActive` en los selectores.
 - `CostCenterService` — centros de costo activos; filtrado a `isActive` en el selector.
 - `BankStatementTemplateService`, `BankAccountService`, `BankMovementTypeService` — catálogos de soporte.
+
+---
+
+## Fase 4b — Filtro «Pendientes» en listado de imports ✅ `(completado 2026-04-12)`
+
+**Motivación:** Cuando un import tiene muchas transacciones ya clasificadas conviene ver solo las que faltan clasificar sin perder el contexto del import completo.
+
+**Cambios en el coordinador (`BankStatementImportsPage`):**
+- `showOnlyPending = signal(false)` — indica si el panel de transacciones está en modo pendientes.
+- `visibleTransactions = computed(...)` — deriva de `transactions()`: si `showOnlyPending` es `true`, filtra las que no tienen `idBankMovementType` ni `idAccountingEntry`; si no, muestra todas.
+- `expandPendingImport(imp)` — carga las transacciones del import y activa `showOnlyPending = true`. Si el mismo import ya está en modo pendientes, lo cierra.
+- `expandImport(imp)` — ahora detecta su propio toggle de forma independiente: cierra solo si el import ya está abierto y **no** está en modo pendientes.
+- Ambos sub-componentes reciben `[showOnlyPending]` como input de lectura y emiten `(expandPending)` como output.
+
+**Vista desktop:**
+- Columna de acción ampliada a 220px con dos botones:
+  - Azul **«Ver Tx»** / **«Ocultar»** — muestra **todas** las transacciones.
+  - Naranja **«Pendientes»** / **«Ocultar»** — muestra solo las **no clasificadas**. Usa `fa-exclamation-circle`.
+- El label de cada botón cambia a «Ocultar» cuando ese modo concreto está activo para el import seleccionado.
+
+**Vista mobile:**
+- Click en el `ion-item` → `expand` (todas las tx, comportamiento anterior).
+- `ion-button` con `slot="end"` y color `warning` → `expandPending` (solo pendientes). El ícono cambia a `close-outline` cuando ese modo está activo. Usa `$event.stopPropagation()` para no disparar el click del row.
 
 **Análisis de endpoints — ¿en servicio y dos endpoints o uno?**
 

@@ -107,11 +107,13 @@ export class BankStatementImportsMobileComponent {
   selectedImportId  = input<number | null>(null);
   pendingCount      = input(0);
   isLoadingCatalogs = input(false);
+  showOnlyPending   = input(false);
 
   // ── Outputs ─────────────────────────────────────────────
   refresh       = output<void>();
   upload        = output<{ idBankAccount: number; idTemplate: number; file: File }>();
   expand        = output<BankStatementImportDto>();
+  expandPending = output<BankStatementImportDto>();
   batchClassify = output<BulkClassifyItem[]>();
   clearError    = output<void>();
 

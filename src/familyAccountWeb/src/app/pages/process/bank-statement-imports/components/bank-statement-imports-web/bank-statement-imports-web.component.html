@@ -171,18 +171,29 @@
     </ngx-datatable-column>
 
     <!-- Acción expandir -->
-    <ngx-datatable-column name="" [width]="130" [sortable]="false">
+    <ngx-datatable-column name="" [width]="220" [sortable]="false">
       <ng-template let-row="row" ngx-datatable-cell-template>
         @if (row.status === 'Completado') {
-          <button type="button" class="btn btn-xs btn-primary"
-            (click)="expand.emit(row)"
-            [attr.aria-label]="'Ver transacciones del import ' + row.idBankStatementImport"
-            [attr.title]="'Ver transacciones del import ' + row.idBankStatementImport">
-            <i class="fa fa-list" aria-hidden="true"></i>
-            <span class="ms-1">
-              {{ selectedImportId() === row.idBankStatementImport ? 'Ocultar' : 'Ver Tx' }}
-            </span>
-          </button>
+          <div class="d-flex gap-1">
+            <button type="button" class="btn btn-xs btn-primary"
+              (click)="expand.emit(row)"
+              [attr.aria-label]="'Ver todas las transacciones del import ' + row.idBankStatementImport"
+              [attr.title]="'Ver todas las transacciones'">
+              <i class="fa fa-list" aria-hidden="true"></i>
+              <span class="ms-1">
+                {{ selectedImportId() === row.idBankStatementImport && !showOnlyPending() ? 'Ocultar' : 'Ver Tx' }}
+              </span>
+            </button>
+            <button type="button" class="btn btn-xs btn-warning"
+              (click)="expandPending.emit(row)"
+              [attr.aria-label]="'Ver solo no clasificadas del import ' + row.idBankStatementImport"
+              [attr.title]="'Ver solo no clasificadas'">
+              <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+              <span class="ms-1">
+                {{ selectedImportId() === row.idBankStatementImport && showOnlyPending() ? 'Ocultar' : 'Pendientes' }}
+              </span>
+            </button>
+          </div>
         }
       </ng-template>
     </ngx-datatable-column>
