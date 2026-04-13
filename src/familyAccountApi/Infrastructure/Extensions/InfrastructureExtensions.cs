@@ -91,6 +91,7 @@ public static class InfrastructureExtensions
         builder.Services.AddScoped<PinJobs>();
         builder.Services.AddScoped<FiscalPeriodJobs>();
         builder.Services.AddScoped<BankStatementImportJob>();
+        builder.Services.AddScoped<FinancialObligationBacTcSyncJob>();
 
         return builder;
     }

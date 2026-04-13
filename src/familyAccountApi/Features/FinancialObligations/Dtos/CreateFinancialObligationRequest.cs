@@ -17,8 +17,8 @@ public sealed record CreateFinancialObligationRequest
     [Description("Monto original desembolsado")]
     public required decimal OriginalAmount { get; init; }
 
-    [Required, Range(typeof(decimal), "0.01", "100", ParseLimitsInInvariantCulture = true)]
-    [Description("Tasa de interés anual. Ej: 18.50 = 18.5%")]
+    [Required, Range(typeof(decimal), "0", "100", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true)]
+    [Description("Tasa de interés anual. Ej: 18.50 = 18.5%. Usar 0 para Tasa Cero (BAC Financiamientos).")]
     public required decimal InterestRate { get; init; }
 
     [Required]

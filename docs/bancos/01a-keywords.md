@@ -64,10 +64,10 @@
 | `SALARIO`, `ITQS`, `IT QUEST`, `NOMINA`, `PLANILLA` | 1 – SAL | 44 – 4.1.01.01 ITQS Salario | — |
 | `DEP EFECTIVO`, `DEPOSITO EFECTIVO`, `DEPOSITO EN CAJA` | 2 – DEP | 106 – 1.1.06.01 Caja CRC | — |
 | `INTERNET DTR SINPE`, `DTR SINPE`, `SINPE CR`, `TRANSF CREDIT`, `CREDITO SINPE`, `SINPE MOVIL CR`, `ABONO SINPE`, `RECIBO SINPE` | 3 – TRANSF-REC | _(default tipo)_ | — |
-| `MOVISTAR`, `KOLBI`, `DB AH TELEF`, `PG AH TIEMPO AIRE TD` | 4 – GASTO | 68 – 5.7.01 Teléfono Celular | — |
+| `MOVISTAR`, `KOLBI`, `DB AH TELEF`, `PG AH TIEMPO AIRE TD` | 4 – GASTO | 68 – 5.7.01 Teléfono Celular | 1 – FAM-KYE |
 | `83681485` | 4 – GASTO | 68 – 5.7.01 Teléfono Celular | 1 – FAM-KYE |
 | `22703332` | 4 – GASTO | 82 – 5.9.03 Teléfono Casa | 2 – FAM-PAPA |
-| `COMPRAS EN COMERCIOS`, `COMPRA EN COMERCIO`, `COMPRAS COMERC`, `COMPRA COMERC` | 4 – GASTO | 61 – 5.3.01 Alimentación | — |
+| `COMPRAS EN COMERCIOS`, `COMPRA EN COMERCIO`, `COMPRAS COMERC`, `COMPRA COMERC` | 4 – GASTO | 61 – 5.3.01 Alimentación | 1 – FAM-KYE |
 | `RETIRO ATM`, `RETIRO CAJERO`, `RETIRO EFECTIVO`, `CAJERO AUTOMATICO` | 5 – RET | 106 – 1.1.06.01 Caja CRC | — |
 | `PAGO TC`, `PAGO TARJETA`, `TRJ CRED`, `PAGO TARJETA CREDITO`, `PAGO TRJ`, `PAGO TARJETAS`, `TRANSFERENC BANCOBCR` | 6 – PAGO-TC | _(default tipo)_ | — |
 | `PAGO PREST`, `CUOTA PREST`, `PAGO PRESTAMO`, `CUOTA PRESTAMO` | 7 – PAGO-PREST | 42 – 2.2.01.01 Coopealianza Préstamo | — |
@@ -82,11 +82,11 @@
 | Keywords | Tipo | Cuenta contrapartida | Centro de costo |
 |---|---|---|---|
 | `SU PAGO RECIBIDO GRACIAS` | 3 – TRANSF-REC | _(default tipo)_ | — |
-| `UBER`, `DLC*UBER`, `DLC*LYFT`, `BOLT` | 4 – GASTO | 83 – 5.4.02 Transporte Actividades | — |
-| `NETFLIX.COM` | 4 – GASTO | 69 – 5.8.01 Netflix | — |
-| `APPLE.COM` | 4 – GASTO | 72 – 5.8.04 Apple iCloud | — |
-| `GITHUB`, `SPOTIFY`, `YOUTUBE`, `AMAZON` | 4 – GASTO | 140 – 5.8.07 Suscripciones Varias | — |
-| `WALMART`, `MAXIPALI`, `MXM `, `SUPER SALON`, `AUTOMERCADO`, `PALI ` | 4 – GASTO | 61 – 5.3.01 Alimentación | — |
+| `UBER`, `DLC*UBER`, `DLC*LYFT`, `BOLT` | 4 – GASTO | 83 – 5.4.02 Transporte Actividades | 1 – FAM-KYE |
+| `NETFLIX.COM` | 4 – GASTO | 69 – 5.8.01 Netflix | 1 – FAM-KYE |
+| `APPLE.COM` | 4 – GASTO | 72 – 5.8.04 Apple iCloud | 1 – FAM-KYE |
+| `GITHUB`, `SPOTIFY`, `YOUTUBE`, `AMAZON` | 4 – GASTO | 140 – 5.8.07 Suscripciones Varias | 1 – FAM-KYE |
+| `WALMART`, `MAXIPALI`, `MXM `, `SUPER SALON`, `AUTOMERCADO`, `PALI ` | 4 – GASTO | 61 – 5.3.01 Alimentación | 1 – FAM-KYE |
 | ~~`IVA -`~~ | ~~4 – GASTO~~ | _(eliminada — sub-línea de compra, sin clasificar)_ | — |
 
 ---
@@ -110,16 +110,16 @@
 | Keywords | Tipo | Cuenta contrapartida | Centro de costo |
 |---|---|---|---|
 | `SU PAGO RECIBIDO GRACIAS` | 3 – TRANSF-REC | _(default tipo)_ | — |
-| `UBER`, `DLC*UBER`, `DLC*LYFT`, `BOLT` | 4 – GASTO | 83 – 5.4.02 Transporte Actividades | — |
-| `NETFLIX.COM` | 4 – GASTO | 69 – 5.8.01 Netflix | — |
-| `APPLE.COM` | 4 – GASTO | 72 – 5.8.04 Apple iCloud | — |
-| `OPENAI`, `CHATGPT` | 4 – GASTO | 73 – 5.8.05 ChatGPT | — |
-| `GITHUB`, `MICROSOFT`, `2CO.COM`, `DIGITALOCEAN`, `NEOTHEK`, `GOOGLE` | 4 – GASTO | 74 – 5.8.06 Copilot/Suscripciones Tech | — |
-| `SPOTIFY`, `YOUTUBE`, `AMAZON` | 4 – GASTO | 140 – 5.8.07 Suscripciones Varias | — |
-| `WALMART`, `MAXIPALI`, `MXM `, `SUPER SALON`, `AUTOMERCADO`, `PALI `, `SIMAN`, `ALMACENES` | 4 – GASTO | 61 – 5.3.01 Alimentación | — |
-| `FARMACIA`, `DROGUERIA`, `CLINICA `, `HOSPITAL`, `OPTICA `, `LABORATORIO` | 4 – GASTO | 75 – 5.12.01 Gastos en Pareja | — |
-| `FERRETERIA`, `DEPOSITO FERR`, `CONSTRUPLAZA` | 4 – GASTO | 75 – 5.12.01 Gastos en Pareja | — |
-| `SEGURO PROTECCION`, `SEGURO DE VIDA`, `PRIMA SEGURO`, `INS ` | 4 – GASTO | 139 – 5.5.07 Seguro Protección BAC | — |
+| `UBER`, `DLC*UBER`, `DLC*LYFT`, `BOLT` | 4 – GASTO | 83 – 5.4.02 Transporte Actividades | 1 – FAM-KYE |
+| `NETFLIX.COM` | 4 – GASTO | 69 – 5.8.01 Netflix | 1 – FAM-KYE |
+| `APPLE.COM` | 4 – GASTO | 72 – 5.8.04 Apple iCloud | 1 – FAM-KYE |
+| `OPENAI`, `CHATGPT` | 4 – GASTO | 73 – 5.8.05 ChatGPT | 1 – FAM-KYE |
+| `GITHUB`, `MICROSOFT`, `2CO.COM`, `DIGITALOCEAN`, `NEOTHEK`, `GOOGLE` | 4 – GASTO | 74 – 5.8.06 Copilot/Suscripciones Tech | 1 – FAM-KYE |
+| `SPOTIFY`, `YOUTUBE`, `AMAZON` | 4 – GASTO | 140 – 5.8.07 Suscripciones Varias | 1 – FAM-KYE |
+| `WALMART`, `MAXIPALI`, `MXM `, `SUPER SALON`, `AUTOMERCADO`, `PALI `, `SIMAN`, `ALMACENES` | 4 – GASTO | 61 – 5.3.01 Alimentación | 1 – FAM-KYE |
+| `FARMACIA`, `DROGUERIA`, `CLINICA `, `HOSPITAL`, `OPTICA `, `LABORATORIO` | 4 – GASTO | 75 – 5.12.01 Gastos en Pareja | 1 – FAM-KYE |
+| `FERRETERIA`, `DEPOSITO FERR`, `CONSTRUPLAZA` | 4 – GASTO | 75 – 5.12.01 Gastos en Pareja | 1 – FAM-KYE |
+| `SEGURO PROTECCION`, `SEGURO DE VIDA`, `PRIMA SEGURO`, `INS ` | 4 – GASTO | 139 – 5.5.07 Seguro Protección BAC | 1 – FAM-KYE |
 | ~~`IVA -`~~ | ~~4 – GASTO~~ | _(eliminada — sub-línea de compra, sin clasificar)_ | — |
 | `TRASLADO SALDO REVOLUTIVO`, `CUOTA:` | 7 – PAGO-PREST | 42 – 2.2.01.01 Coopealianza Préstamo | — |
 
@@ -130,15 +130,15 @@
 | Keywords | Tipo | Cuenta contrapartida | Centro de costo |
 |---|---|---|---|
 | `SU PAGO RECIBIDO GRACIAS` | 3 – TRANSF-REC | _(default tipo)_ | — |
-| `UBER`, `DLC*UBER`, `DLC*LYFT`, `BOLT` | 4 – GASTO | 83 – 5.4.02 Transporte Actividades | — |
-| `NETFLIX.COM` | 4 – GASTO | 69 – 5.8.01 Netflix | — |
-| `APPLE.COM` | 4 – GASTO | 72 – 5.8.04 Apple iCloud | — |
-| `OPENAI`, `CHATGPT`, `GAMMA.APP` | 4 – GASTO | 73 – 5.8.05 ChatGPT | — |
-| `GITHUB`, `JETBRAINS`, `MICROSOFT`, `DIGITALOCEAN`, `2CO.COM`, `NEOTHEK`, `GOOGLE` | 4 – GASTO | 74 – 5.8.06 Copilot/Suscripciones Tech | — |
-| `SPOTIFY`, `YOUTUBE`, `AMAZON` | 4 – GASTO | 140 – 5.8.07 Suscripciones Varias | — |
-| `ICON CC RETAIL` | 4 – GASTO | 142 – 5.16.01 Compras Tecnología (ICON / Apple) | — |
-| `WALMART`, `SIMAN` | 4 – GASTO | 61 – 5.3.01 Alimentación | — |
-| `SEGURO PROTECCION`, `SEGURO DE VIDA`, `PRIMA SEGURO` | 4 – GASTO | 139 – 5.5.07 Seguro Protección BAC | — |
+| `UBER`, `DLC*UBER`, `DLC*LYFT`, `BOLT` | 4 – GASTO | 83 – 5.4.02 Transporte Actividades | 1 – FAM-KYE |
+| `NETFLIX.COM` | 4 – GASTO | 69 – 5.8.01 Netflix | 1 – FAM-KYE |
+| `APPLE.COM` | 4 – GASTO | 72 – 5.8.04 Apple iCloud | 1 – FAM-KYE |
+| `OPENAI`, `CHATGPT`, `GAMMA.APP` | 4 – GASTO | 73 – 5.8.05 ChatGPT | 1 – FAM-KYE |
+| `GITHUB`, `JETBRAINS`, `MICROSOFT`, `DIGITALOCEAN`, `2CO.COM`, `NEOTHEK`, `GOOGLE` | 4 – GASTO | 74 – 5.8.06 Copilot/Suscripciones Tech | 1 – FAM-KYE |
+| `SPOTIFY`, `YOUTUBE`, `AMAZON` | 4 – GASTO | 140 – 5.8.07 Suscripciones Varias | 1 – FAM-KYE |
+| `ICON CC RETAIL` | 4 – GASTO | 142 – 5.16.01 Compras Tecnología (ICON / Apple) | 2 – FAM-PAPA |
+| `WALMART`, `SIMAN` | 4 – GASTO | 61 – 5.3.01 Alimentación | 1 – FAM-KYE |
+| `SEGURO PROTECCION`, `SEGURO DE VIDA`, `PRIMA SEGURO` | 4 – GASTO | 139 – 5.5.07 Seguro Protección BAC | 1 – FAM-KYE |
 | ~~`IVA -`~~ | ~~4 – GASTO~~ | _(eliminada — sub-línea de compra, sin clasificar)_ | — |
 | `TRASLADO SALDO REVOLUTIVO`, `CUOTA:` | 7 – PAGO-PREST | 42 – 2.2.01.01 Coopealianza Préstamo | — |
 

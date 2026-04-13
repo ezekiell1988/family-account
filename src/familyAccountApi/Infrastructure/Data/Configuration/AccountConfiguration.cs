@@ -310,7 +310,17 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
 
             // ── 5.16 Tecnología (hardware y compras tecnológicas) ─────────────────
             new Account { IdAccount = 141, CodeAccount = "5.16",    NameAccount = "Tecnología",                TypeAccount = "Gasto", LevelAccount = 2, IdAccountParent = 5,   AllowsMovements = false, IsActive = true },
-            new Account { IdAccount = 142, CodeAccount = "5.16.01", NameAccount = "Compras Tecnología (ICON / Apple)", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 141, AllowsMovements = true, IsActive = true }
+            new Account { IdAccount = 142, CodeAccount = "5.16.01", NameAccount = "Compras Tecnología (ICON / Apple)", TypeAccount = "Gasto", LevelAccount = 3, IdAccountParent = 141, AllowsMovements = true, IsActive = true },
+
+            // ── 2.1.01.08–10 Financiamientos Tasa Cero BAC ────────────────────
+            //  Pasivos corrientes que registran el saldo pendiente de cada plan
+            //  de financiamiento a tasa cero de las TC BAC.
+            //  IdAccountLongTerm / IdAccountShortTerm en FinancialObligation apuntan aquí.
+            //  Tarjeta 5466-8608: planes en CRC (id 143) y USD (id 144).
+            //  Tarjeta 5491-6515: planes en CRC (id 145).
+            new Account { IdAccount = 143, CodeAccount = "2.1.01.08", NameAccount = "BAC - TC 5466-8608 Financiamientos Tasa Cero (₡)", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true, IsActive = true },
+            new Account { IdAccount = 144, CodeAccount = "2.1.01.09", NameAccount = "BAC - TC 5466-8608 Financiamientos Tasa Cero ($)", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true, IsActive = true },
+            new Account { IdAccount = 145, CodeAccount = "2.1.01.10", NameAccount = "BAC - TC 5491-6515 Financiamientos Tasa Cero (₡)", TypeAccount = "Pasivo", LevelAccount = 4, IdAccountParent = 28, AllowsMovements = true, IsActive = true }
         );
     }
 }

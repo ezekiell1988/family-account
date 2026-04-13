@@ -154,14 +154,20 @@ Las keywords `TRASLADO SALDO REVOLUTIVO` y `CUOTA:` en Templates 4 y 5 actualmen
 ```
 FinancialObligation (cabecera del préstamo)
   ├── IdAccountLongTerm  → 2.2.01.01
-  ├── IdAccountShortTerm → 2.1.02.01  (nueva)
-  ├── IdAccountInterest  → 5.5.04
-  ├── IdAccountLateFee   → 5.5.04 (o nuevo)
+  ├── IdAccountShortTerm → 2.1.02.01
+  ├── IdAccountInterest  → 5.5.05
+  ├── IdAccountLateFee   → 5.5.06
   ├── IdBankAccountPayment → bankAccount BAC débito
-  └── FinancialObligationInstallment[] (tabla de amortización — 1 por cuota)
-        ├── SyncedAt           (última sincronización desde Excel)
-        └── FinancialObligationPayment? (pago real + asiento — 0 ó 1 por cuota)
+  ├── FinancialObligationInstallment[] (tabla de amortización — 1 por cuota)
+  │     ├── SyncedAt                        (última sincronización desde Excel)
+  │     ├── FinancialObligationPayment?     (datos del pago — 0 ó 1 por cuota)
+  │     ├── FinancialObligationBankMovement[]   ← movimientos bancarios vinculados (1:N)
+  │     └── FinancialObligationAccountingEntry[] ← asientos de pago (1:N, typeEntry=Pago)
+  ├── FinancialObligationBankMovement[]     (nivel obligación, sin cuota — reservado)
+  └── FinancialObligationAccountingEntry[]  (reclasificación, ajuste saldo inicial — 1:N)
 ```
+
+> Las relaciones con `bankMovement` y `accountingEntry` son siempre **1:N** a través de las tablas de relación propias. Un pago puede tener 0 ó 1 movimientos bancarios vinculados; una obligación puede acumular N asientos contables de distintos tipos a lo largo de su vida.
 
 ---
 
@@ -208,20 +214,50 @@ FinancialObligation (cabecera del préstamo)
 
 ### 3. `FinancialObligationPayment`
 
+Registro del pago a nivel de cuota. Existe si la cuota fue pagada (aunque no tenga movimiento bancario vinculado). Ya **no** contiene FKs directos a `bankMovement` ni a `accountingEntry` — esas relaciones se gestionan a través de las tablas 1:N propias.
+
 | Propiedad | Tipo | Notas |
 |---|---|---|
 | `IdFinancialObligationPayment` | `int` | PK |
 | `IdFinancialObligationInstallment` | `int` | FK único (1:1 con cuota) |
-| `IdBankMovement` | `int?` | FK → `bankMovement` (auto-detectado o manual) |
 | `DatePayment` | `DateOnly` | Fecha real del pago |
 | `AmountPaid` | `decimal` | Total efectivamente pagado |
 | `AmountCapitalPaid` | `decimal` | Capital (tomado del Excel) |
 | `AmountInterestPaid` | `decimal` | Interés (tomado del Excel) |
 | `AmountLatePaid` | `decimal` | Mora (tomado del Excel) |
 | `AmountOtherPaid` | `decimal` | Otros (tomado del Excel) |
-| `IdAccountingEntry` | `int?` | FK → `accountingEntry` generado |
-| `IsAutoProcessed` | `bool` | true = generado automáticamente por el import |
+| `IsAutoProcessed` | `bool` | true = generado automáticamente por el sync |
 | `Notes` | `string?` | |
+
+### 4. `FinancialObligationBankMovement` *(nueva)*
+
+Tabla de relación 1:N entre la obligación (o una cuota específica) y los movimientos bancarios. Permite vincular múltiples movimientos a una cuota o a la obligación en general.
+
+| Propiedad | Tipo | Notas |
+|---|---|---|
+| `IdFinancialObligationBankMovement` | `int` | PK |
+| `IdFinancialObligation` | `int` | FK → `financialObligation` |
+| `IdFinancialObligationInstallment` | `int?` | FK nullable → cuota específica (`null` = nivel obligación) |
+| `IdBankMovement` | `int` | FK → `bankMovement` |
+| `TypeMovement` | `string` | CHECK: `Pago` (extensible) |
+| `Notes` | `string?` | |
+
+Índice único: `UQ_finObligBankMovement_obligation_bankMovement`
+
+### 5. `FinancialObligationAccountingEntry` *(nueva)*
+
+Tabla de relación 1:N entre la obligación (o una cuota específica) y los asientos contables. Centraliza todos los asientos generados por la obligación: pagos, reclasificaciones y ajustes de saldo inicial.
+
+| Propiedad | Tipo | Notas |
+|---|---|---|
+| `IdFinancialObligationAccountingEntry` | `int` | PK |
+| `IdFinancialObligation` | `int` | FK → `financialObligation` |
+| `IdFinancialObligationInstallment` | `int?` | FK nullable → cuota específica (`null` = nivel obligación: RCLS, AjusteSaldo) |
+| `IdAccountingEntry` | `int` | FK → `accountingEntry` |
+| `TypeEntry` | `string` | CHECK: `Pago` \| `Reclasificacion` \| `AjusteSaldoInicial` |
+| `Notes` | `string?` | |
+
+Índice único: `UQ_finObligAccountingEntry_obligation_entry`
 
 ---
 
@@ -229,13 +265,25 @@ FinancialObligation (cabecera del préstamo)
 
 ### `POST /financial-obligations/{id}/sync-excel`
 
-Recibe el archivo `.xlsx` (multipart). Ejecuta el siguiente algoritmo:
+Recibe el archivo `.xlsx` (multipart) y opcionalmente un `idBankMovement` que el usuario puede proveer como evidencia del pago del período. Ejecuta el siguiente algoritmo:
 
 ```
-1. PARSEAR el Excel → lista de InstallmentRow { number, dueDate, balanceAfter,
+1. DETECTAR PERIODO FISCAL
+   · Leer dueDate de la cuota con status 'Vigente' (o la de menor dueDate futura)
+   · Buscar FiscalPeriod donde StartDate ≤ dueDate ≤ EndDate
+   · Usar ese idFiscalPeriod para todos los asientos generados en este sync
+
+2. PARSEAR el Excel → lista de InstallmentRow { number, dueDate, balanceAfter,
                         capital, interest, lateFee, other, total, status }
 
-2. Para cada InstallmentRow:
+3. VERIFICAR AJUSTE DE SALDO INICIAL
+   · Comparar OriginalAmount almacenado vs saldo reconstruido desde la primera cuota del Excel
+   · Si difieren Y no existe ya un registro en FinancialObligationAccountingEntry (type=AjusteSaldoInicial):
+       → GENERAR asiento de ajuste (Borrador, idFiscalPeriod del paso 1)
+       → INSERTAR en FinancialObligationAccountingEntry
+           { idFinancialObligation, idFinancialObligationInstallment=null, typeEntry='AjusteSaldoInicial' }
+
+4. Para cada InstallmentRow:
    a. UPSERT en financialObligationInstallment
       - Si existe (por numberInstallment + idFinancialObligation):
           · Actualizar todos los montos, dueDate, balanceAfter, status, SyncedAt
@@ -243,20 +291,35 @@ Recibe el archivo `.xlsx` (multipart). Ejecuta el siguiente algoritmo:
           · Insertar fila nueva, status = valor del Excel
 
    b. Si status == 'Pagada' Y no existe FinancialObligationPayment para esta cuota:
-      → BUSCAR movimiento BAC automáticamente (ver §Matching)
-      → CREAR FinancialObligationPayment
-      → GENERAR asiento contable en estado Borrador
-      → ACTUALIZAR statusInstallment = 'Pagada'
+      → CREAR FinancialObligationPayment (montos del Excel, IsAutoProcessed=true)
 
-3. RECLASIFICACIÓN AUTOMÁTICA del período:
+      → BUSCAR movimiento BAC:
+           - Si el usuario proveyó idBankMovement y corresponde a esta cuota (monto ≈ amountTotal):
+               usar ese idBankMovement directamente
+           - Si no: buscar automáticamente en bankMovement (ver §Matching)
+      → Si movimiento encontrado:
+           INSERTAR en FinancialObligationBankMovement
+               { idFinancialObligation, idFinancialObligationInstallment, idBankMovement, typeMovement='Pago' }
+      → Si no encontrado: paymentsSkipped++
+
+      → GENERAR asiento contable de pago (Borrador, idFiscalPeriod del paso 1)
+      → INSERTAR en FinancialObligationAccountingEntry
+           { idFinancialObligation, idFinancialObligationInstallment, idAccountingEntry, typeEntry='Pago' }
+
+5. RECLASIFICACIÓN AUTOMÁTICA del período:
    · Calcular porción corriente = suma de AmountCapital de cuotas con
      DueDate entre hoy y hoy+12m y status IN ('Pendiente','Vigente')
    · Si porción cambió respecto al último asiento de reclasificación:
-       → GENERAR asiento de reclasificación (Borrador)
+       → GENERAR asiento de reclasificación (Borrador, idFiscalPeriod del paso 1)
+       → INSERTAR en FinancialObligationAccountingEntry
+           { idFinancialObligation, idFinancialObligationInstallment=null, idAccountingEntry, typeEntry='Reclasificacion' }
 
-4. RETORNAR SyncResult {
-     installmentsUpserted, paymentsCreated, paymentsSkipped (sin movimiento BAC),
-     reclassificationEntry (id o null), warnings[]
+6. RETORNAR SyncResult {
+     fiscalPeriodId, fiscalPeriodName,
+     installmentsUpserted, paymentsCreated, paymentsSkipped,
+     initialBalanceAdjustmentEntryId (id o null),
+     reclassificationEntryId (id o null),
+     warnings[]
    }
 ```
 
@@ -328,30 +391,35 @@ Domain/
     FinancialObligation.cs
     FinancialObligationInstallment.cs
     FinancialObligationPayment.cs
+    FinancialObligationBankMovement.cs      ← NUEVA (relación 1:N con bankMovement)
+    FinancialObligationAccountingEntry.cs   ← NUEVA (relación 1:N con accountingEntry)
 
 Infrastructure/
   Data/
     Configuration/
-      FinancialObligationConfiguration.cs          ← incluye seed cuentas nuevas
+      FinancialObligationConfiguration.cs
       FinancialObligationInstallmentConfiguration.cs
       FinancialObligationPaymentConfiguration.cs
-    AppDbContext.cs                                 ← 3 DbSets nuevos
+      FinancialObligationBankMovementConfiguration.cs      ← NUEVA
+      FinancialObligationAccountingEntryConfiguration.cs   ← NUEVA
+    AppDbContext.cs                                        ← 5 DbSets
 
 Features/
   FinancialObligations/
     Dtos/
       FinancialObligationResponse.cs
-      FinancialObligationSummaryResponse.cs         ← saldo, próxima cuota, porción corriente
+      FinancialObligationSummaryResponse.cs
+      FinancialObligationAuxiliaryResponse.cs    ← NUEVA (tabla auxiliar enriquecida)
       FinancialObligationInstallmentResponse.cs
       FinancialObligationPaymentResponse.cs
       CreateFinancialObligationRequest.cs
       UpdateFinancialObligationRequest.cs
-      SyncExcelResult.cs                            ← resultado del sync
-      RegisterPaymentRequest.cs                     ← pago manual (sin Excel)
+      SyncExcelResult.cs                         ← incluye fiscalPeriodId/Name + initialBalanceAdjustmentEntryId
+      RegisterPaymentRequest.cs
     Parsers/
-      FinancialObligationExcelParser.cs             ← lee .xlsx columnas fijas
+      FinancialObligationExcelParser.cs
     IFinancialObligationService.cs
-    FinancialObligationService.cs                   ← lógica sync + matching + asientos
+    FinancialObligationService.cs               ← lógica sync + periodo fiscal + ajuste saldo + 1:N
     FinancialObligationsModule.cs
 ```
 
@@ -367,6 +435,7 @@ Features/
 | `PUT` | `/financial-obligations/{id}` | Actualiza datos |
 | `DELETE` | `/financial-obligations/{id}` | Elimina si sin pagos |
 | `GET` | `/financial-obligations/{id}/summary` | Saldo, próxima cuota, porción corriente |
+| **`GET`** | **`/financial-obligations/{id}/auxiliary.json`** | **Tabla auxiliar enriquecida: cuotas + pago + movimiento BAC + asiento** |
 | **`POST`** | **`/financial-obligations/{id}/sync-excel`** | **Import Excel → upsert cuotas → pagos → asientos** |
 | `PUT` | `/financial-obligations/{id}/installments/{iid}` | Edita cuota manualmente |
 | `POST` | `/financial-obligations/{id}/installments/{iid}/payment` | Registra pago manual (sin Excel) |
@@ -374,16 +443,142 @@ Features/
 
 ---
 
+## Vista Auxiliar — Tabla de Amortización Enriquecida
+
+El endpoint `GET /financial-obligations/{id}/auxiliary.json` devuelve la tabla de cuotas enriquecida con datos de pago y conciliación bancaria. Es el insumo principal del frontend para el auxiliar contable del préstamo.
+
+### Estructura del response por cuota (`AuxiliaryInstallmentRow`)
+
+| Campo | Origen | Descripción |
+|---|---|---|
+| `numberInstallment` | `financialObligationInstallment` | Número de cuota |
+| `dueDate` | idem | Fecha de vencimiento |
+| `balanceAfter` | idem | Saldo luego del pago |
+| `amountCapital` | idem | Porción capital |
+| `amountInterest` | idem | Intereses |
+| `amountLateFee` | idem | Mora |
+| `amountOther` | idem | Otros |
+| `amountTotal` | idem | Total cuota |
+| `statusInstallment` | idem | `Pendiente` \| `Vigente` \| `Pagada` \| `Vencida` |
+| `syncedAt` | idem | Última actualización desde Excel |
+| `payment.datePayment` | `financialObligationPayment` | Fecha real del pago (null si no pagada) |
+| `payment.amountPaid` | idem | Monto efectivamente pagado |
+| `payment.isAutoProcessed` | idem | Fue detectado automáticamente por el sync |
+| `payment.diffAmount` | calculado | `amountTotal - amountPaid` — detecta redondeos o diferencias |
+| `bankMovement.numberMovement` | `bankMovement` | Número del movimiento BAC vinculado |
+| `bankMovement.dateMovement` | idem | Fecha del débito en la cuenta |
+| `bankMovement.descriptionMovement` | idem | Descripción del extracto |
+| `bankMovement.amount` | idem | Monto del débito BAC |
+| `bankMovement.statusMovement` | idem | Estado del movimiento |
+| `accountingEntry.idAccountingEntry` | `accountingEntry` | ID del asiento generado |
+| `accountingEntry.numberEntry` | idem | Número contable (ej. `PAG-0001-202603`) |
+| `accountingEntry.statusEntry` | idem | `Borrador` \| `Publicado` \| `Anulado` |
+| `accountingEntry.dateEntry` | idem | Fecha del asiento |
+
+### Valor del auxiliar
+
+- **Detectar cuotas sin conciliación**: `statusInstallment = Pagada` pero `bankMovement = null` → requiere vinculación manual.
+- **Detectar diferencias de monto**: `diffAmount ≠ 0` → posible mora o redondeo no capturado.
+- **Auditar asientos**: ver si el asiento ya fue Publicado o sigue en Borrador sin confirmar.
+- **Trazabilidad completa**: desde la cuota del Excel hasta el débito en la cuenta bancaria y el asiento contable.
+- **Navegación cruzada**: el `numberMovement` y `numberEntry` son links directos a los módulos de movimientos y contabilidad.
+
+### DTO propuesto (`FinancialObligationAuxiliaryResponse`)
+
+```csharp
+public record FinancialObligationAuxiliaryResponse(
+    int IdFinancialObligation,
+    string NameObligation,
+    decimal OriginalAmount,
+    decimal CurrentBalance,
+    string StatusObligation,
+    IReadOnlyList<AuxiliaryInstallmentRow> Installments,
+    // Asientos a nivel obligación (no vinculados a una cuota específica)
+    IReadOnlyList<AuxiliaryEntryInfo> ObligationEntries
+);
+
+public record AuxiliaryInstallmentRow(
+    int NumberInstallment,
+    DateOnly DueDate,
+    decimal BalanceAfter,
+    decimal AmountCapital,
+    decimal AmountInterest,
+    decimal AmountLateFee,
+    decimal AmountOther,
+    decimal AmountTotal,
+    string StatusInstallment,
+    DateTime? SyncedAt,
+    AuxiliaryPaymentInfo? Payment,
+    // 1:N — normalmente 0 ó 1 elemento, pero el modelo soporta N
+    IReadOnlyList<AuxiliaryBankMovementInfo> BankMovements,
+    IReadOnlyList<AuxiliaryEntryInfo> AccountingEntries
+);
+
+public record AuxiliaryPaymentInfo(
+    DateOnly DatePayment,
+    decimal AmountPaid,
+    decimal DiffAmount,        // AmountTotal - AmountPaid
+    bool IsAutoProcessed
+);
+
+public record AuxiliaryBankMovementInfo(
+    int IdFinancialObligationBankMovement,
+    int IdBankMovement,
+    string NumberMovement,
+    DateOnly DateMovement,
+    string DescriptionMovement,
+    decimal Amount,
+    string TypeMovement           // "Pago"
+);
+
+public record AuxiliaryEntryInfo(
+    int IdFinancialObligationAccountingEntry,
+    int IdAccountingEntry,
+    string NumberEntry,
+    string StatusEntry,
+    DateOnly DateEntry,
+    string TypeEntry              // "Pago" | "Reclasificacion" | "AjusteSaldoInicial"
+);
+```
+
+### Vista frontend (columnas del ngx-datatable)
+
+| Columna | Contenido | Indicador visual |
+|---|---|---|
+| `#` | `numberInstallment` | — |
+| Vencimiento | `dueDate` | Rojo si vencida y sin pago |
+| Capital | `amountCapital` | — |
+| Interés | `amountInterest` | Gris si = 0 (tasa cero) |
+| Mora | `amountLateFee` | Amarillo si > 0 |
+| Total | `amountTotal` | **Bold** si es cuota vigente |
+| Estado | `statusInstallment` | Badge: verde=Pagada, azul=Vigente, gris=Pendiente, rojo=Vencida |
+| Fecha pago | `payment.datePayment` | `—` si null |
+| Movimiento BAC | `bankMovements[0].numberMovement` | Link clickeable \| ⚠ sin vincular si Pagada y vacío |
+| Asiento pago | `accountingEntries[type=Pago].numberEntry` | Badge: gris=Borrador, verde=Publicado \| `—` si null |
+| Diff | `payment.diffAmount` | Amarillo si ≠ 0 |
+
+**Sección inferior de la página** — Asientos a nivel obligación (`obligationEntries`):
+
+| Tipo | Descripción | Estado |
+|---|---|---|
+| `Reclasificacion` | Largo plazo → Corto plazo del período | Badge Borrador/Publicado |
+| `AjusteSaldoInicial` | Diferencia entre saldo configurado y saldo real del Excel | Badge Borrador/Publicado |
+
+> El row-detail expandible de cada cuota muestra el desglose completo: descripción del movimiento BAC, líneas del asiento de pago y notas. Si hay más de un movimiento o asiento vinculado (caso excepcional), se listan todos.
+
+---
+
 ## Fases de implementación
 
 | # | Fase | Contenido | Estado |
 |---|---|---|---|
-| 1 | **Entidades + Config + Migración** | 3 entidades, 3 configs Fluent API, migración `AddFinancialObligations` | ✅ Completado |
-| 2 | **Parser Excel + servicio sync** | `FinancialObligationExcelParser`, algoritmo upsert, matching BAC, generación asientos | ✅ Completado |
-| 3 | **DTOs + Module + endpoints** | 7 DTOs, 8 endpoints incluyendo `sync-excel` (multipart) y `summary` | ✅ Completado |
+| 1 | **Entidades + Config + Migración** | 3 entidades originales + **2 nuevas** (`FinancialObligationBankMovement`, `FinancialObligationAccountingEntry`) + configs Fluent API | ⚠ Requiere nueva migración para las 2 tablas 1:N |
+| 2 | **Parser Excel + servicio sync** | `FinancialObligationExcelParser`, algoritmo upsert, detección periodo fiscal, ajuste saldo inicial, matching BAC, generación asientos con inserción en tablas 1:N | ⚠ Requiere actualización (tablas 1:N aún no implementadas) |
+| 3 | **DTOs + Module + endpoints** | 7 DTOs + nuevo `FinancialObligationAuxiliaryResponse`, endpoint `sync-excel` con `idBankMovement` opcional | ⚠ Requiere actualización |
 | 4 | **Reclasificación automática** | Cálculo porción corriente desde `BalanceAfter`, integrado en sync y endpoint manual | ✅ Completado |
 | 5 | **Cuentas contables completas** | 5 cuentas nuevas: 134, 135, 136, 137, 138 — migración `AddFinancialObligationAccounts` | ✅ Completado |
-| 6 | **Frontend Angular** | Página de obligaciones | ⏳ Pendiente |
+| 6 | **Frontend Angular — Lista + Summary** | Página `/obligaciones`: tabla con nombre, moneda, monto original, estado, próxima cuota y badge de conciliación pendiente. Header de detalle con `summary` (saldo vigente, cuotas pagadas/pendientes, porción corriente). Botón „Subir Excel" dispara `sync-excel`. | ⏳ Pendiente |
+| 6b | **Frontend Angular — Tabla Auxiliar** | Sub-componente `FinancialObligationAuxiliaryComponent`: consume `/auxiliary.json`, columnas enriquecidas (estado, movimiento BAC, asiento), row-detail expandible, badges de alerta para cuotas sin conciliación o asientos en Borrador, link directo a módulo bancario y contable. | ⏳ Pendiente |
 | 7 | **Tipo B — BAC Tasa Cero** | `FinancialObligationBacFinanciamientosParser`, nuevo endpoint `sync-bac-financiamientos`, migración cuentas TC, relajar `InterestRate ≥ 0`, ajustar keywords 01a | ⏳ Pendiente |
 
 ### Última ejecución validada (2026-04-12 — BD `20260412212705_InitialCreate`)
@@ -424,11 +619,15 @@ Features/
 | Decisión | Resolución |
 |---|---|
 | ¿Pago parcial? | No en v1. Pago = total de la cuota según Excel |
+| ¿Pago siempre requiere movimiento bancario? | **No** — el registro de pago se crea aunque no haya movimiento BAC vinculado (`paymentsSkipped`). El usuario puede vincular manualmente después |
 | ¿Asiento en Borrador o Confirmado? | **Borrador** — usuario revisa y confirma |
 | ¿Mora y otros desde Excel o manual? | **Desde Excel** — ya vienen en las columnas |
-| ¿Matching automático de banco? | **Sí** — por monto ±1%, fecha ±10 días, keyword |
+| ¿Matching automático de banco? | **Sí** — por monto ±1%, fecha ±10 días, keyword. El usuario también puede proveer `idBankMovement` directamente en el request |
 | ¿Reclasificación automática en sync? | **Sí** — incluida en el algoritmo del sync |
 | ¿Cuentas configurables? | **Sí** — FK en `FinancialObligation`, no hardcoded |
+| ¿Relación con bankMovement y accountingEntry? | **1:N** a través de `FinancialObligationBankMovement` y `FinancialObligationAccountingEntry`. No hay FKs directos en `Payment` |
+| ¿Ajuste de saldo inicial? | Si el saldo configurado difiere del Excel, el sync genera un asiento `AjusteSaldoInicial` sin movimiento bancario, vinculado a nivel de obligación |
+| ¿Periodo fiscal? | Se detecta automáticamente desde `dueDate` de la cuota Vigente. Se asigna a todos los asientos generados en el sync |
 
 ---
 

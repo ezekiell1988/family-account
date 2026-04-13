@@ -1,6 +1,11 @@
+using FamilyAccountApi.BackgroundJobs;
 using FamilyAccountApi.Features.FinancialObligations.Dtos;
+using Hangfire;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Security.Claims;
+using System.Text.RegularExpressions;
 
 namespace FamilyAccountApi.Features.FinancialObligations;
 
@@ -9,6 +14,7 @@ public static class FinancialObligationsModule
     public static IServiceCollection AddFinancialObligationsModule(this IServiceCollection services)
     {
         services.AddScoped<IFinancialObligationService, FinancialObligationService>();
+        services.AddScoped<FinancialObligationBacTcSyncJob>();
         return services;
     }
 
@@ -60,6 +66,12 @@ public static class FinancialObligationsModule
             .WithName("ReclassifyFinancialObligation")
             .WithSummary("Reclasificación manual largo plazo → corto plazo a una fecha de corte")
             .RequireAuthorization("Admin");
+
+        group.MapPost("/sync-bac-financiamientos", SyncBacFinanciamientos)
+            .WithName("SyncBacFinanciamientos")
+            .WithSummary("Cargar XLS de Financiamientos (Tasa Cero) BAC: upsert de obligaciones y cuotas vía Hangfire")
+            .RequireAuthorization("Admin")
+            .DisableAntiforgery();
 
         return app;
     }
@@ -174,5 +186,68 @@ public static class FinancialObligationsModule
         {
             return TypedResults.BadRequest(new ProblemDetails { Detail = ex.Message });
         }
+    }
+
+    // ── Regex para extraer el sufijo de 4 dígitos de la tarjeta del nombre del archivo ──
+    // Ejemplo: "BAC-5466-37XX-XXXX-8608-202603-Financiamientos.xls" → "8608"
+    private static readonly Regex CardSuffixRegex =
+        new(@"-(\d{4})-\d{6}-Financiamientos", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static async Task<Results<Accepted<SyncBacFinanciamientosResponse>, BadRequest<ProblemDetails>>> SyncBacFinanciamientos(
+        HttpContext                  ctx,
+        IBackgroundJobClient         backgroundJobs,
+        IDistributedCache            cache,
+        ClaimsPrincipal              user,
+        CancellationToken            ct)
+    {
+        var files = ctx.Request.Form.Files;
+        if (files.Count == 0)
+            return TypedResults.BadRequest(new ProblemDetails { Detail = "Debe adjuntar al menos un archivo XLS de Financiamientos BAC." });
+
+        var syncId  = Guid.NewGuid().ToString("N");
+        var entries = new List<BacTcFileEntry>();
+
+        foreach (var file in files)
+        {
+            if (file.Length == 0) continue;
+
+            // Extraer sufijo de tarjeta del nombre del archivo
+            var match = CardSuffixRegex.Match(file.FileName);
+            if (!match.Success)
+                return TypedResults.BadRequest(new ProblemDetails
+                {
+                    Detail = $"El archivo '{file.FileName}' no tiene el sufijo de tarjeta esperado. " +
+                             "Nombre esperado: BAC-XXXX-XXXX-XXXX-{{sufijo}}-YYYYMM-Financiamientos.xls"
+                });
+
+            var cardSuffix = match.Groups[1].Value;
+            var redisKey   = FinancialObligationBacTcSyncJob.BuildRedisKey(syncId, cardSuffix);
+
+            // Guardar bytes en Redis (TTL 30 min)
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms, ct);
+            await cache.SetAsync(redisKey, ms.ToArray(),
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
+                }, ct);
+
+            entries.Add(new BacTcFileEntry(cardSuffix, redisKey));
+        }
+
+        if (entries.Count == 0)
+            return TypedResults.BadRequest(new ProblemDetails { Detail = "No se procesó ningún archivo válido." });
+
+        // Encolar job de Hangfire
+        var jobId = backgroundJobs.Enqueue<FinancialObligationBacTcSyncJob>(
+            job => job.ProcessAsync(syncId, entries));
+
+        var response = new SyncBacFinanciamientosResponse(
+            SyncId:         syncId,
+            JobId:          jobId,
+            FilesSubmitted: entries.Count,
+            Status:         "Enqueued");
+
+        return TypedResults.Accepted((string?)null, response);
     }
 }
