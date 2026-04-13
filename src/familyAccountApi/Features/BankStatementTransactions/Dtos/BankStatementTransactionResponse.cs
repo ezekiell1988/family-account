@@ -17,4 +17,6 @@ public sealed record BankStatementTransactionResponse(
     string? MovementSign,
     int? IdAccountCounterpart,
     string? AccountCounterpartName,
+    int? IdCostCenter,
+    string? CostCenterName,
     int? IdAccountingEntry);

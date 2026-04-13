@@ -294,6 +294,7 @@ public sealed class BankStatementImportService(
 
             tx.IdBankMovementType   = item.IdBankMovementType;
             tx.IdAccountCounterpart = item.IdAccountCounterpart;
+            tx.IdCostCenter         = item.IdCostCenter;
             classified++;
 
             // ── 4. Aprender keyword si se solicita ─────────────────────────

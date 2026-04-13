@@ -69,7 +69,8 @@ public sealed class BankStatementTransactionConfiguration : IEntityTypeConfigura
 
         builder.Property(b => b.IdAccountCounterpart)
             .HasComment("Cuenta contable contrapartida asignada manualmente (sobrescribe la del tipo de movimiento)");
-
+        builder.Property(b => b.IdCostCenter)
+            .HasComment("Centro de costo asignado manualmente a la transacción (opcional)");
         // ── Relaciones ──────────────────────────────────────
         builder.HasOne(b => b.IdBankStatementImportNavigation)
             .WithMany(i => i.BankStatementTransactions)
@@ -84,6 +85,11 @@ public sealed class BankStatementTransactionConfiguration : IEntityTypeConfigura
         builder.HasOne(b => b.IdAccountCounterpartNavigation)
             .WithMany()
             .HasForeignKey(b => b.IdAccountCounterpart)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(b => b.IdCostCenterNavigation)
+            .WithMany()
+            .HasForeignKey(b => b.IdCostCenter)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(b => b.IdAccountingEntryNavigation)

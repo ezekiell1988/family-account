@@ -34,15 +34,15 @@
 | Keywords BAC CRC | ✅ | Pago recibido, transporte, digital/streaming, supermercados, farmacias, ferreterías, seguros, cuotas |
 | Keywords BAC USD | ✅ | Pago recibido, transporte, suscripciones tech, seguros, cuotas |
 | Keywords BNCR | ✅ | Salario, intereses, SINPE, retiros, pago TC, préstamo, débito SINPE; `PAGOSERVICIO` (sin espacios) |
-| Clasificación manual | ✅ | `POST /bank-statement-transactions/{id}/classify` |
-| Clasificación masiva (`classify-batch`) | ✅ | `POST /bank-statement-imports/{id}/classify-batch` — clasifica todas + aprende keywords |
+| Clasificación manual | ✅ | `PATCH /bank-statement-transactions/{id}/classify` — tipo + cuenta + centro de costo (sin learnKeyword) |
+| Clasificación masiva (`classify-batch`) | ✅ | `POST /bank-statement-imports/{id}/classify-batch` — clasifica todas + aprende keywords + centro de costo |
 | Keywords con cuentas contables | ✅ | Migración `EnrichKeywordRulesWithAccounts` — todos los templates tienen `idAccountCounterpart` por keyword |
 | Script prueba BCR | ✅ | `docs/bancos/BCR-carga-test.ps1` |
 | Script prueba BAC TXT | ✅ | `docs/bancos/BAC-carga-test.ps1` — carga 6 archivos (3 CRC + 3 USD) |
 | Script prueba BAC XLS | ✅ | `docs/bancos/BAC-XLS-carga-test.ps1` — cuenta ahorro/débito CR73 |
 | Keywords BAC XLS | ✅ | DEP_ATM → DEP; TEF/SINPE → TRANSF-REC; COOPEALIANZA → PAGO-PREST; PAGO/SINPE MOVIL PAGO_TARJETA → PAGO-TC; DTR: → TRANSF-ENV |
 | Script prueba BNCR | ✅ | `docs/bancos/BNCR-carga-test.ps1` — carga 2 archivos (1 CRC + 1 USD) |
-| Frontend Angular | ✅ | Página `bancos/carga` implementada — web (Color Admin + ngx-datatable + row-detail) + mobile (Ionic) |
+| Frontend Angular | ✅ | Página `bancos/carga` implementada — web (Color Admin + ngx-datatable) + mobile (Ionic) |
 
 ---
 
@@ -208,13 +208,30 @@ Migración `EnrichKeywordRulesWithAccounts` aplicada. Todos los templates tienen
 | `COOPEALIANZA`, `CUOTA:` | PAGO-PREST (7) | 42 — Coopealianza Préstamo |
 | `MOVISTAR`, `KOLBI` | GASTO (4) | 68 — Teléfono Celular |
 
+### Endpoint `classify` (individual)
+
+```
+PATCH /bank-statement-transactions/{id}/classify
+```
+
+Clasifica una sola transacción. **No soporta `learnKeyword`** — no aprende keywords.
+
+```json
+{ "idBankMovementType": 4, "idAccountCounterpart": 68, "idCostCenter": 1 }
+```
+
+> `idAccountCounterpart` e `idCostCenter` son **opcionales**.
+
+---
+
 ### Endpoint `classify-batch`
 
 ```
 POST /bank-statement-imports/{id}/classify-batch
 ```
 
-Recibe la clasificación explícita del usuario para todas las transacciones del import y:
+Clasifica una o más transacciones. Soporta `learnKeyword` por ítem. El frontend lo usa tanto para el botón ✓ por fila como para «Confirmar Todo».
+
 1. Actualiza `IdBankMovementType` e `IdAccountCounterpart` en cada transacción.
 2. Si `learnKeyword=true`, agrega la descripción como nueva `KeywordRule` al template (solo si no está ya cubierta).
 3. **No modifica** transacciones que ya tienen `IdAccountingEntry` (ya contabilizadas).
@@ -229,7 +246,8 @@ Task<BulkClassifyResult> ClassifyBatchAsync(int importId, BulkClassifyRequest re
 record BulkClassifyItem {
     int    IdBankStatementTransaction;
     int    IdBankMovementType;
-    int?   IdAccountCounterpart;
+    int?   IdAccountCounterpart;  // opcional — null usa la cuenta del tipo de movimiento
+    int?   IdCostCenter;          // opcional — centro de costo para el asiento contable
     bool   LearnKeyword;          // true = aprender descripción como keyword nuevo
 }
 record BulkClassifyRequest { IReadOnlyList<BulkClassifyItem> Items; }
@@ -243,25 +261,44 @@ record BulkClassifyResult(int Classified, int KeywordsAdded);
 **Página:** `bancos/carga` (`BankStatementImportsPage`)
 
 **Arquitectura:**
-- Page coordinador `BankStatementImportsPage` — extiende `ResponsiveComponent`, estado con signals, `forkJoin` para carga inicial (imports, templates, cuentas bancarias, tipos de movimiento, **plan de cuentas**).
+- Page coordinador `BankStatementImportsPage` — extiende `ResponsiveComponent`, estado con signals, `forkJoin` para carga inicial.
 - `BankStatementImportsWebComponent` — Color Admin + `PanelComponent` + `ngx-datatable`.
 - `BankStatementImportsMobileComponent` — Ionic (FAB upload, `ion-list` de imports, expansión inline de transacciones).
 
+**Estado reactivo del coordinador:**
+- `pendingCount = computed(...)` — transacciones sin `idBankMovementType` y sin `idAccountingEntry`. Se pasa a ambos sub-componentes.
+- `isLoadingCatalogs = computed(...)` — `true` mientras `BankAccountService` o `BankStatementTemplateService` siguen cargando. Se pasa a ambos sub-componentes para bloquear los selects del formulario de upload.
+
 **Vista desktop (Color Admin):**
 - Formulario de upload: selector de cuenta bancaria + selector de plantilla + input de archivo.
-- Tabla de imports con botón "Ver Tx" por fila.
+- Tabla de imports con botón «Ver Tx» por fila.
 - Panel de transacciones del import seleccionado con:
-  - Columna "Tipo / Cuenta": dos `<select>` apilados — tipo de movimiento (auto-clasifica la cuenta del tipo al cambiar) + cuenta contrapartida (editable).
-  - Botón "✓" por fila para guardar clasificación individual.
-  - Botón **"Confirmar Todo"** al pie: envía todas las transacciones no contabilizadas como un solo payload `classify-batch`; si el tipo fue modificado manualmente, activa `learnKeyword=true`.
+  - Columna "Tipo / Cuenta / CC": tres `<select>` apilados — tipo de movimiento (auto-clasifica la cuenta del tipo al cambiar) + cuenta contrapartida (editable) + centro de costo (opcional).
+  - Botón **✓** por fila: llama a `classify-batch` con un solo ítem. Al lado, botón **🏷️** (toggle): azul = guarda descripción como regla (`learnKeyword=true`); gris = no guarda. Default gris — el usuario decide explícitamente. `idAccountCounterpart` e `idCostCenter` son opcionales.
+  - Botón **«Confirmar Todo»** al pie: envía todas las transacciones pendientes como un solo payload `classify-batch`, respetando el estado del 🏷️ y el CC por fila. Muestra badge **"N pendientes"** cuando hay transacciones sin clasificar.
+  - Selects de cuenta bancaria y plantilla muestran spinner `fa-spin` y quedan `[disabled]` mientras `isLoadingCatalogs` es `true`.
 - Polling Hangfire: cada 2s hasta `Completado` o `Error`.
 
 **Vista mobile (Ionic):**
 - FAB upload (inferior-derecha).
-- FAB **"Confirmar Todo"** (inferior-izquierda) cuando hay transacciones cargadas.
-- Por cada transacción: `ion-select` para tipo + `ion-select` para cuenta contrapartida.
+- FAB **«Confirmar Todo»** (inferior-izquierda) cuando hay transacciones cargadas. `aria-label` dinámico incluye el conteo de pendientes.
+- Cuando hay pendientes: fila `ion-item` con badge de conteo al inicio de la lista de transacciones.
+- Por cada transacción: `ion-select` para tipo + `ion-select` para cuenta + `ion-select` para centro de costo + botón 🏷️ toggle + botón ✓ confirmar.
+- Selects de cuenta bancaria y plantilla muestran label dinámico `"Cargando…"` y quedan `[disabled]` mientras `isLoadingCatalogs` es `true`.
 
 **Servicios Angular:**
-- `BankStatementImportService` — upload, `pollById`, `loadTransactions`, `classifyTransaction` (individual), **`classifyBatch`** (masivo).
+- `BankStatementImportService` — upload, `pollById`, `loadTransactions`, `classifyTransaction` (individual, disponible para uso directo), **`classifyBatch`** (masivo — usado por el frontend para todo).
 - `AccountService` — plan de cuentas; filtrado a `allowsMovements && isActive` en los selectores.
+- `CostCenterService` — centros de costo activos; filtrado a `isActive` en el selector.
 - `BankStatementTemplateService`, `BankAccountService`, `BankMovementTypeService` — catálogos de soporte.
+
+**Análisis de endpoints — ¿en servicio y dos endpoints o uno?**
+
+Se mantienen dos endpoints:
+
+| Endpoint | Para quién | Soporta `learnKeyword` |
+|---|---|---|
+| `PATCH /bank-statement-transactions/{id}/classify` | Scripts, curl, integraciones directas | ❌ No |
+| `POST /bank-statement-imports/{id}/classify-batch` | Frontend Angular (fila individual + confirmar todo) | ✅ Sí |
+
+El frontend **siempre usa `classify-batch`** — tanto para el botón ✓ por fila como para «Confirmar Todo». La diferencia es el payload: un ítem o todos. No se creó un tercer endpoint porque `classify-batch` ya cubre ambos casos.

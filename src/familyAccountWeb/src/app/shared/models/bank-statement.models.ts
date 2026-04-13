@@ -44,6 +44,8 @@ export interface BankStatementTransactionDto {
   movementSign: string | null;
   idAccountCounterpart: number | null;
   accountCounterpartName: string | null;
+  idCostCenter: number | null;
+  costCenterName: string | null;
   idAccountingEntry: number | null;
 }
 
@@ -51,6 +53,7 @@ export interface BankStatementTransactionDto {
 export interface ClassifyTransactionRequest {
   idBankMovementType: number;
   idAccountCounterpart?: number | null;
+  idCostCenter?: number | null;
 }
 
 // ── Bulk classify ─────────────────────────────────────────────────────────────
@@ -58,6 +61,7 @@ export interface BulkClassifyItem {
   idBankStatementTransaction: number;
   idBankMovementType: number;
   idAccountCounterpart?: number | null;
+  idCostCenter?: number | null;
   learnKeyword?: boolean;
 }
 

@@ -18,6 +18,7 @@ import {
   warningOutline,
   closeOutline,
   documentTextOutline,
+  pricetagOutline,
 } from 'ionicons/icons';
 import {
   IonContent,
@@ -52,7 +53,7 @@ import {
   BankAccountDto,
   BankMovementTypeDto,
   BulkClassifyItem,
-  ClassifyTransactionRequest,
+  CostCenterDto,
 } from '../../../../../shared/models';
 
 @Component({
@@ -102,13 +103,15 @@ export class BankStatementImportsMobileComponent {
   bankAccounts      = input<BankAccountDto[]>([]);
   movementTypes     = input<BankMovementTypeDto[]>([]);
   accounts          = input<AccountDto[]>([]);
+  costCenters       = input<CostCenterDto[]>([]);
   selectedImportId  = input<number | null>(null);
+  pendingCount      = input(0);
+  isLoadingCatalogs = input(false);
 
   // ── Outputs ─────────────────────────────────────────────
   refresh       = output<void>();
   upload        = output<{ idBankAccount: number; idTemplate: number; file: File }>();
   expand        = output<BankStatementImportDto>();
-  classify      = output<{ id: number; req: ClassifyTransactionRequest }>();
   batchClassify = output<BulkClassifyItem[]>();
   clearError    = output<void>();
 
@@ -118,8 +121,10 @@ export class BankStatementImportsMobileComponent {
   selectedTemplateId = signal<number | null>(null);
   selectedFile       = signal<File | null>(null);
   selectedFileName   = signal('');
-  classifyTypeMap    = signal<Record<number, number>>({});
-  classifyAccMap     = signal<Record<number, number | null>>({})
+  classifyTypeMap       = signal<Record<number, number>>({});
+  classifyAccMap        = signal<Record<number, number | null>>({});
+  classifyCostCenterMap = signal<Record<number, number | null>>({}); // idTx → idCostCenter
+  learnKeywordMap       = signal<Record<number, boolean>>({}); // idTx → guardar como regla
 
   constructor() {
     addIcons({
@@ -132,6 +137,7 @@ export class BankStatementImportsMobileComponent {
       warningOutline,
       closeOutline,
       documentTextOutline,
+      pricetagOutline,
     });
   }
 
@@ -190,6 +196,23 @@ export class BankStatementImportsMobileComponent {
     return m[idTx] !== undefined ? m[idTx] : current;
   }
 
+  getClassifyCostCenter(idTx: number, current: number | null): number | null {
+    const m = this.classifyCostCenterMap();
+    return m[idTx] !== undefined ? m[idTx] : current;
+  }
+
+  setClassifyCostCenter(idTx: number, value: number | null): void {
+    this.classifyCostCenterMap.update(m => ({ ...m, [idTx]: value }));
+  }
+
+  getLearnKeyword(idTx: number): boolean {
+    return this.learnKeywordMap()[idTx] ?? false;
+  }
+
+  toggleLearnKeyword(idTx: number): void {
+    this.learnKeywordMap.update(m => ({ ...m, [idTx]: !this.getLearnKeyword(idTx) }));
+  }
+
   submitClassify(tx: BankStatementTransactionDto): void {
     const idBankMovementType = this.getClassifyType(
       tx.idBankStatementTransaction,
@@ -200,9 +223,22 @@ export class BankStatementImportsMobileComponent {
       tx.idBankStatementTransaction,
       tx.idAccountCounterpart,
     );
-    this.classify.emit({ id: tx.idBankStatementTransaction, req: { idBankMovementType, idAccountCounterpart } });
+    const idCostCenter = this.getClassifyCostCenter(
+      tx.idBankStatementTransaction,
+      tx.idCostCenter,
+    );
+    const learnKeyword = this.getLearnKeyword(tx.idBankStatementTransaction);
+    this.batchClassify.emit([{
+      idBankStatementTransaction: tx.idBankStatementTransaction,
+      idBankMovementType,
+      idAccountCounterpart,
+      idCostCenter,
+      learnKeyword,
+    }]);
     this.classifyTypeMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
     this.classifyAccMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
+    this.classifyCostCenterMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
+    this.learnKeywordMap.update(m => { const u = { ...m }; delete u[tx.idBankStatementTransaction]; return u; });
   }
 
   submitBatchClassify(): void {
@@ -212,12 +248,14 @@ export class BankStatementImportsMobileComponent {
         const idType = this.getClassifyType(tx.idBankStatementTransaction, tx.idBankMovementType);
         if (!idType) return null;
         const idAcc    = this.getClassifyAccount(tx.idBankStatementTransaction, tx.idAccountCounterpart);
-        const isManual = this.classifyTypeMap()[tx.idBankStatementTransaction] !== undefined;
+        const idCostCenter = this.getClassifyCostCenter(tx.idBankStatementTransaction, tx.idCostCenter);
+        const learnKeyword = this.getLearnKeyword(tx.idBankStatementTransaction);
         const item: BulkClassifyItem = {
           idBankStatementTransaction: tx.idBankStatementTransaction,
           idBankMovementType:         idType,
           idAccountCounterpart:       idAcc,
-          learnKeyword:               isManual,
+          idCostCenter,
+          learnKeyword,
         };
         return item;
       })
@@ -226,6 +264,8 @@ export class BankStatementImportsMobileComponent {
     this.batchClassify.emit(items);
     this.classifyTypeMap.set({});
     this.classifyAccMap.set({});
+    this.classifyCostCenterMap.set({});
+    this.learnKeywordMap.set({});
   }
 
   statusColor(status: string): string {

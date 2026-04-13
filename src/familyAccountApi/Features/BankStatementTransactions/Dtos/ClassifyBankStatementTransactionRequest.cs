@@ -15,4 +15,7 @@ public sealed record ClassifyBankStatementTransactionRequest
     [Description("ID de la cuenta contable contrapartida (sobreescribe la del tipo de movimiento). " +
                  "Enviar null para usar la cuenta por defecto del tipo de movimiento.")]
     public int? IdAccountCounterpart { get; init; }
+
+    [Description("ID del centro de costo (opcional).")]
+    public int? IdCostCenter { get; init; }
 }

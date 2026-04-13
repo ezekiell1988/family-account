@@ -30,31 +30,51 @@
     <!-- Cuenta bancaria -->
     <div class="col-md-4">
       <label for="uploadAccount" class="form-label">Cuenta Bancaria</label>
-      <select id="uploadAccount" class="form-select"
-        [ngModel]="selectedAccountId()"
-        (ngModelChange)="selectedAccountId.set($event ? +$event : null)">
-        <option [ngValue]="null">— Selecciona cuenta —</option>
-        @for (acc of bankAccounts(); track acc.idBankAccount) {
-          <option [ngValue]="acc.idBankAccount">
-            {{ acc.codeBankAccount }} — {{ acc.accountNumber }}
-          </option>
+      <div class="input-group">
+        @if (isLoadingCatalogs()) {
+          <span class="input-group-text">
+            <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+          </span>
         }
-      </select>
+        <select id="uploadAccount" class="form-select"
+          [disabled]="isLoadingCatalogs()"
+          [ngModel]="selectedAccountId()"
+          (ngModelChange)="selectedAccountId.set($event ? +$event : null)">
+          <option [ngValue]="null">
+            {{ isLoadingCatalogs() ? 'Cargando…' : '— Selecciona cuenta —' }}
+          </option>
+          @for (acc of bankAccounts(); track acc.idBankAccount) {
+            <option [ngValue]="acc.idBankAccount">
+              {{ acc.codeBankAccount }} — {{ acc.accountNumber }}
+            </option>
+          }
+        </select>
+      </div>
     </div>
 
     <!-- Plantilla -->
     <div class="col-md-3">
       <label for="uploadTemplate" class="form-label">Plantilla</label>
-      <select id="uploadTemplate" class="form-select"
-        [ngModel]="selectedTemplateId()"
-        (ngModelChange)="selectedTemplateId.set($event ? +$event : null)">
-        <option [ngValue]="null">— Selecciona plantilla —</option>
-        @for (tpl of templates(); track tpl.idBankStatementTemplate) {
-          <option [ngValue]="tpl.idBankStatementTemplate">
-            {{ tpl.codeTemplate }}
-          </option>
+      <div class="input-group">
+        @if (isLoadingCatalogs()) {
+          <span class="input-group-text">
+            <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+          </span>
         }
-      </select>
+        <select id="uploadTemplate" class="form-select"
+          [disabled]="isLoadingCatalogs()"
+          [ngModel]="selectedTemplateId()"
+          (ngModelChange)="selectedTemplateId.set($event ? +$event : null)">
+          <option [ngValue]="null">
+            {{ isLoadingCatalogs() ? 'Cargando…' : '— Selecciona plantilla —' }}
+          </option>
+          @for (tpl of templates(); track tpl.idBankStatementTemplate) {
+            <option [ngValue]="tpl.idBankStatementTemplate">
+              {{ tpl.codeTemplate }}
+            </option>
+          }
+        </select>
+      </div>
     </div>
 
     <!-- Archivo -->
@@ -261,13 +281,22 @@
                   [disabled]="!getClassifyType(row.idBankStatementTransaction, row.idBankMovementType) || isBulkClassifying()"
                   (click)="submitClassify(row)"
                   [attr.aria-label]="'Guardar clasificación ' + row.idBankStatementTransaction"
-                  [attr.title]="'Guardar clasificación ' + row.idBankStatementTransaction">
+                  [attr.title]="'Confirmar clasificación'">
                   @if (classifyingId() === row.idBankStatementTransaction) {
                     <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
                   } @else {
                     <i class="fa fa-check" aria-hidden="true"></i>
                   }
                   <span class="visually-hidden">Guardar {{ row.idBankStatementTransaction }}</span>
+                </button>
+                <button type="button" class="btn btn-xs ms-1"
+                  [class.btn-outline-secondary]="!getLearnKeyword(row.idBankStatementTransaction)"
+                  [class.btn-primary]="getLearnKeyword(row.idBankStatementTransaction)"
+                  (click)="toggleLearnKeyword(row.idBankStatementTransaction)"
+                  [attr.aria-label]="'Guardar como regla transacción ' + row.idBankStatementTransaction"
+                  [attr.title]="getLearnKeyword(row.idBankStatementTransaction) ? 'Guardar como regla (activo)' : 'No guardar como regla'">
+                  <i class="fa fa-tag" aria-hidden="true"></i>
+                  <span class="visually-hidden">Regla {{ row.idBankStatementTransaction }}</span>
                 </button>
               </div>
 
@@ -286,6 +315,25 @@
                 @for (acc of accounts(); track acc.idAccount) {
                   @if (acc.allowsMovements && acc.isActive) {
                     <option [ngValue]="acc.idAccount">{{ acc.codeAccount }} {{ acc.nameAccount }}</option>
+                  }
+                }
+              </select>
+
+              <!-- Centro de costo -->
+              <label [for]="'classCc' + row.idBankStatementTransaction" class="visually-hidden">
+                Centro de costo para transacción {{ row.idBankStatementTransaction }}
+              </label>
+              <select
+                [id]="'classCc' + row.idBankStatementTransaction"
+                class="form-select form-select-sm"
+                aria-label="Centro de costo"
+                [ngModel]="getClassifyCostCenter(row.idBankStatementTransaction, row.idCostCenter)"
+                (ngModelChange)="setClassifyCostCenter(row.idBankStatementTransaction, $event ? +$event : null)"
+                [attr.title]="row.costCenterName ?? 'Centro de costo'">
+                <option [ngValue]="null">— Centro de costo —</option>
+                @for (cc of costCenters(); track cc.idCostCenter) {
+                  @if (cc.isActive) {
+                    <option [ngValue]="cc.idCostCenter">{{ cc.codeCostCenter }} — {{ cc.nameCostCenter }}</option>
                   }
                 }
               </select>
@@ -317,7 +365,11 @@
           @if (isBulkClassifying()) {
             <i class="fa fa-spinner fa-spin me-1" aria-hidden="true"></i> Clasificando...
           } @else {
-            <i class="fa fa-check-double me-1" aria-hidden="true"></i> Confirmar Todo
+            <i class="fa fa-check-double me-1" aria-hidden="true"></i>
+            Confirmar Todo
+            @if (pendingCount() > 0) {
+              <span class="badge bg-warning text-dark ms-1">{{ pendingCount() }} pendientes</span>
+            }
           }
         </button>
       </div>

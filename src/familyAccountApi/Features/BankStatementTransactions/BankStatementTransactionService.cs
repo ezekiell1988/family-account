@@ -148,6 +148,8 @@ public sealed class BankStatementTransactionService(AppDbContext db) : IBankStat
             t.IdBankMovementTypeNavigation != null ? t.IdBankMovementTypeNavigation.MovementSign : null,
             t.IdAccountCounterpart,
             t.IdAccountCounterpartNavigation != null ? t.IdAccountCounterpartNavigation.NameAccount : null,
+            t.IdCostCenter,
+            t.IdCostCenterNavigation != null ? t.IdCostCenterNavigation.NameCostCenter : null,
             t.IdAccountingEntry);
     }
 
@@ -181,6 +183,7 @@ public sealed class BankStatementTransactionService(AppDbContext db) : IBankStat
 
         entity.IdBankMovementType   = request.IdBankMovementType;
         entity.IdAccountCounterpart = request.IdAccountCounterpart;
+        entity.IdCostCenter         = request.IdCostCenter;
 
         await db.SaveChangesAsync(ct);
 

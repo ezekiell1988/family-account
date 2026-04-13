@@ -4,6 +4,7 @@ import {
   OnDestroy,
   inject,
   signal,
+  computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { forkJoin } from 'rxjs';
@@ -14,6 +15,7 @@ import {
   BankMovementTypeService,
   BankStatementTemplateService,
   BankStatementImportService,
+  CostCenterService,
   LoggerService,
 } from '../../../service';
 import { ResponsiveComponent } from '../../../shared';
@@ -21,7 +23,6 @@ import {
   BankStatementImportDto,
   BankStatementTransactionDto,
   BulkClassifyItem,
-  ClassifyTransactionRequest,
 } from '../../../shared/models';
 import { BankStatementImportsWebComponent } from './components/bank-statement-imports-web/bank-statement-imports-web.component';
 import { BankStatementImportsMobileComponent } from './components/bank-statement-imports-mobile/bank-statement-imports-mobile.component';
@@ -37,12 +38,13 @@ export class BankStatementImportsPage
   extends ResponsiveComponent
   implements OnInit, OnDestroy
 {
-  private readonly importSvc   = inject(BankStatementImportService);
-  private readonly templateSvc = inject(BankStatementTemplateService);
-  private readonly accountSvc  = inject(BankAccountService);
-  private readonly chartSvc    = inject(AccountService);
-  private readonly movTypeSvc  = inject(BankMovementTypeService);
-  private readonly logger      = inject(LoggerService).getLogger('BankStatementImportsPage');
+  private readonly importSvc    = inject(BankStatementImportService);
+  private readonly templateSvc  = inject(BankStatementTemplateService);
+  private readonly accountSvc   = inject(BankAccountService);
+  private readonly chartSvc     = inject(AccountService);
+  private readonly movTypeSvc   = inject(BankMovementTypeService);
+  private readonly costCenterSvc = inject(CostCenterService);
+  private readonly logger       = inject(LoggerService).getLogger('BankStatementImportsPage');
 
   // ── Estado del servicio ───────────────────────────────────────────
   isLoading         = this.importSvc.isLoading;
@@ -55,9 +57,20 @@ export class BankStatementImportsPage
   bankAccounts      = this.accountSvc.items;
   movementTypes     = this.movTypeSvc.items;
   chartAccounts     = this.chartSvc.accounts;
+  costCenters       = this.costCenterSvc.items;
 
-  // ── Estado local ──────────────────────────────────────────────────
+  // ── Estado local ───────────────────────────────────────────
   selectedImportId = signal<number | null>(null);
+
+  // ── Derivados ──────────────────────────────────────────
+  pendingCount = computed(() =>
+    this.transactions().filter(t => !t.idBankMovementType && !t.idAccountingEntry).length
+  );
+
+  /** true mientras cuentas bancarias o plantillas siguen cargando */
+  isLoadingCatalogs = computed(
+    () => this.accountSvc.isLoading() || this.templateSvc.isLoading()
+  );
 
   constructor(public appSettings: AppSettings) {
     super();
@@ -79,6 +92,7 @@ export class BankStatementImportsPage
       this.accountSvc.loadList(),
       this.movTypeSvc.loadList(),
       this.chartSvc.loadList(),
+      this.costCenterSvc.loadList(),
     ]).subscribe({
       error: err => this.logger.error('Error cargando datos iniciales', err),
     });
@@ -109,11 +123,9 @@ export class BankStatementImportsPage
     });
   }
 
-  classify(payload: { id: number; req: ClassifyTransactionRequest }): void {
-    this.importSvc.classifyTransaction(payload.id, payload.req).subscribe({
-      next: () => this.logger.info(`Transacción ${payload.id} clasificada`),
-      error: err => this.logger.error('Error clasificando', err),
-    });
+  classify(_payload: { id: number; req: unknown }): void {
+    // No-op: el frontend usa classify-batch para todo (individual y masivo).
+    // El endpoint PATCH /classify sigue disponible para consumo directo (scripts/curl).
   }
 
   classifyBatch(items: BulkClassifyItem[]): void {

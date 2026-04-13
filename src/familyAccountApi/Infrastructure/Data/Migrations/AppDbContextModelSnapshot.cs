@@ -2656,6 +2656,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .HasColumnName("idBankStatementImport")
                         .HasComment("Importación a la que pertenece esta transacción");
 
+                    b.Property<int?>("IdCostCenter")
+                        .HasColumnType("int")
+                        .HasColumnName("idCostCenter")
+                        .HasComment("Centro de costo asignado manualmente a la transacción (opcional)");
+
                     b.Property<bool>("IsReconciled")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -2688,6 +2693,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
 
                     b.HasIndex("IdBankStatementImport")
                         .HasDatabaseName("IX_bankStatementTransaction_idBankStatementImport");
+
+                    b.HasIndex("IdCostCenter");
 
                     b.HasIndex("IsReconciled")
                         .HasDatabaseName("IX_bankStatementTransaction_isReconciled");
@@ -8548,6 +8555,11 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("FamilyAccountApi.Domain.Entities.CostCenter", "IdCostCenterNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdCostCenter")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("IdAccountCounterpartNavigation");
 
                     b.Navigation("IdAccountingEntryNavigation");
@@ -8555,6 +8567,8 @@ namespace FamilyAccountApi.Infrastructure.Data.Migrations
                     b.Navigation("IdBankMovementTypeNavigation");
 
                     b.Navigation("IdBankStatementImportNavigation");
+
+                    b.Navigation("IdCostCenterNavigation");
                 });
 
             modelBuilder.Entity("FamilyAccountApi.Domain.Entities.Budget", b =>

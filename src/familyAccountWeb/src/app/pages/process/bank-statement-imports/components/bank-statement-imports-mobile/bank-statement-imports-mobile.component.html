@@ -47,8 +47,9 @@
         <ion-select
           interface="action-sheet"
           labelPlacement="floating"
-          label="Cuenta Bancaria"
+          [label]="isLoadingCatalogs() ? 'Cargando cuentas…' : 'Cuenta Bancaria'"
           fill="outline"
+          [disabled]="isLoadingCatalogs()"
           [value]="selectedAccountId()"
           (ionChange)="selectedAccountId.set($event.detail.value)">
           @for (acc of bankAccounts(); track acc.idBankAccount) {
@@ -63,8 +64,9 @@
           <ion-select
             interface="action-sheet"
             labelPlacement="floating"
-            label="Plantilla"
+            [label]="isLoadingCatalogs() ? 'Cargando plantillas…' : 'Plantilla'"
             fill="outline"
+            [disabled]="isLoadingCatalogs()"
             [value]="selectedTemplateId()"
             (ionChange)="selectedTemplateId.set($event.detail.value)">
             @for (tpl of templates(); track tpl.idBankStatementTemplate) {
@@ -160,6 +162,15 @@
                 <ion-spinner name="crescent"></ion-spinner>
               </div>
             } @else {
+              <!-- Resumen de pendientes -->
+              @if (pendingCount() > 0) {
+                <ion-item lines="none">
+                  <ion-badge color="warning" slot="start">{{ pendingCount() }}</ion-badge>
+                  <ion-label>
+                    <ion-text color="medium"><p>sin clasificar — usa el botón ✓ por fila o el FAB para confirmar todo</p></ion-text>
+                  </ion-label>
+                </ion-item>
+              }
               @for (tx of transactions(); track tx.idBankStatementTransaction) {
                 <ion-card>
                   <ion-card-content>
@@ -220,6 +231,34 @@
                             }
                           </ion-select>
                         </ion-col>
+                        <ion-col size="12">
+                          <ion-select
+                            interface="alert"
+                            label="Centro de costo"
+                            labelPlacement="stacked"
+                            fill="outline"
+                            size="small"
+                            [value]="getClassifyCostCenter(tx.idBankStatementTransaction, tx.idCostCenter)"
+                            (ionChange)="setClassifyCostCenter(tx.idBankStatementTransaction, $event.detail.value ? +$event.detail.value : null)">
+                            <ion-select-option [value]="null">— Centro de costo —</ion-select-option>
+                            @for (cc of costCenters(); track cc.idCostCenter) {
+                              @if (cc.isActive) {
+                                <ion-select-option [value]="cc.idCostCenter">
+                                  {{ cc.codeCostCenter }} – {{ cc.nameCostCenter }}
+                                </ion-select-option>
+                              }
+                            }
+                          </ion-select>
+                        </ion-col>
+                        <ion-col size="auto">
+                          <ion-button size="small"
+                            [color]="getLearnKeyword(tx.idBankStatementTransaction) ? 'primary' : 'medium'"
+                            fill="outline"
+                            (click)="toggleLearnKeyword(tx.idBankStatementTransaction)"
+                            [attr.aria-label]="getLearnKeyword(tx.idBankStatementTransaction) ? 'No guardar como regla' : 'Guardar como regla'">
+                            <ion-icon slot="icon-only" name="pricetag-outline"></ion-icon>
+                          </ion-button>
+                        </ion-col>
                         <ion-col size="auto">
                           <ion-button size="small" color="success"
                             [disabled]="!getClassifyType(tx.idBankStatementTransaction, tx.idBankMovementType) || isBulkClassifying()"
@@ -250,7 +289,7 @@
       <ion-fab-button color="success"
         [disabled]="isBulkClassifying()"
         (click)="submitBatchClassify()"
-        aria-label="Confirmar todas las clasificaciones">
+        [attr.aria-label]="pendingCount() > 0 ? 'Confirmar todo — ' + pendingCount() + ' pendientes' : 'Confirmar todas las clasificaciones'">
         @if (isBulkClassifying()) {
           <ion-spinner name="crescent"></ion-spinner>
         } @else {

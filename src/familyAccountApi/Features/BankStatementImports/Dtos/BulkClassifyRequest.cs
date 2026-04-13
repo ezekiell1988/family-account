@@ -19,6 +19,9 @@ public sealed record BulkClassifyItem
     [Description("ID de la cuenta contable contrapartida (sobreescribe la del tipo). Null = usar la del tipo.")]
     public int? IdAccountCounterpart { get; init; }
 
+    [Description("ID del centro de costo (opcional).")]
+    public int? IdCostCenter { get; init; }
+
     [Description("Si true, la descripción de la transacción se agrega como keyword al template para uso futuro.")]
     public bool LearnKeyword { get; init; } = false;
 }
