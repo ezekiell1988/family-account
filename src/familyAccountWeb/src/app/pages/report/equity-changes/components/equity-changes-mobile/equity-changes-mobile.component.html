@@ -1,0 +1,168 @@
+<header pageTitle="Cambios en el Patrimonio" color="theme" [translucent]="true"></header>
+
+<ion-content class="ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="clearError.emit()"
+              aria-label="Cerrar error">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
+
+  <!-- Filtros -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="calendar-outline"></ion-icon>
+        Período
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-grid>
+        <ion-row>
+          <ion-col size="6">
+            <ion-input fill="outline" labelPlacement="floating" label="Año" type="number"
+              [value]="filterYear()"
+              (ionInput)="filterYear.set(+$any($event.target).value || null)">
+            </ion-input>
+          </ion-col>
+          <ion-col size="6">
+            <ion-select fill="outline" labelPlacement="floating" label="Mes"
+              [value]="filterMonth()"
+              (ionChange)="filterMonth.set($any($event.detail.value) || null)"
+              placeholder="Año completo">
+              @for (m of months; track m.value) {
+                <ion-select-option [value]="m.value">{{ m.label }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col>
+            <ion-button expand="block" (click)="applyFilter()" [disabled]="isLoading()">
+              @if (isLoading()) {
+                <ion-spinner slot="start" name="crescent"></ion-spinner>
+              } @else {
+                <ion-icon slot="start" name="play-outline"></ion-icon>
+              }
+              Generar
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-card-content>
+  </ion-card>
+
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  @if (report()) {
+    <ion-note class="ion-padding-horizontal">
+      <ion-icon name="calendar-outline" aria-hidden="true"></ion-icon>
+      {{ report()!.dateFrom }} — {{ report()!.dateTo }}
+    </ion-note>
+
+    <!-- Movimientos -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="pie-chart-outline"></ion-icon>
+          Movimientos de Patrimonio
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list lines="inset">
+          @for (line of report()!.movements; track line.idAccount) {
+            <ion-item>
+              <ion-label>
+                <h3>{{ line.nameAccount }}</h3>
+                <p>{{ line.codeAccount }}</p>
+                <p>
+                  Apertura: {{ formatCurrency(line.openingBalance) }}
+                  &nbsp;|&nbsp;
+                  Cierre: {{ formatCurrency(line.closingBalance) }}
+                </p>
+              </ion-label>
+              <ion-note slot="end">
+                <div>
+                  <ion-text color="success">+{{ formatCurrency(line.credits) }}</ion-text>
+                </div>
+                <div>
+                  <ion-text color="danger">-{{ formatCurrency(line.debits) }}</ion-text>
+                </div>
+              </ion-note>
+            </ion-item>
+          }
+          @if (report()!.movements.length === 0) {
+            <ion-item><ion-label color="medium">Sin movimientos registrados</ion-label></ion-item>
+          }
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Resumen totales -->
+    <ion-card color="dark">
+      <ion-card-header>
+        <ion-card-title>Resumen del Patrimonio</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list lines="none">
+          <ion-item color="dark">
+            <ion-label>Patrimonio inicial</ion-label>
+            <ion-note slot="end">{{ formatCurrency(report()!.totalOpeningEquity) }}</ion-note>
+          </ion-item>
+          <ion-item color="dark">
+            <ion-label>Aportes</ion-label>
+            <ion-note slot="end" color="success">{{ formatCurrency(report()!.totalContributions) }}</ion-note>
+          </ion-item>
+          <ion-item color="dark">
+            <ion-label>Retiros</ion-label>
+            <ion-note slot="end" color="danger">{{ formatCurrency(report()!.totalWithdrawals) }}</ion-note>
+          </ion-item>
+          <ion-item color="dark">
+            <ion-label>Resultado del período</ion-label>
+            <ion-note slot="end" [color]="valueColor(report()!.netIncome)">
+              {{ formatCurrency(report()!.netIncome) }}
+            </ion-note>
+          </ion-item>
+          <ion-item color="dark">
+            <ion-label><strong>Patrimonio al cierre</strong></ion-label>
+            <ion-note slot="end" [color]="valueColor(report()!.totalEquityIncludingNetIncome)">
+              <strong>{{ formatCurrency(report()!.totalEquityIncludingNetIncome) }}</strong>
+            </ion-note>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!report() && !isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-icon name="analytics-outline" size="large" color="medium"></ion-icon>
+      <ion-text color="medium">
+        <p>Seleccione un período y presione Generar.</p>
+      </ion-text>
+    </div>
+  }
+
+</ion-content>
+
+<app-footer></app-footer>

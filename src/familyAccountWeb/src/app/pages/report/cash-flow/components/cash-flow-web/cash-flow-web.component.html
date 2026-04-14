@@ -1,0 +1,204 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
+  <li class="breadcrumb-item"><a href="javascript:;">Reportes</a></li>
+  <li class="breadcrumb-item active">Estado de Flujo de Efectivo</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Estado de Flujo de Efectivo
+  <small>Método indirecto simplificado</small>
+</h1>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i>{{ errorMessage() }}
+    <button type="button" class="btn-close float-end" (click)="clearError.emit()"
+      aria-label="Cerrar mensaje de error"></button>
+  </div>
+}
+
+<!-- Filtros -->
+<panel title="Filtros" variant="default">
+  <div class="row g-2 align-items-end">
+    <div class="col-sm-3">
+      <label for="cfYear" class="form-label">Año</label>
+      <input id="cfYear" type="number" class="form-control form-control-sm"
+        [value]="filterYear()"
+        (input)="filterYear.set(+$any($event.target).value || null)"
+        placeholder="2026">
+    </div>
+    <div class="col-sm-3">
+      <label for="cfMonth" class="form-label">Mes <small class="text-muted">(opcional)</small></label>
+      <select id="cfMonth" class="form-select form-select-sm"
+        [value]="filterMonth() ?? ''"
+        (change)="filterMonth.set(+$any($event.target).value || null)">
+        <option value="">— Año completo —</option>
+        @for (m of months; track m.value) {
+          <option [value]="m.value">{{ m.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="col-sm-1 text-center text-muted">ó</div>
+    <div class="col-sm-2">
+      <label for="cfFrom" class="form-label">Desde</label>
+      <input id="cfFrom" type="date" class="form-control form-control-sm"
+        [value]="filterFrom()"
+        (input)="filterFrom.set($any($event.target).value)">
+    </div>
+    <div class="col-sm-2">
+      <label for="cfTo" class="form-label">Hasta</label>
+      <input id="cfTo" type="date" class="form-control form-control-sm"
+        [value]="filterTo()"
+        (input)="filterTo.set($any($event.target).value)">
+    </div>
+    <div class="col-sm-1">
+      <button type="button" class="btn btn-sm btn-primary w-100"
+        (click)="applyFilter()" [disabled]="isLoading()"
+        aria-label="Generar reporte">
+        @if (isLoading()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        } @else {
+          <i class="fa fa-play" aria-hidden="true"></i>
+        }
+      </button>
+    </div>
+  </div>
+</panel>
+
+@if (report()) {
+  <div class="mb-3 text-muted small">
+    <i class="fa fa-calendar me-1" aria-hidden="true"></i>
+    Período: <strong>{{ report()!.dateFrom }}</strong> al <strong>{{ report()!.dateTo }}</strong>
+    &nbsp;|&nbsp;
+    Resultado neto:
+    <strong [class]="changeClass(report()!.netIncome)">{{ formatCurrency(report()!.netIncome) }}</strong>
+  </div>
+
+  <!-- Activos -->
+  <panel title="Movimientos de Activos"
+    variant="primary"
+    [showReloadButton]="true" [reload]="isLoading()" (onReload)="refresh.emit()">
+    <p class="text-muted small mb-2">
+      <i class="fa fa-info-circle me-1" aria-hidden="true"></i>
+      Cambio positivo = aumento del activo (uso de efectivo). Negativo = disminución (liberación de efectivo).
+    </p>
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr>
+          <th scope="col">Código</th>
+          <th scope="col">Cuenta</th>
+          <th scope="col" class="text-end">Apertura</th>
+          <th scope="col" class="text-end">Cierre</th>
+          <th scope="col" class="text-end">Cambio</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of report()!.assetMovements; track line.idAccount) {
+          <tr>
+            <td class="text-muted small">{{ line.codeAccount }}</td>
+            <td>{{ line.nameAccount }}</td>
+            <td class="text-end small">{{ formatCurrency(line.openingBalance) }}</td>
+            <td class="text-end small">{{ formatCurrency(line.closingBalance) }}</td>
+            <td class="text-end fw-bold" [class]="changeClass(line.change)">{{ formatCurrency(line.change) }}</td>
+          </tr>
+        }
+        @if (report()!.assetMovements.length === 0) {
+          <tr><td colspan="5" class="text-center text-muted py-3">Sin movimientos</td></tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr class="table-primary">
+          <td colspan="4" class="fw-bold">Total cambio Activos</td>
+          <td class="text-end fw-bold" [class]="changeClass(totalAssetChange())">{{ formatCurrency(totalAssetChange()) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </panel>
+
+  <!-- Pasivos -->
+  <panel title="Movimientos de Pasivos" variant="warning" [showReloadButton]="false">
+    <p class="text-muted small mb-2">
+      <i class="fa fa-info-circle me-1" aria-hidden="true"></i>
+      Cambio positivo = aumento del pasivo (fuente de efectivo). Negativo = disminución (pago de deuda).
+    </p>
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr>
+          <th scope="col">Código</th>
+          <th scope="col">Cuenta</th>
+          <th scope="col" class="text-end">Apertura</th>
+          <th scope="col" class="text-end">Cierre</th>
+          <th scope="col" class="text-end">Cambio</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of report()!.liabilityMovements; track line.idAccount) {
+          <tr>
+            <td class="text-muted small">{{ line.codeAccount }}</td>
+            <td>{{ line.nameAccount }}</td>
+            <td class="text-end small">{{ formatCurrency(line.openingBalance) }}</td>
+            <td class="text-end small">{{ formatCurrency(line.closingBalance) }}</td>
+            <td class="text-end fw-bold" [class]="changeClass(line.change)">{{ formatCurrency(line.change) }}</td>
+          </tr>
+        }
+        @if (report()!.liabilityMovements.length === 0) {
+          <tr><td colspan="5" class="text-center text-muted py-3">Sin movimientos</td></tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr class="table-warning">
+          <td colspan="4" class="fw-bold">Total cambio Pasivos</td>
+          <td class="text-end fw-bold" [class]="changeClass(totalLiabilityChange())">{{ formatCurrency(totalLiabilityChange()) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </panel>
+
+  <!-- Capital -->
+  <panel title="Movimientos de Capital" variant="success" [showReloadButton]="false">
+    <p class="text-muted small mb-2">
+      <i class="fa fa-info-circle me-1" aria-hidden="true"></i>
+      Cambio positivo = aporte. Negativo = retiro.
+    </p>
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr>
+          <th scope="col">Código</th>
+          <th scope="col">Cuenta</th>
+          <th scope="col" class="text-end">Apertura</th>
+          <th scope="col" class="text-end">Cierre</th>
+          <th scope="col" class="text-end">Cambio</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of report()!.equityMovements; track line.idAccount) {
+          <tr>
+            <td class="text-muted small">{{ line.codeAccount }}</td>
+            <td>{{ line.nameAccount }}</td>
+            <td class="text-end small">{{ formatCurrency(line.openingBalance) }}</td>
+            <td class="text-end small">{{ formatCurrency(line.closingBalance) }}</td>
+            <td class="text-end fw-bold" [class]="changeClass(line.change)">{{ formatCurrency(line.change) }}</td>
+          </tr>
+        }
+        @if (report()!.equityMovements.length === 0) {
+          <tr><td colspan="5" class="text-center text-muted py-3">Sin movimientos</td></tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr class="table-success">
+          <td colspan="4" class="fw-bold">Total cambio Capital</td>
+          <td class="text-end fw-bold" [class]="changeClass(totalEquityChange())">{{ formatCurrency(totalEquityChange()) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </panel>
+}
+
+@if (!report() && !isLoading()) {
+  <div class="alert alert-info" role="status">
+    <i class="fa fa-info-circle me-2" aria-hidden="true"></i>
+    Seleccione un período y haga clic en <strong>Generar</strong> para ver el reporte.
+  </div>
+}

@@ -1,0 +1,220 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
+  <li class="breadcrumb-item"><a href="javascript:;">Reportes</a></li>
+  <li class="breadcrumb-item active">Estado de Resultado</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Estado de Resultado
+  <small>Ingresos y gastos del período</small>
+</h1>
+
+<!-- Error global -->
+@if (errorMessage()) {
+  <div class="alert alert-danger mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i>{{ errorMessage() }}
+    <button type="button" class="btn-close float-end" (click)="clearError.emit()"
+      aria-label="Cerrar mensaje de error"></button>
+  </div>
+}
+
+<!-- Panel de Filtros -->
+<panel title="Filtros"
+  variant="default"
+  [noBody]="false">
+
+  <div class="row g-2 align-items-end">
+    <!-- Año -->
+    <div class="col-sm-3">
+      <label for="fsYear" class="form-label">Año</label>
+      <input id="fsYear" type="number" class="form-control form-control-sm"
+        [value]="filterYear()"
+        (input)="filterYear.set(+$any($event.target).value || null)"
+        placeholder="2026">
+    </div>
+    <!-- Mes -->
+    <div class="col-sm-3">
+      <label for="fsMonth" class="form-label">Mes <small class="text-muted">(opcional)</small></label>
+      <select id="fsMonth" class="form-select form-select-sm"
+        [value]="filterMonth() ?? ''"
+        (change)="filterMonth.set(+$any($event.target).value || null)">
+        <option value="">— Año completo —</option>
+        @for (m of months; track m.value) {
+          <option [value]="m.value">{{ m.label }}</option>
+        }
+      </select>
+    </div>
+    <!-- Separador -->
+    <div class="col-sm-1 text-center text-muted">ó</div>
+    <!-- Desde -->
+    <div class="col-sm-2">
+      <label for="fsFrom" class="form-label">Desde</label>
+      <input id="fsFrom" type="date" class="form-control form-control-sm"
+        [value]="filterFrom()"
+        (input)="filterFrom.set($any($event.target).value)">
+    </div>
+    <!-- Hasta -->
+    <div class="col-sm-2">
+      <label for="fsTo" class="form-label">Hasta</label>
+      <input id="fsTo" type="date" class="form-control form-control-sm"
+        [value]="filterTo()"
+        (input)="filterTo.set($any($event.target).value)">
+    </div>
+    <!-- Botón -->
+    <div class="col-sm-1">
+      <button type="button" class="btn btn-sm btn-primary w-100"
+        (click)="applyFilter()" [disabled]="isLoading()"
+        aria-label="Generar reporte">
+        @if (isLoading()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        } @else {
+          <i class="fa fa-play" aria-hidden="true"></i>
+        }
+      </button>
+    </div>
+  </div>
+
+</panel>
+
+<!-- Reporte -->
+@if (report()) {
+  <!-- Período -->
+  <div class="mb-3 text-muted small">
+    <i class="fa fa-calendar me-1" aria-hidden="true"></i>
+    Período: <strong>{{ report()!.dateFrom }}</strong> al <strong>{{ report()!.dateTo }}</strong>
+  </div>
+
+  <!-- Ingresos -->
+  <panel title="Ingresos"
+    variant="success"
+    [showReloadButton]="true"
+    [reload]="isLoading()"
+    (onReload)="refresh.emit()">
+
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr>
+          <th scope="col">Código</th>
+          <th scope="col">Cuenta</th>
+          <th scope="col" class="text-end">Débito</th>
+          <th scope="col" class="text-end">Crédito</th>
+          <th scope="col" class="text-end">Saldo</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of report()!.revenues; track line.idAccount) {
+          <tr>
+            <td class="text-muted small">{{ line.codeAccount }}</td>
+            <td>
+              @if (line.levelAccount > 1) {
+                <span class="ms-{{ line.levelAccount - 1 }}">{{ line.nameAccount }}</span>
+              } @else {
+                <strong>{{ line.nameAccount }}</strong>
+              }
+            </td>
+            <td class="text-end small">{{ formatCurrency(line.debitTotal) }}</td>
+            <td class="text-end small">{{ formatCurrency(line.creditTotal) }}</td>
+            <td class="text-end text-success fw-bold">{{ formatCurrency(line.balance) }}</td>
+          </tr>
+        }
+        @if (report()!.revenues.length === 0) {
+          <tr>
+            <td colspan="5" class="text-center text-muted py-3">Sin ingresos en el período</td>
+          </tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr class="table-success">
+          <td colspan="4" class="fw-bold">Total Ingresos</td>
+          <td class="text-end fw-bold">{{ formatCurrency(totalRevenues()) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+  </panel>
+
+  <!-- Gastos -->
+  <panel title="Gastos"
+    variant="danger"
+    [showReloadButton]="false">
+
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr>
+          <th scope="col">Código</th>
+          <th scope="col">Cuenta</th>
+          <th scope="col" class="text-end">Débito</th>
+          <th scope="col" class="text-end">Crédito</th>
+          <th scope="col" class="text-end">Saldo</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (line of report()!.expenses; track line.idAccount) {
+          <tr>
+            <td class="text-muted small">{{ line.codeAccount }}</td>
+            <td>
+              @if (line.levelAccount > 1) {
+                <span class="ms-{{ line.levelAccount - 1 }}">{{ line.nameAccount }}</span>
+              } @else {
+                <strong>{{ line.nameAccount }}</strong>
+              }
+            </td>
+            <td class="text-end small">{{ formatCurrency(line.debitTotal) }}</td>
+            <td class="text-end small">{{ formatCurrency(line.creditTotal) }}</td>
+            <td class="text-end text-danger fw-bold">{{ formatCurrency(line.balance) }}</td>
+          </tr>
+        }
+        @if (report()!.expenses.length === 0) {
+          <tr>
+            <td colspan="5" class="text-center text-muted py-3">Sin gastos en el período</td>
+          </tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr class="table-danger">
+          <td colspan="4" class="fw-bold">Total Gastos</td>
+          <td class="text-end fw-bold">{{ formatCurrency(totalExpenses()) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+  </panel>
+
+  <!-- Resultado neto -->
+  <panel title="Resultado Neto"
+    variant="inverse">
+
+    <div class="row justify-content-end">
+      <div class="col-sm-6 col-md-4">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr>
+              <td>Total Ingresos</td>
+              <td class="text-end text-success fw-bold">{{ formatCurrency(totalRevenues()) }}</td>
+            </tr>
+            <tr>
+              <td>Total Gastos</td>
+              <td class="text-end text-danger fw-bold">{{ formatCurrency(totalExpenses()) }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Resultado Neto</th>
+              <th class="text-end" [class]="netIncomeClass()">{{ formatCurrency(netIncome()) }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+  </panel>
+}
+
+@if (!report() && !isLoading()) {
+  <div class="alert alert-info" role="status">
+    <i class="fa fa-info-circle me-2" aria-hidden="true"></i>
+    Seleccione un período y haga clic en <strong>Generar</strong> para ver el reporte.
+  </div>
+}

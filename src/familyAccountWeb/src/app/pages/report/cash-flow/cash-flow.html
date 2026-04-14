@@ -1,0 +1,21 @@
+@if (isMobile()) {
+  <app-cash-flow-mobile
+    [isLoading]="isLoading()"
+    [errorMessage]="error() ?? ''"
+    [report]="report()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+    (refresh)="load()"
+    (clearError)="clearError()"
+  />
+} @else {
+  <app-cash-flow-web
+    [isLoading]="isLoading()"
+    [errorMessage]="error() ?? ''"
+    [report]="report()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+    (refresh)="load()"
+    (clearError)="clearError()"
+  />
+}

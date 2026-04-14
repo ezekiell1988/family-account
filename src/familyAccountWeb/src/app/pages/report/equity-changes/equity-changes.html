@@ -1,0 +1,21 @@
+@if (isMobile()) {
+  <app-equity-changes-mobile
+    [isLoading]="isLoading()"
+    [errorMessage]="error() ?? ''"
+    [report]="report()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+    (refresh)="load()"
+    (clearError)="clearError()">
+  </app-equity-changes-mobile>
+} @else {
+  <app-equity-changes-web
+    [isLoading]="isLoading()"
+    [errorMessage]="error() ?? ''"
+    [report]="report()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+    (refresh)="load()"
+    (clearError)="clearError()">
+  </app-equity-changes-web>
+}

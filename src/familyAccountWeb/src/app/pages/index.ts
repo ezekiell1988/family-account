@@ -1,3 +1,7 @@
+export { IncomeStatementPage } from './report/income-statement';
+export { BalanceSheetPage } from './report/balance-sheet';
+export { CashFlowPage } from './report/cash-flow';
+export { EquityChangesPage } from './report/equity-changes';
 export { AccountsPage } from './maintenance/accounts';
 export { BankMovementTypesPage } from './maintenance/bank-movement-types';
 export { BanksPage } from './maintenance/banks';

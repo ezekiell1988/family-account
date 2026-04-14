@@ -1,0 +1,21 @@
+@if (isMobile()) {
+  <app-balance-sheet-mobile
+    [isLoading]="isLoading()"
+    [errorMessage]="error() ?? ''"
+    [report]="report()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+    (refresh)="load()"
+    (clearError)="clearError()"
+  />
+} @else {
+  <app-balance-sheet-web
+    [isLoading]="isLoading()"
+    [errorMessage]="error() ?? ''"
+    [report]="report()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+    (refresh)="load()"
+    (clearError)="clearError()"
+  />
+}

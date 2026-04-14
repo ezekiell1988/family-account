@@ -1,0 +1,180 @@
+<header pageTitle="Estado de Resultado" color="theme" [translucent]="true"></header>
+
+<ion-content class="ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Error -->
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="clearError.emit()"
+              aria-label="Cerrar error">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
+
+  <!-- Filtros -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>
+        <ion-icon name="calendar-outline"></ion-icon>
+        Período
+      </ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-grid>
+        <ion-row>
+          <ion-col size="6">
+            <ion-input fill="outline" labelPlacement="floating" label="Año" type="number"
+              [value]="filterYear()"
+              (ionInput)="filterYear.set(+$any($event.target).value || null)">
+            </ion-input>
+          </ion-col>
+          <ion-col size="6">
+            <ion-select fill="outline" labelPlacement="floating" label="Mes"
+              [value]="filterMonth()"
+              (ionChange)="filterMonth.set($any($event.detail.value) || null)"
+              placeholder="Año completo">
+              @for (m of months; track m.value) {
+                <ion-select-option [value]="m.value">{{ m.label }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col>
+            <ion-button expand="block" (click)="applyFilter()" [disabled]="isLoading()">
+              @if (isLoading()) {
+                <ion-spinner slot="start" name="crescent"></ion-spinner>
+              } @else {
+                <ion-icon slot="start" name="play-outline"></ion-icon>
+              }
+              Generar
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Spinner -->
+  @if (isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  <!-- Reporte -->
+  @if (report()) {
+    <!-- Período -->
+    <ion-note class="ion-padding-horizontal">
+      <ion-icon name="calendar-outline" aria-hidden="true"></ion-icon>
+      {{ report()!.dateFrom }} — {{ report()!.dateTo }}
+    </ion-note>
+
+    <!-- Ingresos -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title color="success">
+          <ion-icon name="trending-up-outline"></ion-icon>
+          Ingresos
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list lines="inset">
+          @for (line of report()!.revenues; track line.idAccount) {
+            <ion-item>
+              <ion-label>
+                <h3>{{ line.nameAccount }}</h3>
+                <p>{{ line.codeAccount }}</p>
+              </ion-label>
+              <ion-note slot="end" color="success">{{ formatCurrency(line.balance) }}</ion-note>
+            </ion-item>
+          }
+          @if (report()!.revenues.length === 0) {
+            <ion-item>
+              <ion-label color="medium">Sin ingresos en el período</ion-label>
+            </ion-item>
+          }
+        </ion-list>
+        <ion-item lines="none" color="success">
+          <ion-label><strong>Total Ingresos</strong></ion-label>
+          <ion-note slot="end" color="success"><strong>{{ formatCurrency(report()!.totalRevenues) }}</strong></ion-note>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Gastos -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title color="danger">
+          <ion-icon name="trending-down-outline"></ion-icon>
+          Gastos
+        </ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list lines="inset">
+          @for (line of report()!.expenses; track line.idAccount) {
+            <ion-item>
+              <ion-label>
+                <h3>{{ line.nameAccount }}</h3>
+                <p>{{ line.codeAccount }}</p>
+              </ion-label>
+              <ion-note slot="end" color="danger">{{ formatCurrency(line.balance) }}</ion-note>
+            </ion-item>
+          }
+          @if (report()!.expenses.length === 0) {
+            <ion-item>
+              <ion-label color="medium">Sin gastos en el período</ion-label>
+            </ion-item>
+          }
+        </ion-list>
+        <ion-item lines="none" color="danger">
+          <ion-label><strong>Total Gastos</strong></ion-label>
+          <ion-note slot="end" color="danger"><strong>{{ formatCurrency(report()!.totalExpenses) }}</strong></ion-note>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Resultado neto -->
+    <ion-card [color]="report()!.netIncome >= 0 ? 'success' : 'danger'">
+      <ion-card-content>
+        <ion-grid>
+          <ion-row class="ion-align-items-center">
+            <ion-col>
+              <ion-icon name="analytics-outline" aria-hidden="true"></ion-icon>
+              <strong>Resultado Neto</strong>
+            </ion-col>
+            <ion-col size="auto">
+              <strong>{{ formatCurrency(report()!.netIncome) }}</strong>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-card-content>
+    </ion-card>
+  }
+
+  @if (!report() && !isLoading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-icon name="analytics-outline" size="large" color="medium"></ion-icon>
+      <ion-text color="medium">
+        <p>Seleccione un período y presione Generar.</p>
+      </ion-text>
+    </div>
+  }
+
+</ion-content>
+
+<app-footer></app-footer>

@@ -1,0 +1,213 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Inicio</a></li>
+  <li class="breadcrumb-item"><a href="javascript:;">Reportes</a></li>
+  <li class="breadcrumb-item active">Estado de Situación Financiera</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Estado de Situación Financiera
+  <small>Balance General acumulado al cierre del período</small>
+</h1>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i>{{ errorMessage() }}
+    <button type="button" class="btn-close float-end" (click)="clearError.emit()"
+      aria-label="Cerrar mensaje de error"></button>
+  </div>
+}
+
+<!-- Filtros -->
+<panel title="Filtros" variant="default">
+  <div class="row g-2 align-items-end">
+    <div class="col-sm-3">
+      <label for="bsYear" class="form-label">Año</label>
+      <input id="bsYear" type="number" class="form-control form-control-sm"
+        [value]="filterYear()"
+        (input)="filterYear.set(+$any($event.target).value || null)"
+        placeholder="2026">
+    </div>
+    <div class="col-sm-3">
+      <label for="bsMonth" class="form-label">Mes <small class="text-muted">(opcional)</small></label>
+      <select id="bsMonth" class="form-select form-select-sm"
+        [value]="filterMonth() ?? ''"
+        (change)="filterMonth.set(+$any($event.target).value || null)">
+        <option value="">— Año completo —</option>
+        @for (m of months; track m.value) {
+          <option [value]="m.value">{{ m.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="col-sm-1 text-center text-muted">ó</div>
+    <div class="col-sm-3">
+      <label for="bsTo" class="form-label">Corte al</label>
+      <input id="bsTo" type="date" class="form-control form-control-sm"
+        [value]="filterTo()"
+        (input)="filterTo.set($any($event.target).value)">
+    </div>
+    <div class="col-sm-2">
+      <button type="button" class="btn btn-sm btn-primary w-100"
+        (click)="applyFilter()" [disabled]="isLoading()"
+        aria-label="Generar reporte">
+        @if (isLoading()) {
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        } @else {
+          <i class="fa fa-play" aria-hidden="true"></i>
+          Generar
+        }
+      </button>
+    </div>
+  </div>
+</panel>
+
+@if (report()) {
+  <!-- Fecha de corte -->
+  <div class="mb-3 text-muted small">
+    <i class="fa fa-calendar me-1" aria-hidden="true"></i>
+    Al: <strong>{{ report()!.dateTo }}</strong>
+  </div>
+
+  <div class="row">
+    <!-- ACTIVOS -->
+    <div class="col-lg-6">
+      <panel title="Activos" variant="primary"
+        [showReloadButton]="true" [reload]="isLoading()" (onReload)="refresh.emit()">
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Código</th>
+              <th scope="col">Cuenta</th>
+              <th scope="col" class="text-end">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of report()!.assets; track line.idAccount) {
+              <tr>
+                <td class="text-muted small">{{ line.codeAccount }}</td>
+                <td>
+                  @if (line.levelAccount > 1) {
+                    <span class="ms-{{ line.levelAccount - 1 }}">{{ line.nameAccount }}</span>
+                  } @else {
+                    <strong>{{ line.nameAccount }}</strong>
+                  }
+                </td>
+                <td class="text-end fw-bold">{{ formatCurrency(line.balance) }}</td>
+              </tr>
+            }
+            @if (report()!.assets.length === 0) {
+              <tr><td colspan="3" class="text-center text-muted py-3">Sin activos registrados</td></tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="table-primary">
+              <td colspan="2" class="fw-bold">Total Activos</td>
+              <td class="text-end fw-bold">{{ formatCurrency(totalAssets()) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </panel>
+    </div>
+
+    <!-- PASIVOS + CAPITAL -->
+    <div class="col-lg-6">
+      <!-- Pasivos -->
+      <panel title="Pasivos" variant="warning" [showReloadButton]="false">
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Código</th>
+              <th scope="col">Cuenta</th>
+              <th scope="col" class="text-end">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of report()!.liabilities; track line.idAccount) {
+              <tr>
+                <td class="text-muted small">{{ line.codeAccount }}</td>
+                <td>
+                  @if (line.levelAccount > 1) {
+                    <span class="ms-{{ line.levelAccount - 1 }}">{{ line.nameAccount }}</span>
+                  } @else {
+                    <strong>{{ line.nameAccount }}</strong>
+                  }
+                </td>
+                <td class="text-end fw-bold">{{ formatCurrency(line.balance) }}</td>
+              </tr>
+            }
+            @if (report()!.liabilities.length === 0) {
+              <tr><td colspan="3" class="text-center text-muted py-3">Sin pasivos registrados</td></tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="table-warning">
+              <td colspan="2" class="fw-bold">Total Pasivos</td>
+              <td class="text-end fw-bold">{{ formatCurrency(totalLiabilities()) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </panel>
+
+      <!-- Capital -->
+      <panel title="Capital" variant="success" [showReloadButton]="false">
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Código</th>
+              <th scope="col">Cuenta</th>
+              <th scope="col" class="text-end">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (line of report()!.capital; track line.idAccount) {
+              <tr>
+                <td class="text-muted small">{{ line.codeAccount }}</td>
+                <td>
+                  @if (line.levelAccount > 1) {
+                    <span class="ms-{{ line.levelAccount - 1 }}">{{ line.nameAccount }}</span>
+                  } @else {
+                    <strong>{{ line.nameAccount }}</strong>
+                  }
+                </td>
+                <td class="text-end fw-bold">{{ formatCurrency(line.balance) }}</td>
+              </tr>
+            }
+            @if (report()!.capital.length === 0) {
+              <tr><td colspan="3" class="text-center text-muted py-3">Sin cuentas de capital</td></tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="table-success">
+              <td colspan="2" class="fw-bold">Total Capital</td>
+              <td class="text-end fw-bold">{{ formatCurrency(totalCapital()) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </panel>
+
+      <!-- Ecuación contable -->
+      <panel title="Resumen" variant="inverse" [showReloadButton]="false">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr>
+              <td>Total Activos</td>
+              <td class="text-end fw-bold text-primary">{{ formatCurrency(totalAssets()) }}</td>
+            </tr>
+            <tr>
+              <td>Total Pasivos + Capital</td>
+              <td class="text-end fw-bold text-success">{{ formatCurrency(totalLiabilitiesCapital()) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </panel>
+    </div>
+  </div>
+}
+
+@if (!report() && !isLoading()) {
+  <div class="alert alert-info" role="status">
+    <i class="fa fa-info-circle me-2" aria-hidden="true"></i>
+    Seleccione un período y haga clic en <strong>Generar</strong> para ver el reporte.
+  </div>
+}

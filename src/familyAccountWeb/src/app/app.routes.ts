@@ -12,6 +12,10 @@ import {
   ErrorPage,
   LoginPage,
   BankStatementTemplatesPage,
+  IncomeStatementPage,
+  BalanceSheetPage,
+  CashFlowPage,
+  EquityChangesPage,
 } from "./pages";
 import { AuthGuard } from "./shared/guards";
 
@@ -84,6 +88,30 @@ export const routes: Routes = [
     path: "maintenance/bank-statement-templates",
     component: BankStatementTemplatesPage,
     data: { title: "Plantillas de Extractos Bancarios" },
+    canActivate: [AuthGuard],
+  },
+  {
+    path: "report/income-statement",
+    component: IncomeStatementPage,
+    data: { title: "Estado de Resultado" },
+    canActivate: [AuthGuard],
+  },
+  {
+    path: "report/balance-sheet",
+    component: BalanceSheetPage,
+    data: { title: "Estado de Situación Financiera" },
+    canActivate: [AuthGuard],
+  },
+  {
+    path: "report/cash-flow",
+    component: CashFlowPage,
+    data: { title: "Estado de Flujo de Efectivo" },
+    canActivate: [AuthGuard],
+  },
+  {
+    path: "report/equity-changes",
+    component: EquityChangesPage,
+    data: { title: "Estado de Cambios en el Patrimonio" },
     canActivate: [AuthGuard],
   },
   {

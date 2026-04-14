@@ -30,3 +30,4 @@ export { CostCenterService } from './cost-center.service';
 export { ContactService } from './contact.service';
 export { BankStatementTemplateService } from './bank-statement-template.service';
 export { BankStatementImportService } from './bank-statement-import.service';
+export { FinancialStatementService } from './financial-statement.service';

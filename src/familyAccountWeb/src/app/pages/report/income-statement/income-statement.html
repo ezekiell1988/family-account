@@ -1,0 +1,21 @@
+@if (isMobile()) {
+  <app-income-statement-mobile
+    [isLoading]="isLoading()"
+    [errorMessage]="error() ?? ''"
+    [report]="report()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+    (refresh)="load()"
+    (clearError)="clearError()"
+  />
+} @else {
+  <app-income-statement-web
+    [isLoading]="isLoading()"
+    [errorMessage]="error() ?? ''"
+    [report]="report()"
+    [filter]="filter()"
+    (filterChange)="onFilterChange($event)"
+    (refresh)="load()"
+    (clearError)="clearError()"
+  />
+}

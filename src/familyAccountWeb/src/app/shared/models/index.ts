@@ -13,3 +13,4 @@ export * from './product.models';
 export * from './contact.models';
 export * from './bank-statement.models';
 export * from './bank-statement-template.models';
+export * from './financial-statements.models';
