@@ -95,30 +95,28 @@ export class BankStatementTemplatesKeywordEditorComponent {
     this.emit();
   }
 
-  setMovType(index: number, value: string): void {
+  setMovType(index: number, value: number | null): void {
     this.rules.update(rs => {
       const copy = [...rs];
-      copy[index] = { ...copy[index], idBankMovementType: Number(value) };
+      copy[index] = { ...copy[index], idBankMovementType: value ?? 0 };
       return copy;
     });
     this.emit();
   }
 
-  setAccount(index: number, value: string): void {
-    const id = value === '' ? null : Number(value);
+  setAccount(index: number, value: number | null): void {
     this.rules.update(rs => {
       const copy = [...rs];
-      copy[index] = { ...copy[index], idAccountCounterpart: id ?? undefined };
+      copy[index] = { ...copy[index], idAccountCounterpart: value ?? undefined };
       return copy;
     });
     this.emit();
   }
 
-  setCostCenter(index: number, value: string): void {
-    const id = value === '' ? null : Number(value);
+  setCostCenter(index: number, value: number | null): void {
     this.rules.update(rs => {
       const copy = [...rs];
-      copy[index] = { ...copy[index], idCostCenter: id ?? undefined };
+      copy[index] = { ...copy[index], idCostCenter: value ?? undefined };
       return copy;
     });
     this.emit();

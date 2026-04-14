@@ -59,12 +59,12 @@
             <td>
               <select class="form-select form-select-sm"
                 title="Tipo de movimiento"
-                [value]="rule.idBankMovementType || ''"
-                (change)="setMovType(idx, $any($event.target).value)"
+                [ngModel]="rule.idBankMovementType || null"
+                (ngModelChange)="setMovType(idx, $event)"
                 [attr.aria-label]="'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_MOVEMENT_TYPE' | translate">
-                <option value="">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.SELECT_MOVEMENT_TYPE' | translate }}</option>
+                <option [ngValue]="null">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.SELECT_MOVEMENT_TYPE' | translate }}</option>
                 @for (mt of movementTypes(); track mt.idBankMovementType) {
-                  <option [value]="mt.idBankMovementType">
+                  <option [ngValue]="mt.idBankMovementType">
                     {{ mt.codeBankMovementType }} – {{ mt.nameBankMovementType }}
                   </option>
                 }
@@ -75,12 +75,12 @@
             <td>
               <select class="form-select form-select-sm"
                 title="Cuenta contrapartida"
-                [value]="rule.idAccountCounterpart || ''"
-                (change)="setAccount(idx, $any($event.target).value)"
+                [ngModel]="rule.idAccountCounterpart || null"
+                (ngModelChange)="setAccount(idx, $event)"
                 [attr.aria-label]="'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_ACCOUNT' | translate">
-                <option value="">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.SELECT_ACCOUNT' | translate }}</option>
+                <option [ngValue]="null">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.SELECT_ACCOUNT' | translate }}</option>
                 @for (acc of accounts(); track acc.idAccount) {
-                  <option [value]="acc.idAccount" *ngIf="acc.allowsMovements && acc.isActive">
+                  <option [ngValue]="acc.idAccount" *ngIf="acc.allowsMovements && acc.isActive">
                     {{ acc.codeAccount }} – {{ acc.nameAccount }}
                   </option>
                 }
@@ -91,12 +91,12 @@
             <td>
               <select class="form-select form-select-sm"
                 title="Centro de costo"
-                [value]="rule.idCostCenter || ''"
-                (change)="setCostCenter(idx, $any($event.target).value)"
+                [ngModel]="rule.idCostCenter || null"
+                (ngModelChange)="setCostCenter(idx, $event)"
                 [attr.aria-label]="'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_COST_CENTER' | translate">
-                <option value="">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.SELECT_COST_CENTER' | translate }}</option>
+                <option [ngValue]="null">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.SELECT_COST_CENTER' | translate }}</option>
                 @for (cc of costCenters(); track cc.idCostCenter) {
-                  <option [value]="cc.idCostCenter" *ngIf="cc.isActive">
+                  <option [ngValue]="cc.idCostCenter" *ngIf="cc.isActive">
                     {{ cc.nameCostCenter }}
                   </option>
                 }
