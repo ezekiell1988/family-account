@@ -1,0 +1,19 @@
+@if (isMobile()) {
+  <app-bank-statement-templates-mobile
+    [loading]="loading()"
+    [errorMessage]="errorMessage()"
+  />
+} @else {
+  <app-bank-statement-templates-web
+    [items]="items()"
+    [isLoading]="loading()"
+    [errorMessage]="errorMessage()"
+    [movementTypes]="movementTypes()"
+    [accounts]="accounts()"
+    [costCenters]="costCenters()"
+    (refresh)="load()"
+    (create)="onCreate($event)"
+    (editSave)="onEditSave($event)"
+    (remove)="onRemove($event)"
+  />
+}

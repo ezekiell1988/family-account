@@ -1,0 +1,121 @@
+<div class="mb-2 d-flex justify-content-between align-items-center">
+  <span class="fw-semibold">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.TITLE' | translate }}</span>
+  <button type="button" class="btn btn-sm btn-outline-primary" (click)="addRule()">
+    <i class="fa fa-plus me-1" aria-hidden="true"></i>{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.ADD_RULE' | translate }}
+  </button>
+</div>
+
+@if (rules().length === 0) {
+  <div class="text-muted small mb-2">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.NO_RULES' | translate }}</div>
+} @else {
+  <div class="table-responsive">
+    <table class="table table-bordered table-sm align-middle mb-2">
+      <thead class="table-light">
+        <tr>
+          <th>{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_KEYWORDS' | translate }}</th>
+          <th>{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_MOVEMENT_TYPE' | translate }}</th>
+          <th>{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_ACCOUNT' | translate }}</th>
+          <th>{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_COST_CENTER' | translate }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (rule of rules(); track $index; let idx = $index) {
+          <tr>
+            <!-- ── Keywords chips ─────────────────────────────── -->
+            <td>
+              <div class="d-flex flex-wrap gap-1 mb-1">
+                @for (kw of rule.keywords; track $index; let ki = $index) {
+                  <span class="badge text-bg-secondary d-inline-flex align-items-center gap-1">
+                    {{ kw }}
+                    <button type="button"
+                      class="btn-close btn-close-white"
+                      title="Eliminar keyword"
+                      (click)="removeKeyword(idx, ki)"
+                      [attr.aria-label]="'Eliminar ' + kw"></button>
+                  </span>
+                }
+              </div>
+              <div class="input-group input-group-sm">
+                <label [for]="'kwInput' + idx" class="visually-hidden">Keyword</label>
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  title="Keyword"
+                  [id]="'kwInput' + idx"
+                  [placeholder]="'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.KEYWORD_PLACEHOLDER' | translate"
+                  [value]="newKeywordInputs()[idx]"
+                  (input)="setNewKeyword(idx, $any($event.target).value)"
+                  (keydown)="onKeywordInputKeydown($event, idx)"
+                  [attr.aria-label]="'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.KEYWORD_PLACEHOLDER' | translate" />
+                <button type="button" class="btn btn-outline-secondary btn-sm" title="Agregar keyword" (click)="addKeyword(idx)">
+                  <i class="fa fa-plus" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div class="form-text">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.KEYWORD_HINT' | translate }}</div>
+            </td>
+
+            <!-- ── Tipo de movimiento ────────────────────────── -->
+            <td>
+              <select class="form-select form-select-sm"
+                title="Tipo de movimiento"
+                [value]="rule.idBankMovementType || ''"
+                (change)="setMovType(idx, $any($event.target).value)"
+                [attr.aria-label]="'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_MOVEMENT_TYPE' | translate">
+                <option value="">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.SELECT_MOVEMENT_TYPE' | translate }}</option>
+                @for (mt of movementTypes(); track mt.idBankMovementType) {
+                  <option [value]="mt.idBankMovementType">
+                    {{ mt.codeBankMovementType }} – {{ mt.nameBankMovementType }}
+                  </option>
+                }
+              </select>
+            </td>
+
+            <!-- ── Cuenta contrapartida ──────────────────────── -->
+            <td>
+              <select class="form-select form-select-sm"
+                title="Cuenta contrapartida"
+                [value]="rule.idAccountCounterpart || ''"
+                (change)="setAccount(idx, $any($event.target).value)"
+                [attr.aria-label]="'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_ACCOUNT' | translate">
+                <option value="">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.SELECT_ACCOUNT' | translate }}</option>
+                @for (acc of accounts(); track acc.idAccount) {
+                  <option [value]="acc.idAccount" *ngIf="acc.allowsMovements && acc.isActive">
+                    {{ acc.codeAccount }} – {{ acc.nameAccount }}
+                  </option>
+                }
+              </select>
+            </td>
+
+            <!-- ── Centro de costo ───────────────────────────── -->
+            <td>
+              <select class="form-select form-select-sm"
+                title="Centro de costo"
+                [value]="rule.idCostCenter || ''"
+                (change)="setCostCenter(idx, $any($event.target).value)"
+                [attr.aria-label]="'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.COL_COST_CENTER' | translate">
+                <option value="">{{ 'BANK_STATEMENT_TEMPLATES.KEYWORD_EDITOR.SELECT_COST_CENTER' | translate }}</option>
+                @for (cc of costCenters(); track cc.idCostCenter) {
+                  <option [value]="cc.idCostCenter" *ngIf="cc.isActive">
+                    {{ cc.nameCostCenter }}
+                  </option>
+                }
+              </select>
+            </td>
+
+            <!-- ── Eliminar regla ────────────────────────────── -->
+            <td class="text-center">
+              <button type="button"
+                class="btn btn-sm btn-outline-danger"
+                title="Eliminar regla"
+                (click)="removeRule(idx)"
+                [attr.aria-label]="'Eliminar regla ' + (idx + 1)">
+                <i class="fa fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

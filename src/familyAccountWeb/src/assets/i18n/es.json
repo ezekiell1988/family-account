@@ -642,6 +642,53 @@
       "CREATE_BTN": "Crear tipo"
     }
   },
+  "BANK_STATEMENT_TEMPLATES": {
+    "TITLE": "Plantillas de Extractos Bancarios",
+    "PAGE_SUBTITLE": "Mantenimiento de plantillas de carga bancaria",
+    "NEW_BTN": "Nueva Plantilla",
+    "NEW_ITEM": "Nueva plantilla de extracto bancario",
+    "EMPTY": "No hay plantillas registradas.",
+    "CONFIRM_DELETE": "¿Eliminar la plantilla seleccionada? Esta acción no se puede deshacer.",
+    "COL_CODE": "Código",
+    "COL_NAME": "Nombre",
+    "COL_BANK": "Banco",
+    "COL_STATUS": "Estado",
+    "COL_ACTIONS": "Acciones",
+    "FORM": {
+      "NEW_TITLE": "Nueva Plantilla",
+      "EDIT_TITLE": "Editar Plantilla",
+      "CODE_LABEL": "Código",
+      "CODE_PLACEHOLDER": "Ej: BCR-HTML-XLS-V1",
+      "NAME_LABEL": "Nombre",
+      "NAME_PLACEHOLDER": "Ej: BCR – Movimientos de Cuenta (HTML-XLS)",
+      "BANK_LABEL": "Banco",
+      "BANK_PLACEHOLDER": "Ej: Banco de Costa Rica",
+      "COLUMN_MAPPINGS_LABEL": "Mapeo de columnas (JSON)",
+      "KEYWORD_RULES_LABEL": "Reglas de palabras clave",
+      "DATE_FORMAT_LABEL": "Formato de fecha",
+      "DATE_FORMAT_PLACEHOLDER": "Ej: dd/MM/yyyy",
+      "TIME_FORMAT_LABEL": "Formato de hora",
+      "TIME_FORMAT_PLACEHOLDER": "Ej: HH:mm:ss",
+      "IS_ACTIVE": "Activo",
+      "NOTES_LABEL": "Notas",
+      "SAVE_BTN": "Guardar cambios",
+      "CREATE_BTN": "Crear plantilla"
+    },
+    "KEYWORD_EDITOR": {
+      "TITLE": "Reglas de palabras clave",
+      "ADD_RULE": "Agregar regla",
+      "NO_RULES": "Sin reglas. Haz clic en \"Agregar regla\" para añadir la primera.",
+      "COL_KEYWORDS": "Keywords",
+      "COL_MOVEMENT_TYPE": "Tipo de movimiento",
+      "COL_ACCOUNT": "Cuenta contrapartida",
+      "COL_COST_CENTER": "Centro de costo",
+      "SELECT_MOVEMENT_TYPE": "— Seleccionar —",
+      "SELECT_ACCOUNT": "— (del tipo) —",
+      "SELECT_COST_CENTER": "— Ninguno —",
+      "KEYWORD_PLACEHOLDER": "Ej: SALARIO",
+      "KEYWORD_HINT": "Enter o coma para agregar. Se guarda en mayúsculas."
+    }
+  },
   "BANK_ACCOUNTS": {
     "TITLE": "Cuentas Bancarias",
     "NEW_BANK_ACCOUNT": "Nueva Cuenta",

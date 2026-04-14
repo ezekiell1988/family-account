@@ -119,6 +119,13 @@ export class AppMenuService {
           url: "/maintenance/product-categories",
           roles: [1, 2],
         },
+        {
+          icon: "fa fa-file-text",
+          iconMobile: "document-text-outline",
+          title: "Plantillas de Extractos Bancarios",
+          url: "/maintenance/bank-statement-templates",
+          roles: [1, 2],
+        },
       ],
     },
   ];

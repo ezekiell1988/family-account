@@ -626,6 +626,53 @@
       "CREATE_BTN": "Create type"
     }
   },
+  "BANK_STATEMENT_TEMPLATES": {
+    "TITLE": "Bank Statement Templates",
+    "PAGE_SUBTITLE": "Maintenance of bank statement import templates",
+    "NEW_BTN": "New Template",
+    "NEW_ITEM": "New bank statement template",
+    "EMPTY": "No templates found.",
+    "CONFIRM_DELETE": "Delete the selected template? This action cannot be undone.",
+    "COL_CODE": "Code",
+    "COL_NAME": "Name",
+    "COL_BANK": "Bank",
+    "COL_STATUS": "Status",
+    "COL_ACTIONS": "Actions",
+    "FORM": {
+      "NEW_TITLE": "New Template",
+      "EDIT_TITLE": "Edit Template",
+      "CODE_LABEL": "Code",
+      "CODE_PLACEHOLDER": "e.g. BCR-HTML-XLS-V1",
+      "NAME_LABEL": "Name",
+      "NAME_PLACEHOLDER": "e.g. BCR – Account Movements (HTML-XLS)",
+      "BANK_LABEL": "Bank",
+      "BANK_PLACEHOLDER": "e.g. Banco de Costa Rica",
+      "COLUMN_MAPPINGS_LABEL": "Column mappings (JSON)",
+      "KEYWORD_RULES_LABEL": "Keyword rules",
+      "DATE_FORMAT_LABEL": "Date format",
+      "DATE_FORMAT_PLACEHOLDER": "e.g. dd/MM/yyyy",
+      "TIME_FORMAT_LABEL": "Time format",
+      "TIME_FORMAT_PLACEHOLDER": "e.g. HH:mm:ss",
+      "IS_ACTIVE": "Active",
+      "NOTES_LABEL": "Notes",
+      "SAVE_BTN": "Save changes",
+      "CREATE_BTN": "Create template"
+    },
+    "KEYWORD_EDITOR": {
+      "TITLE": "Keyword rules",
+      "ADD_RULE": "Add rule",
+      "NO_RULES": "No rules. Click \"Add rule\" to add the first one.",
+      "COL_KEYWORDS": "Keywords",
+      "COL_MOVEMENT_TYPE": "Movement type",
+      "COL_ACCOUNT": "Counterpart account",
+      "COL_COST_CENTER": "Cost center",
+      "SELECT_MOVEMENT_TYPE": "— Select —",
+      "SELECT_ACCOUNT": "— (from type) —",
+      "SELECT_COST_CENTER": "— None —",
+      "KEYWORD_PLACEHOLDER": "e.g. SALARY",
+      "KEYWORD_HINT": "Press Enter or comma to add. Saved in uppercase."
+    }
+  },
   "BANKS": {
     "TITLE": "Banks",
     "NEW_BANK": "New Bank",

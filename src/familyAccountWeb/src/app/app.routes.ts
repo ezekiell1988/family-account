@@ -11,6 +11,7 @@ import {
   PurchaseInvoicesPage,
   ErrorPage,
   LoginPage,
+  BankStatementTemplatesPage,
 } from "./pages";
 import { AuthGuard } from "./shared/guards";
 
@@ -77,6 +78,12 @@ export const routes: Routes = [
     path: "process/purchase-invoices",
     component: PurchaseInvoicesPage,
     data: { title: "Facturas de Compra" },
+    canActivate: [AuthGuard],
+  },
+  {
+    path: "maintenance/bank-statement-templates",
+    component: BankStatementTemplatesPage,
+    data: { title: "Plantillas de Extractos Bancarios" },
     canActivate: [AuthGuard],
   },
   {

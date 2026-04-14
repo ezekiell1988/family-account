@@ -1,12 +1,3 @@
-// ── BankStatementTemplate ────────────────────────────────────────────────────
-export interface BankStatementTemplateDto {
-  idBankStatementTemplate: number;
-  codeTemplate: string;
-  nameTemplate: string;
-  bankName: string;
-  isActive: boolean;
-}
-
 // ── BankStatementImport ──────────────────────────────────────────────────────
 export interface BankStatementImportDto {
   idBankStatementImport: number;

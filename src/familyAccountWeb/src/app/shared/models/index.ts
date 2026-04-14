@@ -12,3 +12,4 @@ export * from './purchase-invoice.models';
 export * from './product.models';
 export * from './contact.models';
 export * from './bank-statement.models';
+export * from './bank-statement-template.models';

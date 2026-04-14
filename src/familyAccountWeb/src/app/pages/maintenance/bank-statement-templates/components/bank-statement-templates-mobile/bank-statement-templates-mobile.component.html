@@ -1,0 +1,46 @@
+<!-- Header -->
+<header
+  [pageTitle]="'BANK_STATEMENT_TEMPLATES.TITLE' | translate"
+  color="theme"
+  [translucent]="true">
+</header>
+
+<ion-content class="ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="refresh.emit()">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (errorMessage()) {
+    <ion-text color="danger">
+      <ion-grid>
+        <ion-row class="ion-align-items-center">
+          <ion-col>
+            <ion-icon name="warning-outline" aria-hidden="true"></ion-icon>
+            {{ errorMessage() }}
+          </ion-col>
+          <ion-col size="auto">
+            <ion-button fill="clear" size="small" color="danger" (click)="refresh.emit()">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-text>
+  }
+
+  @if (loading()) {
+    <div class="ion-text-center ion-padding">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+  }
+
+  <!-- Lista vacía -->
+  <div class="ion-text-center ion-padding" *ngIf="!loading()">
+    <ion-icon name="albums-outline" size="large"></ion-icon>
+    <ion-text color="medium">
+      <p>No hay plantillas registradas.</p>
+    </ion-text>
+  </div>
+</ion-content>
+
+<app-footer></app-footer>

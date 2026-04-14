@@ -1,0 +1,52 @@
+<panel title="Plantillas de Extractos"
+  variant="inverse"
+  [showReloadButton]="true"
+  [reload]="loading()">
+
+  <button type="button" class="btn btn-success mb-3" (click)="create.emit()">
+    <i class="fa fa-plus"></i> Nueva Plantilla
+  </button>
+
+  <ngx-datatable
+    class="bootstrap"
+    [rows]="items()"
+    [columnMode]="'force'"
+    [headerHeight]="40"
+    [footerHeight]="50"
+    [rowHeight]="'auto'"
+    [limit]="20"
+    [loadingIndicator]="loading()">
+
+    <ngx-datatable-column name="Código" prop="codeTemplate" [sortable]="true">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        {{ row.codeTemplate }}
+      </ng-template>
+    </ngx-datatable-column>
+    <ngx-datatable-column name="Nombre" prop="nameTemplate" [sortable]="true">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        {{ row.nameTemplate }}
+      </ng-template>
+    </ngx-datatable-column>
+    <ngx-datatable-column name="Banco" prop="bankName" [sortable]="true">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        {{ row.bankName }}
+      </ng-template>
+    </ngx-datatable-column>
+    <ngx-datatable-column name="Activo" prop="isActive" [sortable]="true">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        <span class="badge bg-success" *ngIf="row.isActive">Sí</span>
+        <span class="badge bg-secondary" *ngIf="!row.isActive">No</span>
+      </ng-template>
+    </ngx-datatable-column>
+    <ngx-datatable-column name="Acciones">
+      <ng-template let-row="row" ngx-datatable-cell-template>
+        <button type="button" class="btn btn-sm btn-primary me-1" aria-label="Editar" (click)="edit.emit(row.idBankStatementTemplate)">
+          <i class="fa fa-edit" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-danger" aria-label="Eliminar" (click)="remove.emit(row.idBankStatementTemplate)">
+          <i class="fa fa-trash" aria-hidden="true"></i>
+        </button>
+      </ng-template>
+    </ngx-datatable-column>
+  </ngx-datatable>
+</panel>

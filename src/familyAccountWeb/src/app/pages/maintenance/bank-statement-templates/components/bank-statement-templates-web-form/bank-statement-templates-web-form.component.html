@@ -1,0 +1,61 @@
+<form (ngSubmit)="onSubmit()" autocomplete="off">
+  <div class="mb-3">
+    <label class="form-label" for="codeTemplate">Código</label>
+    <input class="form-control" id="codeTemplate" [(ngModel)]="formLocal().codeTemplate" name="codeTemplate" required maxlength="50"
+      title="Código único de la plantilla" placeholder="Ej: BCR-HTML-XLS-V1" />
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="nameTemplate">Nombre</label>
+    <input class="form-control" id="nameTemplate" [(ngModel)]="formLocal().nameTemplate" name="nameTemplate" required maxlength="200"
+      title="Nombre descriptivo de la plantilla" placeholder="Ej: BCR – Movimientos de Cuenta (HTML-XLS)" />
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="bankName">Banco</label>
+    <input class="form-control" id="bankName" [(ngModel)]="formLocal().bankName" name="bankName" required maxlength="200"
+      title="Nombre del banco emisor" placeholder="Ej: Banco de Costa Rica" />
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="columnMappings">Mapeo de columnas (JSON)</label>
+    <textarea class="form-control" id="columnMappings" [(ngModel)]="formLocal().columnMappings" name="columnMappings" required rows="2"
+      title="Mapeo de columnas en formato JSON" placeholder='{"accountingDate":0,"transactionDate":1,...}'></textarea>
+  </div>
+
+  <!-- ── Editor visual de keywords ───────────────────────────────── -->
+  <div class="mb-3">
+    <app-bank-statement-templates-keyword-editor
+      [keywordRulesJson]="formLocal().keywordRules"
+      [movementTypes]="movementTypes()"
+      [accounts]="accounts()"
+      [costCenters]="costCenters()"
+      (rulesChange)="onKeywordRulesChange($event)">
+    </app-bank-statement-templates-keyword-editor>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <label class="form-label" for="dateFormat">Formato de fecha</label>
+      <input class="form-control" id="dateFormat" [(ngModel)]="formLocal().dateFormat" name="dateFormat" maxlength="50"
+        title="Formato de fecha usado en el Excel" placeholder="Ej: dd/MM/yyyy" />
+    </div>
+    <div class="col">
+      <label class="form-label" for="timeFormat">Formato de hora</label>
+      <input class="form-control" id="timeFormat" [(ngModel)]="formLocal().timeFormat" name="timeFormat" maxlength="50"
+        title="Formato de hora usado en el Excel" placeholder="Ej: HH:mm:ss" />
+    </div>
+  </div>
+  <div class="form-check form-switch my-3">
+    <input class="form-check-input" type="checkbox" [(ngModel)]="formLocal().isActive" name="isActive" id="isActive"
+      title="Indica si la plantilla está activa para uso" />
+    <label class="form-check-label" for="isActive">Activo</label>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="notes">Notas</label>
+    <textarea class="form-control" id="notes" [(ngModel)]="formLocal().notes" name="notes" maxlength="1000" rows="2"
+      title="Notas o instrucciones adicionales" placeholder="Notas o instrucciones adicionales"></textarea>
+  </div>
+  <div class="d-flex justify-content-end gap-2">
+    <button type="submit" class="btn btn-primary">{{ isEdit() ? 'Guardar' : 'Crear' }}</button>
+    <button type="button" class="btn btn-secondary" (click)="cancel.emit()">Cancelar</button>
+  </div>
+  <div *ngIf="errorMessage()" class="alert alert-danger mt-3">{{ errorMessage() }}</div>
+</form>

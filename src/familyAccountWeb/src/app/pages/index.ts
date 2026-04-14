@@ -9,3 +9,4 @@ export { BankStatementImportsPage } from './process/bank-statement-imports';
 export { PurchaseInvoicesPage } from './process/purchase-invoices';
 export { ErrorPage } from './error';
 export { LoginPage } from './login';
+export { BankStatementTemplatesPage } from './maintenance/bank-statement-templates';

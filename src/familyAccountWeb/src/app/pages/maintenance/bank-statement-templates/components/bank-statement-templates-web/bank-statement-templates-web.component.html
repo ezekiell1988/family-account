@@ -1,0 +1,45 @@
+<!-- BEGIN breadcrumb -->
+<ol class="breadcrumb float-xl-end">
+  <li class="breadcrumb-item"><a href="javascript:;">Home</a></li>
+  <li class="breadcrumb-item active">Plantillas de Extractos Bancarios</li>
+</ol>
+<!-- END breadcrumb -->
+
+<h1 class="page-header">
+  Plantillas de Extractos Bancarios
+  <small>Mantenimiento de plantillas de carga bancaria</small>
+</h1>
+
+@if (errorMessage()) {
+  <div class="alert alert-danger mb-3" role="alert">
+    <i class="fa fa-exclamation-triangle me-2"></i>{{ errorMessage() }}
+  </div>
+}
+
+@if (showForm()) {
+  <div class="panel panel-inverse">
+    <div class="panel-heading">
+      <h4 class="panel-title">{{ isEditing() ? 'Editar Plantilla' : 'Nueva Plantilla' }}</h4>
+    </div>
+    <div class="panel-body">
+      <app-bank-statement-templates-web-form
+        [form]="formData()"
+        [isEdit]="isEditing()"
+        [movementTypes]="movementTypes()"
+        [accounts]="accounts()"
+        [costCenters]="costCenters()"
+        (save)="submitForm($event)"
+        (cancel)="cancelForm()">
+      </app-bank-statement-templates-web-form>
+    </div>
+  </div>
+} @else {
+  <app-bank-statement-templates-list-web
+    [items]="items()"
+    [loading]="isLoading()"
+    [errorMessage]="errorMessage()"
+    (create)="openCreate()"
+    (edit)="openEdit($event)"
+    (remove)="remove.emit($event)">
+  </app-bank-statement-templates-list-web>
+}
